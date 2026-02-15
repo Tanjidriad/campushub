@@ -13,9 +13,30 @@ const initializeFirebase = () => {
     }
 
     try {
-        // Load service account from config folder
-        const serviceAccountPath = path.join(__dirname, 'firebase-service-account.json');
-        const serviceAccount = require(serviceAccountPath);
+        let serviceAccount;
+
+        // Option 1: Load from Environment Variable (Best for Coolify/Production)
+        if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+            try {
+                // Try parsing as regular JSON string
+                serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+            } catch (e) {
+                // If failed, try parsing as Base64 encoded JSON
+                const buffer = Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT, 'base64');
+                serviceAccount = JSON.parse(buffer.toString('utf-8'));
+            }
+        }
+        // Option 2: Load from local file (Development)
+        else {
+            const serviceAccountPath = path.join(__dirname, 'firebase-service-account.json');
+            // Check if file exists to avoid crashing if it's missing in production
+            const fs = require('fs');
+            if (fs.existsSync(serviceAccountPath)) {
+                serviceAccount = require(serviceAccountPath);
+            } else {
+                throw new Error('firebase-service-account.json not found and FIREBASE_SERVICE_ACCOUNT env var not set');
+            }
+        }
 
         firebaseApp = admin.initializeApp({
             credential: admin.credential.cert(serviceAccount),
