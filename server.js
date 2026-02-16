@@ -31,6 +31,7 @@ const chatHandler = require('./socket/chatHandler');
 
 // Initialize Express app
 const app = express();
+app.set('trust proxy', 1); // Trust first proxy (Coolify/Traefik)
 const server = http.createServer(app);
 
 // Initialize Socket.io
