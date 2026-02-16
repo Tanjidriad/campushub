@@ -20,12 +20,14 @@ exports.getListings = asyncHandler(async (req, res) => {
         sort = '-createdAt',
         page,
         limit,
-        sellerId, // Add sellerId
+        sellerId,
+        isFeatured,
     } = req.query;
 
     // Build query
     const query = { status: 'approved' };
 
+    if (isFeatured === 'true') query.isFeatured = true;
     if (category) query.category = category;
     if (priceType) query.priceType = priceType;
     if (condition) query.condition = condition;
