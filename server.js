@@ -63,7 +63,7 @@ app.use(cors({
 // Rate limiting - enabled for production, relaxed for development
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: process.env.NODE_ENV === 'production' ? 100 : 1000, // Strict in production
+    max: process.env.NODE_ENV === 'production' ? 500 : 1000, // 500 req / 15 min in production
     message: {
         success: false,
         message: 'Too many requests, please try again later',
@@ -77,7 +77,7 @@ app.use('/api/', limiter);
 // Stricter rate limit for auth routes
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: process.env.NODE_ENV === 'production' ? 10 : 100, // Very strict in production
+    max: process.env.NODE_ENV === 'production' ? 20 : 100, // Strict for auth
     message: {
         success: false,
         message: 'Too many authentication attempts, please try again later',
