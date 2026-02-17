@@ -51,6 +51,10 @@ const notificationSchema = new mongoose.Schema(
                 type: mongoose.Schema.Types.ObjectId,
                 ref: 'User',
             },
+            offerId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'Offer',
+            },
             url: String,
         },
         isRead: {
