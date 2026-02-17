@@ -21,6 +21,10 @@ const notificationSchema = new mongoose.Schema(
                 'wishlist_sold',
                 'account_warning',
                 'system',
+                'new_offer',
+                'offer_accepted',
+                'offer_declined',
+                'offer_countered',
             ],
         },
         title: {

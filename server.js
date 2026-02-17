@@ -25,6 +25,7 @@ const usersRoutes = require('./routes/users');
 const reportsRoutes = require('./routes/reports');
 const notificationsRoutes = require('./routes/notifications');
 const categoriesRoutes = require('./routes/categories');
+const offerRoutes = require('./routes/offers');
 
 // Import socket handler
 const chatHandler = require('./socket/chatHandler');
@@ -207,6 +208,7 @@ app.use('/api/users', usersRoutes);
 app.use('/api/reviews', reviewsRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/notifications', notificationsRoutes);
+app.use('/api/offers', offerRoutes);
 app.use('/api/admin', adminRoutes);
 
 // 404 handler

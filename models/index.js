@@ -7,4 +7,5 @@ module.exports = {
     Review: require('./Review'),
     Report: require('./Report'),
     Notification: require('./Notification'),
+    Offer: require('./Offer'),
 };

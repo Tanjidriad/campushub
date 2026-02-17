@@ -79,8 +79,79 @@ const sendTransactionNotification = async (userId, transaction, type) => {
     // TODO: Implement when adding transactions
 };
 
+/**
+ * Send offer-related push notification
+ * @param {string} recipientId - User ID of the recipient
+ * @param {object} offerData - { type, buyerName, amount, listingTitle, offerId, listingId }
+ */
+const sendOfferNotification = async (recipientId, offerData) => {
+    if (!isFirebaseAvailable()) {
+        return { sent: false, reason: 'firebase_not_available' };
+    }
+
+    try {
+        const recipient = await User.findById(recipientId).select('fcmTokens');
+
+        if (!recipient || !recipient.fcmTokens || recipient.fcmTokens.length === 0) {
+            return { sent: false, reason: 'no_tokens' };
+        }
+
+        let title, body;
+        switch (offerData.type) {
+            case 'new_offer':
+                title = '💰 New Offer Received';
+                body = `${offerData.buyerName} offered $${offerData.amount.toFixed(2)} for "${offerData.listingTitle}"`;
+                break;
+            case 'offer_accepted':
+                title = '🎉 Offer Accepted!';
+                body = `Your offer of $${offerData.amount.toFixed(2)} for "${offerData.listingTitle}" was accepted!`;
+                break;
+            case 'offer_declined':
+                title = 'Offer Declined';
+                body = `Your offer for "${offerData.listingTitle}" was declined.`;
+                break;
+            case 'offer_countered':
+                title = '🔄 Counter Offer';
+                body = `Counter offer of $${offerData.amount.toFixed(2)} for "${offerData.listingTitle}"`;
+                break;
+            default:
+                title = 'Offer Update';
+                body = `Update on your offer for "${offerData.listingTitle}"`;
+        }
+
+        const payload = {
+            title,
+            body,
+            data: {
+                type: offerData.type,
+                offerId: offerData.offerId,
+                listingId: offerData.listingId,
+            },
+            badge: 1,
+        };
+
+        const result = await sendToMultipleDevices(recipient.fcmTokens, payload);
+
+        if (result.invalidTokens.length > 0) {
+            await User.findByIdAndUpdate(recipientId, {
+                $pull: { fcmTokens: { $in: result.invalidTokens } },
+            });
+        }
+
+        return {
+            sent: result.successCount > 0,
+            successCount: result.successCount,
+            failureCount: result.failureCount,
+        };
+    } catch (error) {
+        console.error('Offer notification error:', error);
+        return { sent: false, reason: 'error', error: error.message };
+    }
+};
+
 module.exports = {
     sendChatNotification,
     sendListingMatchNotification,
     sendTransactionNotification,
+    sendOfferNotification,
 };
