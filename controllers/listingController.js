@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Listing = require('../models/Listing');
 const User = require('../models/User');
 const { Notification } = require('../models');
@@ -5,6 +6,7 @@ const Category = require('../models/Category');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { paginate, paginationMeta } = require('../utils/pagination');
 const { deleteImage, getPublicIdFromUrl } = require('../config/cloudinary');
+const SearchService = require('../utils/searchService');
 
 // @desc    Get all listings (with filters)
 // @route   GET /api/listings
@@ -24,38 +26,25 @@ exports.getListings = asyncHandler(async (req, res) => {
         isFeatured,
     } = req.query;
 
-    // Build query
-    const query = { status: 'approved' };
+    // Build standard filters
+    const filters = {};
+    if (category) filters.category = category;
+    if (priceType) filters.priceType = priceType;
+    if (condition) filters.condition = condition;
+    if (sellerId) filters.seller = new mongoose.Types.ObjectId(sellerId);
+    if (minPrice) filters.minPrice = minPrice;
+    if (maxPrice) filters.maxPrice = maxPrice;
+    if (isFeatured === 'true') filters.isFeatured = true;
 
-    if (isFeatured === 'true') query.isFeatured = true;
-    if (category) query.category = category;
-    if (priceType) query.priceType = priceType;
-    if (condition) query.condition = condition;
-    if (sellerId) query.seller = sellerId; // Filter by seller
-    if (minPrice || maxPrice) {
-        query.price = {};
-        if (minPrice) query.price.$gte = parseFloat(minPrice);
-        if (maxPrice) query.price.$lte = parseFloat(maxPrice);
-    }
-
-    // Text search
-    if (search) {
-        query.$text = { $search: search };
-    }
-
-    // Pagination
+    // Pagination setup
     const { skip, limit: limitNum, page: pageNum } = paginate(page, limit);
 
-    // Execute query
-    const [listings, total] = await Promise.all([
-        Listing.find(query)
-            .populate('seller', 'name avatar averageRating')
-            .sort(sort)
-            .skip(skip)
-            .limit(limitNum)
-            .lean(),
-        Listing.countDocuments(query),
-    ]);
+    // Use SearchService
+    const { listings, total } = await SearchService.searchListings(
+        search,
+        filters,
+        { skip, limit: limitNum }
+    );
 
     // Add isWishlisted flag if user is authenticated
     if (req.user) {
