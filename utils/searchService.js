@@ -56,11 +56,11 @@ class SearchService {
                                     0
                                 ]
                             },
-                            // Text Search Match (50 points) - requires text index
+                            // Description Contains Query (50 points)
                             {
                                 $cond: [
-                                    { $ne: [{ $meta: "textScore" }, undefined] }, // If text score exists
-                                    50, // Simplified fixed boost for text match presence
+                                    { $regexMatch: { input: "$description", regex: cleanQuery, options: "i" } },
+                                    50,
                                     0
                                 ]
                             },
