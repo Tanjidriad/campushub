@@ -67,11 +67,10 @@ offerSchema.index({ buyer: 1, status: 1, createdAt: -1 });
 offerSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // TTL won't delete, we handle via status
 
 // Pre-save: set expiresAt if not set
-offerSchema.pre('save', function (next) {
+offerSchema.pre('save', function () {
     if (this.isNew && !this.expiresAt) {
         this.expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 hours
     }
-    next();
 });
 
 // Check if offer is expired
