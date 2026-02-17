@@ -76,11 +76,10 @@ chatMessageSchema.index({ conversation: 1, createdAt: -1 });
 chatMessageSchema.index({ sender: 1, createdAt: -1 });
 
 // Validate that message has either text or image
-chatMessageSchema.pre('validate', function (next) {
+chatMessageSchema.pre('validate', function () {
     if (!this.text && !this.image?.url && !this.location && this.messageType !== 'system') {
-        next(new Error('Message must have content (text, image, or location)'));
+        throw new Error('Message must have content (text, image, or location)');
     }
-    next();
 });
 
 // Update conversation's last message after save

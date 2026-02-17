@@ -45,7 +45,7 @@ const categorySchema = new mongoose.Schema(
 categorySchema.index({ isActive: 1, displayOrder: 1 });
 
 // Generate slug only on creation (not on name updates)
-categorySchema.pre('save', function (next) {
+categorySchema.pre('save', function () {
     if (this.isNew && this.isModified('name')) {
         this.slug = this.name
             .toLowerCase()
@@ -54,7 +54,6 @@ categorySchema.pre('save', function (next) {
             .replace(/-+/g, '-')
             .trim();
     }
-    next();
 });
 
 module.exports = mongoose.model('Category', categorySchema);
