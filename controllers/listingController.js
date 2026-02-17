@@ -1,12 +1,14 @@
 const mongoose = require('mongoose');
 const Listing = require('../models/Listing');
 const User = require('../models/User');
+const Offer = require('../models/Offer');
 const { Notification } = require('../models');
 const Category = require('../models/Category');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { paginate, paginationMeta } = require('../utils/pagination');
 const { deleteImage, getPublicIdFromUrl } = require('../config/cloudinary');
 const SearchService = require('../utils/searchService');
+const { sendOfferNotification } = require('../utils/notificationService');
 
 // @desc    Get all listings (with filters)
 // @route   GET /api/listings
@@ -367,6 +369,7 @@ exports.deleteImage = asyncHandler(async (req, res) => {
 // @route   PUT /api/listings/:id/sold
 // @access  Private (owner only)
 exports.markAsSold = asyncHandler(async (req, res) => {
+    const { buyerId, soldPrice } = req.body;
     const listing = await Listing.findById(req.params.id);
 
     if (!listing) {
@@ -383,13 +386,65 @@ exports.markAsSold = asyncHandler(async (req, res) => {
         });
     }
 
+    if (listing.status === 'sold') {
+        return res.status(400).json({
+            success: false,
+            message: 'Listing is already marked as sold',
+        });
+    }
+
     listing.status = 'sold';
+    if (buyerId) listing.soldTo = buyerId;
+    if (soldPrice) listing.soldPrice = soldPrice;
+    listing.soldAt = new Date();
     await listing.save();
 
     // Update seller stats
     await User.findByIdAndUpdate(listing.seller, {
         $inc: { totalSold: 1 },
     });
+
+    // Cancel all pending/countered offers on this listing and notify buyers
+    const activeOffers = await Offer.find({
+        listing: listing._id,
+        status: { $in: ['pending', 'countered'] },
+    }).populate('buyer', 'name');
+
+    if (activeOffers.length > 0) {
+        // Bulk cancel all active offers
+        await Offer.updateMany(
+            { listing: listing._id, status: { $in: ['pending', 'countered'] } },
+            { $set: { status: 'cancelled', respondedAt: new Date() } }
+        );
+
+        // Notify each buyer
+        for (const offer of activeOffers) {
+            // Skip the buyer who purchased (they already know)
+            if (buyerId && offer.buyer._id.toString() === buyerId.toString()) continue;
+
+            await Notification.createNotification({
+                userId: offer.buyer._id,
+                type: 'listing_sold',
+                title: 'Listing Sold',
+                body: `"${listing.title}" has been sold. Your offer of $${offer.amount.toFixed(2)} is no longer active.`,
+                data: { listingId: listing._id, offerId: offer._id },
+            });
+
+            // Send FCM push
+            try {
+                await sendOfferNotification(offer.buyer._id, {
+                    type: 'listing_sold',
+                    buyerName: offer.buyer.name,
+                    amount: offer.amount,
+                    listingTitle: listing.title,
+                    offerId: offer._id.toString(),
+                    listingId: listing._id.toString(),
+                });
+            } catch (err) {
+                console.error(`Failed to send FCM to buyer ${offer.buyer._id}:`, err.message);
+            }
+        }
+    }
 
     // Notify users who wishlisted this item
     const usersWithWishlist = await User.find({

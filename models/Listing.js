@@ -86,6 +86,20 @@ const listingSchema = new mongoose.Schema(
             default: 'pending',
             index: true,
         },
+        // Sold tracking
+        soldTo: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            default: null,
+        },
+        soldPrice: {
+            type: Number,
+            default: null,
+        },
+        soldAt: {
+            type: Date,
+            default: null,
+        },
         rejectionReason: {
             type: String,
             default: null,
