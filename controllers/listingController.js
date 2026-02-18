@@ -26,6 +26,8 @@ exports.getListings = asyncHandler(async (req, res) => {
         limit,
         sellerId,
         isFeatured,
+        sortBy,
+        sortOrder,
     } = req.query;
 
     // Build standard filters
@@ -38,6 +40,12 @@ exports.getListings = asyncHandler(async (req, res) => {
     if (maxPrice) filters.maxPrice = maxPrice;
     if (isFeatured === 'true') filters.isFeatured = true;
 
+    // Determine sort parameter
+    let sortParam = sort;
+    if (sortBy) {
+        sortParam = sortOrder === 'desc' ? `-${sortBy}` : sortBy;
+    }
+
     // Pagination setup
     const { skip, limit: limitNum, page: pageNum } = paginate(page, limit);
 
@@ -45,7 +53,8 @@ exports.getListings = asyncHandler(async (req, res) => {
     const { listings, total } = await SearchService.searchListings(
         search,
         filters,
-        { skip, limit: limitNum }
+        { skip, limit: limitNum },
+        sortParam
     );
 
     // Add isWishlisted flag if user is authenticated

@@ -9,7 +9,7 @@ class SearchService {
      * @param {Object} pagination - { skip, limit }
      * @returns {Promise<{listings: Array, total: Number}>}
      */
-    static async searchListings(query, filters = {}, pagination = { skip: 0, limit: 10 }) {
+    static async searchListings(query, filters = {}, pagination = { skip: 0, limit: 10 }, sort = '-createdAt') {
         const { skip, limit } = pagination;
         const searchPipeline = [];
 
@@ -31,6 +31,7 @@ class SearchService {
 
         // 2. Search Logic (if query exists)
         if (query) {
+            // ... (keep existing search logic) ...
             // Clean query
             const cleanQuery = query.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // Escape regex chars
             if (!cleanQuery) return { listings: [], total: 0 };
@@ -115,8 +116,16 @@ class SearchService {
             searchPipeline.push({ $sort: { searchScore: -1, createdAt: -1 } });
 
         } else {
-            // No search query, just sort by date
-            searchPipeline.push({ $sort: { createdAt: -1 } });
+            // No search query, sort by provided sort param
+            const sortObj = {};
+            if (sort) {
+                const sortField = sort.startsWith('-') ? sort.substring(1) : sort;
+                const sortOrder = sort.startsWith('-') ? -1 : 1;
+                sortObj[sortField] = sortOrder;
+            } else {
+                sortObj.createdAt = -1;
+            }
+            searchPipeline.push({ $sort: sortObj });
         }
 
         // 3. Facets for Pagination and Count

@@ -2,7 +2,7 @@ const Offer = require('../models/Offer');
 const Listing = require('../models/Listing');
 const Notification = require('../models/Notification');
 const Conversation = require('../models/Conversation');
-const ChatMessage = require('../models/ChatMessage');
+const { emitSystemMessage } = require('../socket/socketManager');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { paginate, paginationMeta } = require('../utils/pagination');
 const { sendOfferNotification } = require('../utils/notificationService');
@@ -311,7 +311,7 @@ exports.respondToOffer = asyncHandler(async (req, res) => {
         listingId: offer.listing._id.toString(),
     });
 
-    // Send system message in chat if conversation exists
+    // Send system message in chat if conversation exists (real-time via Socket.io)
     try {
         const conversation = await Conversation.findOne({
             participants: { $all: [offer.buyer._id, offer.seller] },
@@ -321,19 +321,14 @@ exports.respondToOffer = asyncHandler(async (req, res) => {
         if (conversation) {
             let systemText;
             if (action === 'accept') {
-                systemText = `💰 Offer of $${offer.amount.toFixed(2)} accepted! 🎉`;
+                systemText = `✅ Offer of $${offer.amount.toFixed(2)} accepted! 🎉`;
             } else if (action === 'decline') {
-                systemText = `Offer of $${offer.amount.toFixed(2)} was declined.`;
+                systemText = `❌ Offer of $${offer.amount.toFixed(2)} was declined.`;
             } else if (action === 'counter') {
                 systemText = `🔄 Counter offer: $${counterAmount.toFixed(2)}`;
             }
 
-            await ChatMessage.create({
-                conversation: conversation._id,
-                sender: userId,
-                text: systemText,
-                messageType: 'system',
-            });
+            await emitSystemMessage(conversation._id.toString(), userId, systemText);
         }
     } catch (err) {
         console.error('Failed to send system message:', err);

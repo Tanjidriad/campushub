@@ -219,6 +219,8 @@ app.use(errorHandler);
 
 // ============== SOCKET.IO ==============
 
+const socketManager = require('./socket/socketManager');
+socketManager.setIO(io);
 chatHandler(io);
 
 // ============== SCHEDULED TASKS ==============
