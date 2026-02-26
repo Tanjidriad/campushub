@@ -4,6 +4,7 @@ const categoryController = require('../controllers/categoryController');
 const { protect } = require('../middleware/auth');
 const { requireAdmin } = require('../middleware/roles');
 const { validate, rules } = require('../middleware/validate');
+const { uploadCategoryImage } = require('../config/cloudinary');
 
 // Public routes
 router.get('/', categoryController.getAllCategories);
@@ -14,6 +15,7 @@ router.post(
     '/admin',
     protect,
     requireAdmin,
+    uploadCategoryImage,
     categoryController.createCategory
 );
 
@@ -23,6 +25,7 @@ router.put(
     requireAdmin,
     rules.mongoId,
     validate,
+    uploadCategoryImage,
     categoryController.updateCategory
 );
 

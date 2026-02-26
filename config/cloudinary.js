@@ -29,6 +29,16 @@ const avatarStorage = new CloudinaryStorage({
     },
 });
 
+// Storage for category images
+const categoryStorage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'campushub/categories',
+        allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+        transformation: [{ width: 500, height: 500, crop: 'fill', quality: 'auto' }],
+    },
+});
+
 // Storage for chat images
 const chatStorage = new CloudinaryStorage({
     cloudinary: cloudinary,
@@ -59,6 +69,12 @@ const imageFileFilter = (req, file, cb) => {
         cb(new Error('Invalid file type. Only JPEG, PNG, and WebP images are allowed.'), false);
     }
 };
+
+const uploadCategoryImage = multer({
+    storage: categoryStorage,
+    limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit
+    fileFilter: imageFileFilter,
+}).single('image');
 
 const uploadChatImage = multer({
     storage: chatStorage,
@@ -91,6 +107,7 @@ module.exports = {
     cloudinary,
     uploadListingImages,
     uploadAvatar,
+    uploadCategoryImage,
     uploadChatImage,
     deleteImage,
     getPublicIdFromUrl,
