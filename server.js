@@ -1,3 +1,4 @@
+// CampusHub Pro API v1.0.1 - Coolify deploy test
 require('dotenv').config();
 const express = require('express');
 const http = require('http');
