@@ -107,6 +107,7 @@ const authLimiter = rateLimit({
         success: false,
         message: 'Too many authentication attempts, please try again later',
     },
+    skip: (req) => process.env.NODE_ENV === 'development', // No limit in dev
 });
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
