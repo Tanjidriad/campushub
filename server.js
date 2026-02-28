@@ -1,5 +1,35 @@
 // CampusHub Pro API v1.0.1 - Coolify deploy test
 require('dotenv').config();
+
+// Validate required environment variables before anything else starts
+const REQUIRED_ENV_VARS = [
+    'MONGODB_URI',
+    'JWT_SECRET',
+    'JWT_REFRESH_SECRET',
+    'CLOUDINARY_CLOUD_NAME',
+    'CLOUDINARY_API_KEY',
+    'CLOUDINARY_API_SECRET',
+];
+const missingVars = REQUIRED_ENV_VARS.filter(v => !process.env[v]);
+if (missingVars.length > 0) {
+    console.error(`❌ Missing required environment variables: ${missingVars.join(', ')}`);
+    console.error('Please check your .env file and ensure all required variables are set.');
+    process.exit(1);
+}
+
+// Build CORS allowed origins from env (comma-separated list) or fall back to localhost only
+const allowedOrigins = process.env.FRONTEND_URL
+    ? process.env.FRONTEND_URL.split(',').map(o => o.trim())
+    : ['http://localhost:3000', 'http://localhost:5000'];
+
+const corsOptions = {
+    origin: (origin, callback) => {
+        // Allow requests with no origin header (mobile apps, Postman, curl)
+        if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+        callback(new Error(`CORS: origin '${origin}' not in allowed list`));
+    },
+    credentials: true,
+};
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
@@ -11,6 +41,7 @@ const passport = require('passport');
 
 // Import configurations
 const connectDB = require('./config/db');
+const mongoose = require('mongoose');
 require('./config/passport');
 
 // Import middleware
@@ -38,11 +69,7 @@ const server = http.createServer(app);
 
 // Initialize Socket.io
 const io = new Server(server, {
-    cors: {
-        origin: process.env.FRONTEND_URL || '*',
-        methods: ['GET', 'POST'],
-        credentials: true,
-    },
+    cors: corsOptions,
     pingTimeout: 60000,
     pingInterval: 25000,
 });
@@ -55,11 +82,8 @@ connectDB();
 // Security middleware
 app.use(helmet());
 
-// CORS
-app.use(cors({
-    origin: process.env.FRONTEND_URL || '*',
-    credentials: true,
-}));
+// CORS — uses corsOptions defined at top of file (strict origin allowlist)
+app.use(cors(corsOptions));
 
 // Rate limiting - enabled for production, relaxed for development
 const limiter = rateLimit({
@@ -277,6 +301,17 @@ process.on('unhandledRejection', (err) => {
 process.on('uncaughtException', (err) => {
     console.error('Uncaught Exception:', err);
     process.exit(1);
+});
+
+// Graceful shutdown on SIGTERM (sent by Docker/Coolify/PM2 before killing process)
+process.on('SIGTERM', () => {
+    console.log('⏳ SIGTERM received — shutting down gracefully...');
+    server.close(() => {
+        mongoose.connection.close(false, () => {
+            console.log('✅ MongoDB connection closed. Process exiting.');
+            process.exit(0);
+        });
+    });
 });
 
 module.exports = { app, server, io };

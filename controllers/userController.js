@@ -197,10 +197,17 @@ exports.registerFcmToken = asyncHandler(async (req, res) => {
         });
     }
 
-    // Add token if not already present (using $addToSet to prevent duplicates)
+    // Add token if not already present ($addToSet prevents duplicates)
     await User.findByIdAndUpdate(req.user._id, {
         $addToSet: { fcmTokens: token },
     });
+
+    // Enforce a max of 10 registered devices — trim oldest entries if exceeded
+    const updatedUser = await User.findById(req.user._id).select('fcmTokens');
+    if (updatedUser && updatedUser.fcmTokens.length > 10) {
+        const trimmed = updatedUser.fcmTokens.slice(-10); // keep the 10 most recent
+        await User.findByIdAndUpdate(req.user._id, { $set: { fcmTokens: trimmed } });
+    }
 
     res.json({
         success: true,

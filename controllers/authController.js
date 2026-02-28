@@ -304,20 +304,17 @@ exports.getMe = asyncHandler(async (req, res) => {
     const user = await User.findById(req.user.id)
         .select('-password -refreshToken -verificationToken -passwordResetToken');
 
-    // Get stats
-    const [activeListings, totalSold, totalListings] = await Promise.all([
-        Listing.countDocuments({ seller: req.user.id, status: 'approved' }),
-        Listing.countDocuments({ seller: req.user.id, status: 'sold' }),
-        Listing.countDocuments({ seller: req.user.id }),
-    ]);
+    // Only activeListings needs a live count — totalListings & totalSold are already
+    // denormalized onto the User document and updated incrementally, so no extra queries needed.
+    const activeListings = await Listing.countDocuments({ seller: req.user.id, status: 'approved' });
 
     res.json({
         success: true,
         data: {
             ...user.toObject(),
             activeListings,
-            totalSold,
-            totalListings,
+            totalSold: user.totalSold,
+            totalListings: user.totalListings,
         },
     });
 });
