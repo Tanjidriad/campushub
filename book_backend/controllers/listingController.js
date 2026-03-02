@@ -700,45 +700,39 @@ exports.getNearbyListings = asyncHandler(async (req, res) => {
 
     const lng = parseFloat(longitude);
     const lat = parseFloat(latitude);
-    const distance = parseInt(maxDistance);
+    const distanceMeters = parseInt(maxDistance);
     const limitNum = Math.min(parseInt(limit) || 10, 20);
 
-    // Use $geoNear aggregation (avoids $near + countDocuments conflict)
-    const pipeline = [
-        {
-            $geoNear: {
-                near: { type: 'Point', coordinates: [lng, lat] },
-                distanceField: 'distanceMeters',
-                maxDistance: distance,
-                query: {
-                    status: 'approved',
-                    ...(category ? { category } : {}),
-                },
-                spherical: true,
-            },
-        },
-        { $limit: limitNum },
-        {
-            $lookup: {
-                from: 'users',
-                localField: 'seller',
-                foreignField: '_id',
-                as: 'seller',
-                pipeline: [
-                    { $project: { name: 1, avatar: 1, averageRating: 1 } },
-                ],
-            },
-        },
-        { $unwind: { path: '$seller', preserveNullAndEmptyArrays: true } },
-        {
-            $addFields: {
-                // Convert distance from meters to miles for consistency
-                distance: { $divide: ['$distanceMeters', 1609.34] },
-            },
-        },
-    ];
+    // Convert meters to radians for $centerSphere (Earth radius ≈ 6378100 meters)
+    const radiusInRadians = distanceMeters / 6378100;
 
-    const listings = await Listing.aggregate(pipeline);
+    // Use $geoWithin + $centerSphere (no sorting required, works without 2dsphere index issues)
+    const query = {
+        status: 'approved',
+        'location.coordinates': {
+            $geoWithin: {
+                $centerSphere: [[lng, lat], radiusInRadians],
+            },
+        },
+    };
+
+    if (category) query.category = category;
+
+    const listings = await Listing.find(query)
+        .populate('seller', 'name avatar averageRating')
+        .limit(limitNum)
+        .lean();
+
+    // Calculate distance for each listing using Haversine
+    listings.forEach(listing => {
+        if (listing.location?.coordinates?.length === 2) {
+            const [listingLng, listingLat] = listing.location.coordinates;
+            listing.distance = calculateDistance(lat, lng, listingLat, listingLng);
+        }
+    });
+
+    // Sort by distance (closest first)
+    listings.sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
 
     res.json({
         success: true,
