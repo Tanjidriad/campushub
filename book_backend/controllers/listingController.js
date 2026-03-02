@@ -154,6 +154,13 @@ exports.createListing = asyncHandler(async (req, res) => {
             name: req.body['location[name]'],
             address: req.body['location[address]']
         };
+        // Parse GPS coordinates from FormData (location[coordinates][0], location[coordinates][1])
+        const lng = parseFloat(req.body['location[coordinates][0]']);
+        const lat = parseFloat(req.body['location[coordinates][1]']);
+        if (!isNaN(lng) && !isNaN(lat)) {
+            parsedLocation.type = req.body['location[type]'] || 'Point';
+            parsedLocation.coordinates = [lng, lat];
+        }
     } else if (typeof location === 'string') {
         try {
             parsedLocation = JSON.parse(location);
