@@ -13,6 +13,7 @@ import 'package:book_user_app/features/listings/presentation/widgets/education_f
 import 'package:book_user_app/features/listings/presentation/widgets/featured_listings_section.dart';
 import 'package:book_user_app/features/listings/presentation/widgets/staff_picks_section.dart';
 import 'package:book_user_app/features/listings/presentation/widgets/sort_filter_bar.dart';
+import 'package:book_user_app/features/listings/presentation/widgets/deals_near_you_section.dart';
 import 'package:book_user_app/injection_container/injection_container.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
@@ -20,7 +21,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:book_user_app/features/notifications/presentation/bloc/notifications_bloc.dart';
 import 'package:book_user_app/features/notifications/presentation/bloc/notifications_event.dart';
-import 'package:book_user_app/features/chat/presentation/bloc/conversations_bloc.dart';
 import 'package:book_user_app/core/services/socket_service.dart';
 import 'package:flutter_zoom_drawer/flutter_zoom_drawer.dart';
 import 'package:shimmer/shimmer.dart';
@@ -38,7 +38,10 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    sl<SocketService>().connect();
+    // Connect socket — non-critical, so catch any errors
+    sl<SocketService>().connect().catchError((e) {
+      debugPrint('⚠️ HomePage socket connect error (non-fatal): $e');
+    });
   }
 
   @override
@@ -55,11 +58,6 @@ class _HomePageState extends State<HomePage> {
             ..add(const LoadNotifications())
             ..add(LoadUnreadCount())
             ..add(StartNotificationListening()),
-        ),
-        BlocProvider(
-          create: (context) => sl<ConversationsBloc>()
-            ..add(const LoadConversations())
-            ..add(const StartConversationsListening()),
         ),
       ],
       child: ZoomDrawer(
@@ -163,6 +161,30 @@ class _HomePageContent extends StatelessWidget {
                           },
                         ),
 
+                        // ─── Staff Picks Section (moved up) ───
+                        BlocBuilder<ListingsBloc, ListingsState>(
+                          buildWhen: (previous, current) =>
+                              current is ListingsLoading ||
+                              current is ListingsLoaded ||
+                              current is ListingsInitial,
+                          builder: (context, state) {
+                            if (state is ListingsLoading ||
+                                state is ListingsInitial) {
+                              return _buildStaffPicksShimmer();
+                            }
+                            if (state is ListingsLoaded &&
+                                state.staffPicks.isNotEmpty) {
+                              return StaffPicksSection(
+                                listings: state.staffPicks,
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          },
+                        ),
+
+                        // ─── Deals Near You Section ───
+                        const DealsNearYouSection(),
+
                         // ─── Latest Ads Section (Masonry Grid) ───
                         // Listings Title
                         Padding(
@@ -219,27 +241,6 @@ class _HomePageContent extends StatelessWidget {
                               return _buildLoadingState();
                             },
                           ),
-                        ),
-
-                        // ─── Staff Picks Section ───
-                        BlocBuilder<ListingsBloc, ListingsState>(
-                          buildWhen: (previous, current) =>
-                              current is ListingsLoading ||
-                              current is ListingsLoaded ||
-                              current is ListingsInitial,
-                          builder: (context, state) {
-                            if (state is ListingsLoading ||
-                                state is ListingsInitial) {
-                              return _buildStaffPicksShimmer();
-                            }
-                            if (state is ListingsLoaded &&
-                                state.staffPicks.isNotEmpty) {
-                              return StaffPicksSection(
-                                listings: state.staffPicks,
-                              );
-                            }
-                            return const SizedBox.shrink();
-                          },
                         ),
 
                         SizedBox(height: 100.h), // Space for bottom nav
