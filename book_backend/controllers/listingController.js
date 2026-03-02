@@ -47,7 +47,15 @@ exports.getListings = asyncHandler(async (req, res) => {
     if (sellerId) filters.seller = new mongoose.Types.ObjectId(sellerId);
     if (minPrice) filters.minPrice = minPrice;
     if (maxPrice) filters.maxPrice = maxPrice;
-    if (isFeatured === 'true') filters.isFeatured = true;
+    if (isFeatured === 'true') {
+        filters.isFeatured = true;
+        // Only show featured listings that haven't expired
+        // (featuredUntil is null for admin-curated, or in the future for self-promoted)
+        filters.$or = [
+            { featuredUntil: null },
+            { featuredUntil: { $gt: new Date() } },
+        ];
+    }
     if (educationLevel) filters.educationLevel = educationLevel;
     if (classOrSemester) filters.classOrSemester = classOrSemester;
     if (subject) filters.subject = { $regex: subject, $options: 'i' };
