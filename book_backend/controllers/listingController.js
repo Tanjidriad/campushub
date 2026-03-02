@@ -688,7 +688,6 @@ exports.getNearbyListings = asyncHandler(async (req, res) => {
         latitude,
         maxDistance = 10000, // Default 10km in meters
         category,
-        page,
         limit,
     } = req.query;
 
@@ -702,46 +701,48 @@ exports.getNearbyListings = asyncHandler(async (req, res) => {
     const lng = parseFloat(longitude);
     const lat = parseFloat(latitude);
     const distance = parseInt(maxDistance);
+    const limitNum = Math.min(parseInt(limit) || 10, 20);
 
-    const { skip, limit: limitNum, page: pageNum } = paginate(page, limit);
-
-    // Build query with geo filter
-    const query = {
-        status: 'approved',
-        'location.coordinates': {
-            $near: {
-                $geometry: {
-                    type: 'Point',
-                    coordinates: [lng, lat],
+    // Use $geoNear aggregation (avoids $near + countDocuments conflict)
+    const pipeline = [
+        {
+            $geoNear: {
+                near: { type: 'Point', coordinates: [lng, lat] },
+                distanceField: 'distanceMeters',
+                maxDistance: distance,
+                query: {
+                    status: 'approved',
+                    ...(category ? { category } : {}),
                 },
-                $maxDistance: distance,
+                spherical: true,
             },
         },
-    };
+        { $limit: limitNum },
+        {
+            $lookup: {
+                from: 'users',
+                localField: 'seller',
+                foreignField: '_id',
+                as: 'seller',
+                pipeline: [
+                    { $project: { name: 1, avatar: 1, averageRating: 1 } },
+                ],
+            },
+        },
+        { $unwind: { path: '$seller', preserveNullAndEmptyArrays: true } },
+        {
+            $addFields: {
+                // Convert distance from meters to miles for consistency
+                distance: { $divide: ['$distanceMeters', 1609.34] },
+            },
+        },
+    ];
 
-    if (category) query.category = category;
-
-    const [listings, total] = await Promise.all([
-        Listing.find(query)
-            .populate('seller', 'name avatar averageRating')
-            .skip(skip)
-            .limit(limitNum)
-            .lean(),
-        Listing.countDocuments(query),
-    ]);
-
-    // Calculate distance for each listing
-    listings.forEach(listing => {
-        if (listing.location?.coordinates) {
-            const [listingLng, listingLat] = listing.location.coordinates;
-            listing.distance = calculateDistance(lat, lng, listingLat, listingLng);
-        }
-    });
+    const listings = await Listing.aggregate(pipeline);
 
     res.json({
         success: true,
         data: listings,
-        pagination: paginationMeta(total, pageNum, limitNum),
     });
 });
 
