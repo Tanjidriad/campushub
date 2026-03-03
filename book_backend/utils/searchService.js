@@ -20,6 +20,8 @@ class SearchService {
         if (filters.condition) matchStage.$match.condition = filters.condition;
         if (filters.priceType) matchStage.$match.priceType = filters.priceType;
         if (filters.seller) matchStage.$match.seller = filters.seller;
+        if (filters.isFeatured !== undefined) matchStage.$match.isFeatured = filters.isFeatured;
+        if (filters.$or) matchStage.$match.$or = filters.$or;
 
         if (filters.minPrice || filters.maxPrice) {
             matchStage.$match.price = {};
