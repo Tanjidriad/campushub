@@ -22,6 +22,13 @@ class SearchService {
         if (filters.seller) matchStage.$match.seller = filters.seller;
         if (filters.isFeatured !== undefined) matchStage.$match.isFeatured = filters.isFeatured;
         if (filters.$or) matchStage.$match.$or = filters.$or;
+        if (filters.educationLevel) matchStage.$match.educationLevel = filters.educationLevel;
+        if (filters.classOrSemester) matchStage.$match.classOrSemester = filters.classOrSemester;
+        if (filters.subject) matchStage.$match.subject = filters.subject;
+        if (filters.bookType) matchStage.$match.bookType = filters.bookType;
+        if (filters.division) matchStage.$match.division = filters.division;
+        if (filters.district) matchStage.$match.district = filters.district;
+        if (filters.upazila) matchStage.$match.upazila = filters.upazila;
 
         if (filters.minPrice || filters.maxPrice) {
             matchStage.$match.price = {};

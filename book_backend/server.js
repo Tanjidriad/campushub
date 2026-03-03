@@ -58,6 +58,7 @@ const reportsRoutes = require('./routes/reports');
 const notificationsRoutes = require('./routes/notifications');
 const categoriesRoutes = require('./routes/categories');
 const offerRoutes = require('./routes/offers');
+const educationConfigRoutes = require('./routes/educationConfig');
 
 // Import socket handler
 const chatHandler = require('./socket/chatHandler');
@@ -221,6 +222,7 @@ app.get('/api', (req, res) => {
             reports: '/api/reports',
             notifications: '/api/notifications',
             admin: '/api/admin',
+            educationConfig: '/api/education-config',
         },
     });
 });
@@ -236,6 +238,7 @@ app.use('/api/reports', reportsRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/offers', offerRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/education-config', educationConfigRoutes);
 
 // 404 handler
 app.use(notFound);

@@ -32,6 +32,9 @@ router.post('/listings/bulk-approve', adminController.bulkApproveListings);
 router.post('/listings/bulk-reject', adminController.bulkRejectListings);
 router.post('/listings/bulk-delete', adminController.bulkDeleteListings);
 
+// Education Config
+router.put('/education-config', require('../controllers/educationConfigController').updateEducationConfig);
+
 // Reports
 router.get('/reports', rules.pagination, validate, adminController.getReports);
 router.put('/reports/:id', rules.mongoId, validate, adminController.reviewReport);

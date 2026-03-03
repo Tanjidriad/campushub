@@ -172,7 +172,7 @@ const listingSchema = new mongoose.Schema(
         // ── Education metadata (for book listings) ──────────────────────
         educationLevel: {
             type: String,
-            enum: ['school', 'college', 'university', 'other', null],
+            trim: true,
             default: null,
             index: true,
         },
@@ -189,7 +189,7 @@ const listingSchema = new mongoose.Schema(
         },
         bookType: {
             type: String,
-            enum: ['nctb', 'guide', 'reference', 'university_textbook', 'other', null],
+            trim: true,
             default: null,
         },
 
