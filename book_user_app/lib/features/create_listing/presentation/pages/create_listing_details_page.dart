@@ -1,6 +1,7 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:book_user_app/config/routes/app_router.dart';
+import 'package:book_user_app/core/services/education_config_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -22,10 +23,12 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _subjectController = TextEditingController();
 
-  // Education fields
+  // Education fields (dynamic from API)
   String? _selectedEducationLevel;
   String? _selectedClassOrSemester;
   String? _selectedBookType;
+  final _configService = EducationConfigService();
+  EducationConfig? _eduConfig;
 
   final List<Map<String, String>> _categories = [
     {'value': 'textbooks', 'label': 'Textbooks'},
@@ -43,32 +46,31 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
     {'value': 'fair', 'label': 'Fair', 'icon': Icons.build},
   ];
 
-  final List<Map<String, String>> _educationLevels = [
-    {'value': 'school', 'label': 'School'},
-    {'value': 'college', 'label': 'College'},
-    {'value': 'university', 'label': 'University'},
-    {'value': 'other', 'label': 'Other'},
-  ];
+  List<EducationLevel> get _educationLevels =>
+      (_eduConfig ?? EducationConfig.fallback).levels;
 
-  final List<Map<String, String>> _bookTypes = [
-    {'value': 'nctb', 'label': 'NCTB'},
-    {'value': 'guide', 'label': 'Guide'},
-    {'value': 'reference', 'label': 'Reference'},
-    {'value': 'university_textbook', 'label': 'Uni Book'},
-    {'value': 'other', 'label': 'Other'},
-  ];
+  List<BookType> get _bookTypes =>
+      (_eduConfig ?? EducationConfig.fallback).bookTypes;
 
   List<String> get _classOrSemesterOptions {
-    switch (_selectedEducationLevel) {
-      case 'school':
-        return ['Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 10'];
-      case 'college':
-        return ['HSC 1st Year', 'HSC 2nd Year'];
-      case 'university':
-        return List.generate(12, (i) => 'Semester ${i + 1}');
-      default:
-        return [];
-    }
+    if (_selectedEducationLevel == null) return [];
+    final config = _eduConfig ?? EducationConfig.fallback;
+    final level = config.levels
+        .where((l) => l.key == _selectedEducationLevel)
+        .toList();
+    if (level.isEmpty) return [];
+    return level.first.subLevels.map((s) => s.label).toList();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadConfig();
+  }
+
+  Future<void> _loadConfig() async {
+    final config = await _configService.fetchConfig();
+    if (mounted) setState(() => _eduConfig = config);
   }
 
   @override
@@ -84,10 +86,12 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final borderColor =
-        isDark ? const Color(0xFF344155) : const Color(0xFFD1DBE6);
-    final surfaceColor =
-        isDark ? const Color(0xFF1A242F) : const Color(0xFFFFFFFF);
+    final borderColor = isDark
+        ? const Color(0xFF344155)
+        : const Color(0xFFD1DBE6);
+    final surfaceColor = isDark
+        ? const Color(0xFF1A242F)
+        : const Color(0xFFFFFFFF);
 
     final bool showBookFields =
         _selectedCategory == 'textbooks' ||
@@ -144,8 +148,9 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                         height: 8.w,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: theme.colorScheme.primary
-                              .withOpacity(isDark ? 0.2 : 0.3),
+                          color: theme.colorScheme.primary.withOpacity(
+                            isDark ? 0.2 : 0.3,
+                          ),
                         ),
                       ),
                       SizedBox(width: 12.w),
@@ -157,8 +162,7 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                           borderRadius: BorderRadius.circular(999),
                           boxShadow: [
                             BoxShadow(
-                              color:
-                                  theme.colorScheme.primary.withOpacity(0.3),
+                              color: theme.colorScheme.primary.withOpacity(0.3),
                               blurRadius: 4,
                               offset: const Offset(0, 2),
                             ),
@@ -240,7 +244,10 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                             ),
                           ),
                           isExpanded: true,
-                          icon: Icon(Icons.expand_more, color: Colors.grey[500]),
+                          icon: Icon(
+                            Icons.expand_more,
+                            color: Colors.grey[500],
+                          ),
                           items: _categories.map((category) {
                             return DropdownMenuItem<String>(
                               value: category['value'],
@@ -286,15 +293,15 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                         return GestureDetector(
                           onTap: () {
                             setState(() {
-                              _selectedCondition =
-                                  condition['value'] as String;
+                              _selectedCondition = condition['value'] as String;
                             });
                           },
                           child: Container(
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? theme.colorScheme.primary
-                                      .withOpacity(isDark ? 0.2 : 0.1)
+                                  ? theme.colorScheme.primary.withOpacity(
+                                      isDark ? 0.2 : 0.1,
+                                    )
                                   : surfaceColor,
                               borderRadius: BorderRadius.circular(12.r),
                               border: Border.all(
@@ -360,8 +367,9 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12.r),
-                          borderSide:
-                              BorderSide(color: theme.colorScheme.primary),
+                          borderSide: BorderSide(
+                            color: theme.colorScheme.primary,
+                          ),
                         ),
                       ),
                     ),
@@ -406,8 +414,9 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12.r),
-                          borderSide:
-                              BorderSide(color: theme.colorScheme.primary),
+                          borderSide: BorderSide(
+                            color: theme.colorScheme.primary,
+                          ),
                         ),
                       ),
                     ),
@@ -419,8 +428,9 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                         width: double.infinity,
                         padding: EdgeInsets.all(16.w),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.primary
-                              .withOpacity(isDark ? 0.08 : 0.05),
+                          color: theme.colorScheme.primary.withOpacity(
+                            isDark ? 0.08 : 0.05,
+                          ),
                           borderRadius: BorderRadius.circular(16.r),
                           border: Border.all(
                             color: theme.colorScheme.primary.withOpacity(0.2),
@@ -449,8 +459,9 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                             SizedBox(height: 4.h),
                             Text(
                               'Help students find the right book for their level.',
-                              style: theme.textTheme.bodySmall
-                                  ?.copyWith(color: Colors.grey),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: Colors.grey,
+                              ),
                             ),
                             SizedBox(height: 16.h),
 
@@ -467,11 +478,11 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                               runSpacing: 8.h,
                               children: _educationLevels.map((level) {
                                 final isSelected =
-                                    _selectedEducationLevel == level['value'];
+                                    _selectedEducationLevel == level.key;
                                 return GestureDetector(
                                   onTap: () {
                                     setState(() {
-                                      _selectedEducationLevel = level['value'];
+                                      _selectedEducationLevel = level.key;
                                       _selectedClassOrSemester = null;
                                     });
                                   },
@@ -484,8 +495,7 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                                       color: isSelected
                                           ? theme.colorScheme.primary
                                           : surfaceColor,
-                                      borderRadius:
-                                          BorderRadius.circular(999),
+                                      borderRadius: BorderRadius.circular(999),
                                       border: Border.all(
                                         color: isSelected
                                             ? theme.colorScheme.primary
@@ -493,14 +503,13 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                                       ),
                                     ),
                                     child: Text(
-                                      level['label']!,
+                                      level.label,
                                       style: TextStyle(
                                         fontSize: 13.sp,
                                         fontWeight: FontWeight.w500,
                                         color: isSelected
                                             ? Colors.white
-                                            : theme
-                                                .textTheme.bodyMedium?.color,
+                                            : theme.textTheme.bodyMedium?.color,
                                       ),
                                     ),
                                   ),
@@ -542,8 +551,9 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                                         color: isSelected
                                             ? theme.colorScheme.primary
                                             : surfaceColor,
-                                        borderRadius:
-                                            BorderRadius.circular(999),
+                                        borderRadius: BorderRadius.circular(
+                                          999,
+                                        ),
                                         border: Border.all(
                                           color: isSelected
                                               ? theme.colorScheme.primary
@@ -558,7 +568,9 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                                           color: isSelected
                                               ? Colors.white
                                               : theme
-                                                  .textTheme.bodyMedium?.color,
+                                                    .textTheme
+                                                    .bodyMedium
+                                                    ?.color,
                                         ),
                                       ),
                                     ),
@@ -582,8 +594,7 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                               decoration: InputDecoration(
                                 hintText:
                                     "e.g. Mathematics, Physics, Bengali...",
-                                hintStyle:
-                                    TextStyle(color: Colors.grey[400]),
+                                hintStyle: TextStyle(color: Colors.grey[400]),
                                 filled: true,
                                 fillColor: surfaceColor,
                                 contentPadding: EdgeInsets.symmetric(
@@ -620,12 +631,11 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                               spacing: 8.w,
                               runSpacing: 8.h,
                               children: _bookTypes.map((bt) {
-                                final isSelected =
-                                    _selectedBookType == bt['value'];
+                                final isSelected = _selectedBookType == bt.key;
                                 return GestureDetector(
                                   onTap: () {
                                     setState(() {
-                                      _selectedBookType = bt['value'];
+                                      _selectedBookType = bt.key;
                                     });
                                   },
                                   child: Container(
@@ -637,8 +647,7 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                                       color: isSelected
                                           ? theme.colorScheme.primary
                                           : surfaceColor,
-                                      borderRadius:
-                                          BorderRadius.circular(999),
+                                      borderRadius: BorderRadius.circular(999),
                                       border: Border.all(
                                         color: isSelected
                                             ? theme.colorScheme.primary
@@ -646,14 +655,13 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                                       ),
                                     ),
                                     child: Text(
-                                      bt['label']!,
+                                      bt.label,
                                       style: TextStyle(
                                         fontSize: 12.sp,
                                         fontWeight: FontWeight.w500,
                                         color: isSelected
                                             ? Colors.white
-                                            : theme
-                                                .textTheme.bodyMedium?.color,
+                                            : theme.textTheme.bodyMedium?.color,
                                       ),
                                     ),
                                   ),
@@ -712,9 +720,7 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                 }
                 if (_descriptionController.text.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Please enter a description'),
-                    ),
+                    const SnackBar(content: Text('Please enter a description')),
                   );
                   return;
                 }
@@ -725,12 +731,14 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                     category: _selectedCategory!,
                     condition: _selectedCondition,
                     description: _descriptionController.text,
-                    educationLevel:
-                        showBookFields ? _selectedEducationLevel : null,
-                    classOrSemester:
-                        showBookFields ? _selectedClassOrSemester : null,
-                    subject: showBookFields &&
-                            _subjectController.text.isNotEmpty
+                    educationLevel: showBookFields
+                        ? _selectedEducationLevel
+                        : null,
+                    classOrSemester: showBookFields
+                        ? _selectedClassOrSemester
+                        : null,
+                    subject:
+                        showBookFields && _subjectController.text.isNotEmpty
                         ? _subjectController.text
                         : null,
                     bookType: showBookFields ? _selectedBookType : null,

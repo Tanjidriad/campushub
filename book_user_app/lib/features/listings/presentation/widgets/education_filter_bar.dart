@@ -3,13 +3,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:book_user_app/core/services/education_config_service.dart';
 import '../bloc/listings_bloc.dart';
 import '../bloc/listings_event.dart';
 import '../bloc/listings_state.dart';
 
 /// Horizontal filter bar for browsing by education level and class/semester.
-/// Shows pill chips: All | School | College | University
-/// When School or College is selected a second row of class chips appears.
+/// Dynamically loads levels and sub-levels from the EducationConfigService.
 class EducationFilterBar extends StatefulWidget {
   const EducationFilterBar({super.key});
 
@@ -18,24 +18,24 @@ class EducationFilterBar extends StatefulWidget {
 }
 
 class _EducationFilterBarState extends State<EducationFilterBar> {
-  static const _levels = [
-    {'value': null, 'label': 'All'},
-    {'value': 'school', 'label': 'School'},
-    {'value': 'college', 'label': 'College'},
-    {'value': 'university', 'label': 'University'},
-  ];
-
-  static const Map<String, List<String>> _classOptions = {
-    'school': ['Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 10'],
-    'college': ['HSC 1st Year', 'HSC 2nd Year'],
-    'university': [
-      'Semester 1', 'Semester 2', 'Semester 3', 'Semester 4',
-      'Semester 5', 'Semester 6', 'Semester 7', 'Semester 8',
-    ],
-  };
+  final _configService = EducationConfigService();
+  EducationConfig? _config;
 
   String? _activeLevel;
   String? _activeClass;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadConfig();
+  }
+
+  Future<void> _loadConfig() async {
+    final config = await _configService.fetchConfig();
+    if (mounted) {
+      setState(() => _config = config);
+    }
+  }
 
   void _onLevelTap(String? level, BuildContext ctx) {
     setState(() {
@@ -94,15 +94,28 @@ class _EducationFilterBarState extends State<EducationFilterBar> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final primary = theme.colorScheme.primary;
-    final borderColor =
-        isDark ? const Color(0xFF344155) : const Color(0xFFE2E8F0);
-    final bgColor =
-        isDark ? const Color(0xFF1A242F) : const Color(0xFFFFFFFF);
+    final borderColor = isDark
+        ? const Color(0xFF344155)
+        : const Color(0xFFE2E8F0);
+    final bgColor = isDark ? const Color(0xFF1A242F) : const Color(0xFFFFFFFF);
 
-    final classes = _activeLevel != null
-        ? (_classOptions[_activeLevel] ?? <String>[])
+    final config = _config ?? EducationConfig.fallback;
+
+    // Build level list: "All" + dynamic levels from config
+    final levelItems = <Map<String, String?>>[
+      {'value': null, 'label': 'All'},
+      ...config.levels.map((l) => {'value': l.key, 'label': l.label}),
+    ];
+
+    // Get sub-levels for the active level
+    final subLevels = _activeLevel != null
+        ? config.levels
+              .where((l) => l.key == _activeLevel)
+              .expand((l) => l.subLevels)
+              .map((s) => s.label)
+              .toList()
         : <String>[];
-    final showClasses = classes.isNotEmpty;
+    final showSubLevels = subLevels.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -113,12 +126,12 @@ class _EducationFilterBarState extends State<EducationFilterBar> {
           child: ListView.separated(
             padding: EdgeInsets.symmetric(horizontal: 16.w),
             scrollDirection: Axis.horizontal,
-            itemCount: _levels.length,
+            itemCount: levelItems.length,
             separatorBuilder: (_, __) => SizedBox(width: 8.w),
             itemBuilder: (context, i) {
-              final level = _levels[i];
-              final val = level['value'] as String?;
-              final label = level['label'] as String;
+              final level = levelItems[i];
+              final val = level['value'];
+              final label = level['label'] ?? '';
               final isActive = _activeLevel == val;
               return GestureDetector(
                 onTap: () => _onLevelTap(val, context),
@@ -128,9 +141,7 @@ class _EducationFilterBarState extends State<EducationFilterBar> {
                   decoration: BoxDecoration(
                     color: isActive ? primary : bgColor,
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(
-                      color: isActive ? primary : borderColor,
-                    ),
+                    border: Border.all(color: isActive ? primary : borderColor),
                     boxShadow: isActive
                         ? [
                             BoxShadow(
@@ -161,11 +172,11 @@ class _EducationFilterBarState extends State<EducationFilterBar> {
           ),
         ),
 
-        // Class / Semester row (animated)
+        // Sub-level row (animated)
         AnimatedSize(
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeInOut,
-          child: showClasses
+          child: showSubLevels
               ? Padding(
                   padding: EdgeInsets.only(top: 8.h),
                   child: SizedBox(
@@ -173,26 +184,23 @@ class _EducationFilterBarState extends State<EducationFilterBar> {
                     child: ListView.separated(
                       padding: EdgeInsets.symmetric(horizontal: 16.w),
                       scrollDirection: Axis.horizontal,
-                      itemCount: classes.length,
+                      itemCount: subLevels.length,
                       separatorBuilder: (_, __) => SizedBox(width: 8.w),
                       itemBuilder: (context, i) {
-                        final cls = classes[i];
+                        final cls = subLevels[i];
                         final isActive = _activeClass == cls;
                         return GestureDetector(
                           onTap: () => _onClassTap(cls, context),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
-                            padding:
-                                EdgeInsets.symmetric(horizontal: 12.w),
+                            padding: EdgeInsets.symmetric(horizontal: 12.w),
                             decoration: BoxDecoration(
                               color: isActive
                                   ? primary.withOpacity(0.15)
                                   : bgColor,
                               borderRadius: BorderRadius.circular(999),
                               border: Border.all(
-                                color: isActive
-                                    ? primary
-                                    : borderColor,
+                                color: isActive ? primary : borderColor,
                                 width: isActive ? 1.5 : 1,
                               ),
                             ),
@@ -207,8 +215,8 @@ class _EducationFilterBarState extends State<EducationFilterBar> {
                                   color: isActive
                                       ? primary
                                       : (isDark
-                                          ? Colors.grey[300]
-                                          : Colors.grey[600]),
+                                            ? Colors.grey[300]
+                                            : Colors.grey[600]),
                                 ),
                               ),
                             ),

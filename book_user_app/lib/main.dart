@@ -1,4 +1,5 @@
 import 'package:book_user_app/config/routes/app_router.dart';
+import 'package:flutter/foundation.dart';
 import 'package:book_user_app/config/theme/app_theme.dart';
 import 'package:book_user_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:book_user_app/features/auth/presentation/bloc/auth_event.dart';
@@ -8,41 +9,68 @@ import 'package:book_user_app/features/chat/presentation/bloc/conversations_bloc
 import 'package:book_user_app/injection_container/injection_container.dart';
 import 'package:book_user_app/core/services/fcm_service.dart';
 import 'package:book_user_app/core/services/socket_service.dart';
+import 'package:book_user_app/core/services/education_config_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import 'dart:async';
+
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  runZonedGuarded(
+    () async {
+      WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase
-  await Firebase.initializeApp();
+      // Catch Flutter framework errors
+      FlutterError.onError = (details) {
+        debugPrint('🔴 FlutterError: ${details.exception}');
+        debugPrint('🔴 Stack: ${details.stack}');
+      };
 
-  // Set background message handler (must be top-level function)
-  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+      // Initialize Firebase
+      await Firebase.initializeApp();
 
-  await initDependencies();
+      // Set background message handler (must be top-level function)
+      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
-  // Initialize FCM service and setup notification tap navigation
-  final fcmService = sl<FCMService>();
-  await fcmService.initialize();
-  fcmService.onNotificationTap = (conversationId, extras) {
-    final uri = Uri(
-      path: '/chat/detail/$conversationId',
-      queryParameters: {
-        if (extras['name']?.isNotEmpty == true) 'name': extras['name']!,
-        if (extras['userId']?.isNotEmpty == true) 'userId': extras['userId']!,
-      },
-    );
-    AppRouter.router.go(uri.toString());
-  };
-  fcmService.onOfferNotificationTap = (offerId) {
-    AppRouter.router.push('/offer/$offerId');
-  };
+      await initDependencies();
 
-  runApp(const MyApp());
+      // Initialize FCM service and setup notification tap navigation
+      final fcmService = sl<FCMService>();
+      await fcmService.initialize();
+      fcmService.onNotificationTap = (conversationId, extras) {
+        final uri = Uri(
+          path: '/chat/detail/$conversationId',
+          queryParameters: {
+            if (extras['name']?.isNotEmpty == true) 'name': extras['name']!,
+            if (extras['userId']?.isNotEmpty == true)
+              'userId': extras['userId']!,
+          },
+        );
+        AppRouter.router.go(uri.toString());
+      };
+      fcmService.onOfferNotificationTap = (offerId) {
+        AppRouter.router.push('/offer/$offerId');
+      };
+
+      // Pre-fetch education config for dynamic filter/form data
+      EducationConfigService().fetchConfig();
+
+      runApp(const MyApp());
+    },
+    (error, stackTrace) {
+      // This catches ALL unhandled async errors — print them instead of crashing
+      debugPrint('');
+      debugPrint('🔴🔴🔴 UNCAUGHT ASYNC ERROR 🔴🔴🔴');
+      debugPrint('🔴 Error: $error');
+      debugPrint('🔴 Type: ${error.runtimeType}');
+      debugPrint('🔴 Stack: $stackTrace');
+      debugPrint('🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴');
+      debugPrint('');
+    },
+  );
 }
 
 class MyApp extends StatefulWidget {
@@ -98,16 +126,22 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 // User just logged in (or app restored an existing session).
                 // Connect socket and start listening for notifications so
                 // ConversationsBloc gets updates on ANY screen.
-                SocketService().connect().then((_) {
-                  if (context.mounted) {
-                    context.read<ConversationsBloc>().add(
-                      const StartConversationsListening(),
-                    );
-                  }
-                });
+                SocketService()
+                    .connect()
+                    .then((_) {
+                      if (context.mounted) {
+                        context.read<ConversationsBloc>().add(
+                          const StartConversationsListening(),
+                        );
+                      }
+                    })
+                    .catchError((e) {
+                      debugPrint('⚠️ Socket connect error (non-fatal): $e');
+                    });
               } else if (state is AuthUnauthenticated) {
                 // Clean up on logout
                 SocketService().disconnect();
+                AppRouter.router.go('/login');
               }
             },
             child: MaterialApp.router(
