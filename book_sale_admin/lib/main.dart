@@ -8,6 +8,7 @@ import 'screens/users_screen.dart';
 import 'screens/listings_screen.dart';
 import 'screens/reports_screen.dart';
 import 'screens/education_config_screen.dart';
+import 'screens/settings_screen.dart';
 
 void main() {
   runApp(const AdminApp());
@@ -24,7 +25,7 @@ class AdminApp extends StatelessWidget {
       builder: (_, __) => MaterialApp(
         title: 'CampusHub Admin',
         debugShowCheckedModeBanner: false,
-        theme: AppTheme.darkTheme,
+        theme: AppTheme.lightTheme,
         home: const AuthGate(),
       ),
     );
@@ -58,6 +59,10 @@ class _AuthGateState extends State<AuthGate> {
     }
   }
 
+  void _logout() {
+    setState(() => _loggedIn = false);
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_checking) {
@@ -70,12 +75,13 @@ class _AuthGateState extends State<AuthGate> {
       );
     }
 
-    return const AdminShell();
+    return AdminShell(onLogout: _logout);
   }
 }
 
 class AdminShell extends StatefulWidget {
-  const AdminShell({super.key});
+  final VoidCallback onLogout;
+  const AdminShell({super.key, required this.onLogout});
 
   @override
   State<AdminShell> createState() => _AdminShellState();
@@ -84,53 +90,77 @@ class AdminShell extends StatefulWidget {
 class _AdminShellState extends State<AdminShell> {
   int _currentIndex = 0;
 
-  final _screens = const [
-    DashboardScreen(),
-    ListingsScreen(),
-    UsersScreen(),
-    ReportsScreen(),
-    EducationConfigScreen(),
-  ];
+  late final List<Widget> _screens;
 
-  final _navItems = const [
-    NavigationDestination(
-      icon: Icon(Icons.dashboard_outlined),
-      selectedIcon: Icon(Icons.dashboard),
-      label: 'Dashboard',
-    ),
-    NavigationDestination(
-      icon: Icon(Icons.inventory_2_outlined),
-      selectedIcon: Icon(Icons.inventory_2),
-      label: 'Listings',
-    ),
-    NavigationDestination(
-      icon: Icon(Icons.people_outlined),
-      selectedIcon: Icon(Icons.people),
-      label: 'Users',
-    ),
-    NavigationDestination(
-      icon: Icon(Icons.flag_outlined),
-      selectedIcon: Icon(Icons.flag),
-      label: 'Reports',
-    ),
-    NavigationDestination(
-      icon: Icon(Icons.school_outlined),
-      selectedIcon: Icon(Icons.school),
-      label: 'Education',
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _screens = [
+      const DashboardScreen(),
+      const UsersScreen(),
+      const ListingsScreen(),
+      const EducationConfigScreen(),
+      const ReportsScreen(),
+      SettingsScreen(onLogout: widget.onLogout),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(child: _screens[_currentIndex]),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (i) => setState(() => _currentIndex = i),
-        destinations: _navItems,
-        backgroundColor: const Color(0xFF1E293B),
-        indicatorColor: const Color(0xFF6366F1).withOpacity(0.2),
-        labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
+      body: SafeArea(
+        child: IndexedStack(index: _currentIndex, children: _screens),
+      ),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          border: Border(
+            top: BorderSide(color: AppColors.cardBorder, width: 1),
+          ),
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _currentIndex,
+          onTap: (i) => setState(() => _currentIndex = i),
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: AppColors.surface,
+          selectedItemColor: AppColors.primary,
+          unselectedItemColor: AppColors.textMuted,
+          selectedFontSize: 11,
+          unselectedFontSize: 11,
+          elevation: 0,
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.dashboard_outlined),
+              activeIcon: Icon(Icons.dashboard),
+              label: 'Home',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.people_outlined),
+              activeIcon: Icon(Icons.people),
+              label: 'Users',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.inventory_2_outlined),
+              activeIcon: Icon(Icons.inventory_2),
+              label: 'Listings',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.category_outlined),
+              activeIcon: Icon(Icons.category),
+              label: 'Categories',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.flag_outlined),
+              activeIcon: Icon(Icons.flag),
+              label: 'Reports',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.settings_outlined),
+              activeIcon: Icon(Icons.settings),
+              label: 'Settings',
+            ),
+          ],
+        ),
       ),
     );
   }

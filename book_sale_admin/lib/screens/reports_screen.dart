@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../core/api_client.dart';
 import '../core/constants.dart';
+import '../core/theme.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -51,13 +52,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Color _statusColor(String? status) {
     switch (status) {
       case 'pending':
-        return const Color(0xFFF59E0B);
+        return AppColors.warning;
       case 'resolved':
-        return const Color(0xFF10B981);
+        return AppColors.success;
       case 'dismissed':
-        return Colors.grey;
+        return AppColors.textMuted;
       default:
-        return Colors.grey;
+        return AppColors.textMuted;
     }
   }
 
@@ -66,14 +67,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: EdgeInsets.all(16.w),
+        Container(
+          color: AppColors.surface,
+          padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 16.h),
           child: Text(
             'Reports',
             style: TextStyle(
-              fontSize: 28.sp,
+              fontSize: 22.sp,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: AppColors.textPrimary,
             ),
           ),
         ),
@@ -90,113 +92,124 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               Icon(
                                 Icons.check_circle,
                                 size: 48.sp,
-                                color: Colors.green,
+                                color: AppColors.success,
                               ),
                               SizedBox(height: 12.h),
                               Text(
                                 'No reports',
-                                style: TextStyle(color: Colors.grey[400]),
+                                style: TextStyle(color: AppColors.textMuted),
                               ),
                             ],
                           ),
                         )
                       : ListView.builder(
-                          padding: EdgeInsets.symmetric(horizontal: 16.w),
+                          padding: EdgeInsets.all(16.w),
                           itemCount: _reports.length,
                           itemBuilder: (ctx, i) {
                             final report = _reports[i];
                             final status = report['status'] ?? 'pending';
                             final isPending = status == 'pending';
 
-                            return Card(
-                              margin: EdgeInsets.only(bottom: 8.h),
-                              child: Padding(
-                                padding: EdgeInsets.all(12.w),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
+                            return Container(
+                              margin: EdgeInsets.only(bottom: 10.h),
+                              padding: EdgeInsets.all(14.w),
+                              decoration: BoxDecoration(
+                                color: AppColors.surface,
+                                borderRadius: BorderRadius.circular(14.r),
+                                border: Border.all(color: AppColors.cardBorder),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 8.w,
+                                          vertical: 3.h,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: _statusColor(
+                                            status,
+                                          ).withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(
+                                            6.r,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          status.toUpperCase(),
+                                          style: TextStyle(
+                                            color: _statusColor(status),
+                                            fontSize: 10.sp,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      Text(
+                                        report['targetType'] ?? '',
+                                        style: TextStyle(
+                                          color: AppColors.textMuted,
+                                          fontSize: 12.sp,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: 8.h),
+                                  Text(
+                                    report['reason'] ?? 'No reason given',
+                                    style: TextStyle(
+                                      color: AppColors.textPrimary,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14.sp,
+                                    ),
+                                  ),
+                                  SizedBox(height: 4.h),
+                                  Text(
+                                    'Reported by: ${report['reporter']?['name'] ?? 'Unknown'}',
+                                    style: TextStyle(
+                                      color: AppColors.textMuted,
+                                      fontSize: 12.sp,
+                                    ),
+                                  ),
+                                  if (isPending) ...[
+                                    SizedBox(height: 12.h),
+                                    Divider(
+                                      color: AppColors.cardBorder,
+                                      height: 1,
+                                    ),
+                                    SizedBox(height: 8.h),
                                     Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
                                       children: [
-                                        Container(
-                                          padding: EdgeInsets.symmetric(
-                                            horizontal: 8.w,
-                                            vertical: 3.h,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: _statusColor(
-                                              status,
-                                            ).withOpacity(0.15),
-                                            borderRadius: BorderRadius.circular(
-                                              6.r,
-                                            ),
-                                          ),
+                                        TextButton(
+                                          onPressed: () =>
+                                              _review(report['_id'], 'dismiss'),
                                           child: Text(
-                                            status.toUpperCase(),
+                                            'Dismiss',
                                             style: TextStyle(
-                                              color: _statusColor(status),
-                                              fontSize: 10.sp,
-                                              fontWeight: FontWeight.bold,
+                                              color: AppColors.textMuted,
                                             ),
                                           ),
                                         ),
-                                        const Spacer(),
-                                        Text(
-                                          report['targetType'] ?? '',
-                                          style: TextStyle(
-                                            color: Colors.grey[400],
-                                            fontSize: 12.sp,
+                                        SizedBox(width: 8.w),
+                                        ElevatedButton(
+                                          onPressed: () =>
+                                              _review(report['_id'], 'resolve'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: AppColors.error,
+                                            foregroundColor: Colors.white,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8.r),
+                                            ),
                                           ),
+                                          child: const Text('Take Action'),
                                         ),
                                       ],
                                     ),
-                                    SizedBox(height: 8.h),
-                                    Text(
-                                      report['reason'] ?? 'No reason given',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    SizedBox(height: 4.h),
-                                    Text(
-                                      'Reported by: ${report['reporter']?['name'] ?? 'Unknown'}',
-                                      style: TextStyle(
-                                        color: Colors.grey[400],
-                                        fontSize: 12.sp,
-                                      ),
-                                    ),
-                                    if (isPending) ...[
-                                      SizedBox(height: 12.h),
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.end,
-                                        children: [
-                                          TextButton(
-                                            onPressed: () => _review(
-                                              report['_id'],
-                                              'dismiss',
-                                            ),
-                                            child: const Text('Dismiss'),
-                                          ),
-                                          SizedBox(width: 8.w),
-                                          ElevatedButton(
-                                            onPressed: () => _review(
-                                              report['_id'],
-                                              'resolve',
-                                            ),
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: const Color(
-                                                0xFFEF4444,
-                                              ),
-                                              foregroundColor: Colors.white,
-                                            ),
-                                            child: const Text('Take Action'),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
                                   ],
-                                ),
+                                ],
                               ),
                             );
                           },

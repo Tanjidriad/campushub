@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../core/api_client.dart';
 import '../core/constants.dart';
+import '../core/theme.dart';
+import 'package:intl/intl.dart';
 
 class ListingsScreen extends StatefulWidget {
   const ListingsScreen({super.key});
@@ -10,47 +12,75 @@ class ListingsScreen extends StatefulWidget {
   State<ListingsScreen> createState() => _ListingsScreenState();
 }
 
-class _ListingsScreenState extends State<ListingsScreen> {
-  List<dynamic> _listings = [];
+class _ListingsScreenState extends State<ListingsScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabCtl;
+  List<dynamic> _pending = [];
+  List<dynamic> _all = [];
   Map<String, dynamic>? _stats;
-  bool _loading = true;
-  String? _statusFilter = 'pending';
-  final Set<String> _selected = {};
+  bool _loadingPending = true;
+  bool _loadingAll = true;
+  String _searchAll = '';
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _tabCtl = TabController(length: 2, vsync: this);
+    _loadPending();
+    _loadAll();
   }
 
-  Future<void> _load() async {
-    setState(() => _loading = true);
+  @override
+  void dispose() {
+    _tabCtl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadPending() async {
+    setState(() => _loadingPending = true);
+    try {
+      final response = await ApiClient().dio.get(
+        ApiConstants.pendingListings,
+        queryParameters: {'limit': 50},
+      );
+      if (mounted) {
+        setState(() {
+          _pending = response.data['data'] ?? [];
+          _loadingPending = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _loadingPending = false);
+    }
+  }
+
+  Future<void> _loadAll() async {
+    setState(() => _loadingAll = true);
     try {
       final params = <String, dynamic>{'limit': 50};
-      if (_statusFilter != null) params['status'] = _statusFilter;
+      if (_searchAll.isNotEmpty) params['search'] = _searchAll;
 
       final response = await ApiClient().dio.get(
         ApiConstants.listings,
         queryParameters: params,
       );
-
       if (mounted) {
         setState(() {
-          _listings = response.data['data'] ?? [];
+          _all = response.data['data'] ?? [];
           _stats = response.data['statistics'];
-          _selected.clear();
-          _loading = false;
+          _loadingAll = false;
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) setState(() => _loadingAll = false);
     }
   }
 
   Future<void> _approve(String id) async {
     try {
       await ApiClient().dio.put('${ApiConstants.listings}/$id/approve');
-      _load();
+      _loadPending();
+      _loadAll();
     } catch (_) {}
   }
 
@@ -62,7 +92,8 @@ class _ListingsScreenState extends State<ListingsScreen> {
         '${ApiConstants.listings}/$id/reject',
         data: {'reason': reason},
       );
-      _load();
+      _loadPending();
+      _loadAll();
     } catch (_) {}
   }
 
@@ -87,25 +118,14 @@ class _ListingsScreenState extends State<ListingsScreen> {
     if (confirmed != true) return;
     try {
       await ApiClient().dio.delete('${ApiConstants.listings}/$id');
-      _load();
+      _loadAll();
     } catch (_) {}
   }
 
   Future<void> _toggleFeature(String id) async {
     try {
       await ApiClient().dio.put('${ApiConstants.listings}/$id/feature');
-      _load();
-    } catch (_) {}
-  }
-
-  Future<void> _bulkApprove() async {
-    if (_selected.isEmpty) return;
-    try {
-      await ApiClient().dio.post(
-        '/admin/listings/bulk-approve',
-        data: {'listingIds': _selected.toList()},
-      );
-      _load();
+      _loadAll();
     } catch (_) {}
   }
 
@@ -136,337 +156,594 @@ class _ListingsScreenState extends State<ListingsScreen> {
     );
   }
 
+  String _timeAgo(String? dateStr) {
+    if (dateStr == null) return '';
+    try {
+      final date = DateTime.parse(dateStr);
+      final diff = DateTime.now().difference(date);
+      if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+      if (diff.inHours < 24) return '${diff.inHours}h ago';
+      if (diff.inDays < 7) return '${diff.inDays}d ago';
+      return '${(diff.inDays / 7).floor()}w ago';
+    } catch (_) {
+      return '';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Header
-        Padding(
-          padding: EdgeInsets.all(16.w),
+        // AppBar
+        Container(
+          color: AppColors.surface,
+          padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 0),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Listings',
-                style: TextStyle(
-                  fontSize: 28.sp,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
+              Row(
+                children: [
+                  Text(
+                    'Listing Management',
+                    style: TextStyle(
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(Icons.tune, color: AppColors.textMuted),
+                ],
               ),
               SizedBox(height: 12.h),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    _statusChip(
-                      'Pending (${_stats?['pending'] ?? 0})',
-                      'pending',
-                      const Color(0xFFF59E0B),
+              // Tabs
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                child: TabBar(
+                  controller: _tabCtl,
+                  indicator: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(10.r),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  labelColor: AppColors.textPrimary,
+                  unselectedLabelColor: AppColors.textMuted,
+                  labelStyle: TextStyle(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  dividerColor: Colors.transparent,
+                  tabs: [
+                    Tab(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.inbox_outlined, size: 18),
+                          SizedBox(width: 6.w),
+                          const Text('Queue'),
+                          if (_pending.isNotEmpty) ...[
+                            SizedBox(width: 6.w),
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 6.w,
+                                vertical: 1.h,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.error,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                '${_pending.length}',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
-                    SizedBox(width: 8.w),
-                    _statusChip(
-                      'Approved (${_stats?['approved'] ?? 0})',
-                      'approved',
-                      const Color(0xFF10B981),
-                    ),
-                    SizedBox(width: 8.w),
-                    _statusChip(
-                      'Rejected (${_stats?['rejected'] ?? 0})',
-                      'rejected',
-                      const Color(0xFFEF4444),
-                    ),
-                    SizedBox(width: 8.w),
-                    _statusChip(
-                      'All (${_stats?['total'] ?? 0})',
-                      null,
-                      const Color(0xFF6366F1),
+                    Tab(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.grid_view, size: 18),
+                          SizedBox(width: 6.w),
+                          const Text('Management'),
+                          SizedBox(width: 6.w),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 6.w,
+                              vertical: 1.h,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              '${_stats?['total'] ?? 0}',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
-              if (_selected.isNotEmpty) ...[
-                SizedBox(height: 12.h),
-                Row(
-                  children: [
-                    Text(
-                      '${_selected.length} selected',
-                      style: TextStyle(
-                        color: Colors.grey[300],
-                        fontSize: 13.sp,
-                      ),
-                    ),
-                    const Spacer(),
-                    TextButton.icon(
-                      onPressed: _bulkApprove,
-                      icon: const Icon(Icons.check_circle, size: 18),
-                      label: const Text('Approve All'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: const Color(0xFF10B981),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+              SizedBox(height: 8.h),
             ],
           ),
         ),
 
-        // Listings list
+        // Tab views
         Expanded(
-          child: _loading
-              ? const Center(child: CircularProgressIndicator())
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: _listings.isEmpty
-                      ? Center(
-                          child: Text(
-                            'No listings found',
-                            style: TextStyle(color: Colors.grey[400]),
-                          ),
-                        )
-                      : ListView.builder(
-                          padding: EdgeInsets.symmetric(horizontal: 16.w),
-                          itemCount: _listings.length,
-                          itemBuilder: (ctx, i) {
-                            final listing = _listings[i];
-                            final id = listing['_id'] as String;
-                            final isSelected = _selected.contains(id);
-                            final isFeatured = listing['isFeatured'] == true;
-                            final status = listing['status'] ?? '';
-                            final images = listing['images'] as List? ?? [];
-
-                            return Card(
-                              margin: EdgeInsets.only(bottom: 8.h),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12.r),
-                                side: BorderSide(
-                                  color: isSelected
-                                      ? const Color(0xFF6366F1)
-                                      : const Color(0xFF334155),
-                                ),
-                              ),
-                              child: InkWell(
-                                onLongPress: () {
-                                  setState(() {
-                                    if (isSelected) {
-                                      _selected.remove(id);
-                                    } else {
-                                      _selected.add(id);
-                                    }
-                                  });
-                                },
-                                borderRadius: BorderRadius.circular(12.r),
-                                child: Padding(
-                                  padding: EdgeInsets.all(12.w),
-                                  child: Row(
-                                    children: [
-                                      // Thumbnail
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.circular(
-                                          8.r,
-                                        ),
-                                        child: images.isNotEmpty
-                                            ? Image.network(
-                                                images[0]['url'] ?? '',
-                                                width: 56.w,
-                                                height: 56.w,
-                                                fit: BoxFit.cover,
-                                                errorBuilder: (_, __, ___) =>
-                                                    _placeholder(),
-                                              )
-                                            : _placeholder(),
-                                      ),
-                                      SizedBox(width: 12.w),
-
-                                      // Info
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              children: [
-                                                if (isFeatured)
-                                                  Container(
-                                                    margin: EdgeInsets.only(
-                                                      right: 6.w,
-                                                    ),
-                                                    padding:
-                                                        EdgeInsets.symmetric(
-                                                          horizontal: 6.w,
-                                                          vertical: 2.h,
-                                                        ),
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.amber
-                                                          .withOpacity(0.2),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            4.r,
-                                                          ),
-                                                    ),
-                                                    child: Text(
-                                                      '⭐',
-                                                      style: TextStyle(
-                                                        fontSize: 10.sp,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                Expanded(
-                                                  child: Text(
-                                                    listing['title'] ?? '',
-                                                    maxLines: 1,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                    style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                      color: Colors.white,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            SizedBox(height: 4.h),
-                                            Text(
-                                              '${listing['category'] ?? ''} • ৳${listing['price'] ?? 0}',
-                                              style: TextStyle(
-                                                color: Colors.grey[400],
-                                                fontSize: 12.sp,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-
-                                      // Actions
-                                      if (status == 'pending')
-                                        Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            IconButton(
-                                              icon: const Icon(
-                                                Icons.check_circle,
-                                                color: Color(0xFF10B981),
-                                              ),
-                                              onPressed: () => _approve(id),
-                                              tooltip: 'Approve',
-                                              iconSize: 24,
-                                              padding: EdgeInsets.zero,
-                                              constraints:
-                                                  const BoxConstraints(),
-                                            ),
-                                            SizedBox(width: 8.w),
-                                            IconButton(
-                                              icon: const Icon(
-                                                Icons.cancel,
-                                                color: Color(0xFFEF4444),
-                                              ),
-                                              onPressed: () => _reject(id),
-                                              tooltip: 'Reject',
-                                              iconSize: 24,
-                                              padding: EdgeInsets.zero,
-                                              constraints:
-                                                  const BoxConstraints(),
-                                            ),
-                                          ],
-                                        )
-                                      else
-                                        PopupMenuButton<String>(
-                                          icon: const Icon(
-                                            Icons.more_vert,
-                                            color: Colors.grey,
-                                          ),
-                                          onSelected: (action) {
-                                            switch (action) {
-                                              case 'feature':
-                                                _toggleFeature(id);
-                                                break;
-                                              case 'delete':
-                                                _delete(id);
-                                                break;
-                                            }
-                                          },
-                                          itemBuilder: (_) => [
-                                            PopupMenuItem(
-                                              value: 'feature',
-                                              child: Row(
-                                                children: [
-                                                  Icon(
-                                                    isFeatured
-                                                        ? Icons.star_border
-                                                        : Icons.star,
-                                                    size: 18,
-                                                    color: Colors.amber,
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  Text(
-                                                    isFeatured
-                                                        ? 'Unfeature'
-                                                        : 'Feature',
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            const PopupMenuItem(
-                                              value: 'delete',
-                                              child: Row(
-                                                children: [
-                                                  Icon(
-                                                    Icons.delete,
-                                                    size: 18,
-                                                    color: Colors.red,
-                                                  ),
-                                                  SizedBox(width: 8),
-                                                  Text('Delete'),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                ),
+          child: TabBarView(
+            controller: _tabCtl,
+            children: [_buildQueueTab(), _buildManagementTab()],
+          ),
         ),
       ],
     );
   }
 
-  Widget _placeholder() => Container(
-    width: 56.w,
-    height: 56.w,
-    color: const Color(0xFF334155),
-    child: const Icon(Icons.image, color: Colors.grey),
-  );
+  Widget _buildQueueTab() {
+    if (_loadingPending) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-  Widget _statusChip(String label, String? status, Color color) {
-    final isActive = _statusFilter == status;
-    return GestureDetector(
-      onTap: () {
-        setState(() => _statusFilter = status);
-        _load();
-      },
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
-        decoration: BoxDecoration(
-          color: isActive ? color.withOpacity(0.2) : Colors.transparent,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: isActive ? color : const Color(0xFF334155)),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isActive ? color : Colors.grey[400],
-            fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-            fontSize: 13.sp,
+    return RefreshIndicator(
+      onRefresh: _loadPending,
+      child: _pending.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.check_circle,
+                    size: 48.sp,
+                    color: AppColors.success,
+                  ),
+                  SizedBox(height: 8.h),
+                  Text(
+                    'All caught up!',
+                    style: TextStyle(color: AppColors.textMuted),
+                  ),
+                ],
+              ),
+            )
+          : ListView(
+              padding: EdgeInsets.all(16.w),
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.inbox, size: 18, color: AppColors.textSecondary),
+                    SizedBox(width: 6.w),
+                    Text(
+                      '${_pending.length} Pending Review',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                        fontSize: 14.sp,
+                      ),
+                    ),
+                    const Spacer(),
+                    Icon(Icons.sort, size: 16, color: AppColors.textMuted),
+                    SizedBox(width: 4.w),
+                    Text(
+                      'Newest',
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 12.sp,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 12.h),
+                ...List.generate(
+                  _pending.length,
+                  (i) => _buildPendingCard(_pending[i]),
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildPendingCard(Map<String, dynamic> listing) {
+    final images = listing['images'] as List? ?? [];
+    final seller = listing['seller'];
+    final sellerName = seller is Map ? seller['name'] ?? '' : '';
+    final sellerRole = seller is Map ? seller['role'] ?? 'Student' : 'Student';
+
+    return Container(
+      margin: EdgeInsets.only(bottom: 12.h),
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Seller + Category
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 18.r,
+                backgroundImage: seller is Map && seller['avatar'] != null
+                    ? NetworkImage(seller['avatar'])
+                    : null,
+                backgroundColor: AppColors.primaryLight,
+                child: seller is Map && seller['avatar'] == null
+                    ? Text(
+                        sellerName.isNotEmpty
+                            ? sellerName[0].toUpperCase()
+                            : '?',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      )
+                    : null,
+              ),
+              SizedBox(width: 10.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      sellerName,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                        fontSize: 14.sp,
+                      ),
+                    ),
+                    Text(
+                      '${sellerRole[0].toUpperCase()}${sellerRole.substring(1)} • ${_timeAgo(listing['createdAt'])}',
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 11.sp,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                decoration: BoxDecoration(
+                  color: AppColors.warning.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8.r),
+                  border: Border.all(color: AppColors.warning.withOpacity(0.3)),
+                ),
+                child: Text(
+                  listing['category'] ?? '',
+                  style: TextStyle(
+                    color: AppColors.warning,
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ),
+
+          SizedBox(height: 12.h),
+
+          // Title, Price, Description + Image
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      listing['title'] ?? '',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16.sp,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      '৳${listing['price'] ?? 0}',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14.sp,
+                      ),
+                    ),
+                    SizedBox(height: 4.h),
+                    Text(
+                      listing['description'] ?? '',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 12.sp,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (images.isNotEmpty) ...[
+                SizedBox(width: 12.w),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10.r),
+                  child: Image.network(
+                    images[0]['url'] ?? '',
+                    width: 72.w,
+                    height: 72.w,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      width: 72.w,
+                      height: 72.w,
+                      color: AppColors.background,
+                      child: const Icon(
+                        Icons.image,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+
+          SizedBox(height: 12.h),
+          Divider(color: AppColors.cardBorder, height: 1),
+          SizedBox(height: 8.h),
+
+          // Actions
+          Row(
+            children: [
+              Expanded(
+                child: TextButton.icon(
+                  onPressed: () => _reject(listing['_id']),
+                  icon: const Icon(
+                    Icons.close,
+                    size: 18,
+                    color: AppColors.error,
+                  ),
+                  label: Text(
+                    'Reject',
+                    style: TextStyle(
+                      color: AppColors.error,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              Container(width: 1, height: 24, color: AppColors.cardBorder),
+              Expanded(
+                child: TextButton.icon(
+                  onPressed: () => _approve(listing['_id']),
+                  icon: const Icon(
+                    Icons.check,
+                    size: 18,
+                    color: AppColors.success,
+                  ),
+                  label: Text(
+                    'Approve',
+                    style: TextStyle(
+                      color: AppColors.success,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
+
+  Widget _buildManagementTab() {
+    if (_loadingAll) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadAll,
+      child: ListView(
+        padding: EdgeInsets.all(16.w),
+        children: [
+          // Search
+          TextField(
+            style: TextStyle(color: AppColors.textPrimary, fontSize: 14.sp),
+            decoration: InputDecoration(
+              hintText: 'Search title, ID, or user...',
+              hintStyle: TextStyle(color: AppColors.textMuted),
+              prefixIcon: const Icon(Icons.search, color: AppColors.textMuted),
+              suffixIcon: const Icon(Icons.tune, color: AppColors.textMuted),
+            ),
+            onChanged: (val) {
+              _searchAll = val;
+              _loadAll();
+            },
+          ),
+          SizedBox(height: 16.h),
+          ...List.generate(_all.length, (i) => _buildManagedCard(_all[i])),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildManagedCard(Map<String, dynamic> listing) {
+    final images = listing['images'] as List? ?? [];
+    final seller = listing['seller'];
+    final sellerName = seller is Map ? seller['name'] ?? '' : '';
+    final sellerEmail = seller is Map ? seller['email'] ?? '' : '';
+    final isFeatured = listing['isFeatured'] == true;
+    final status = listing['status'] ?? '';
+
+    return Container(
+      margin: EdgeInsets.only(bottom: 12.h),
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      child: Column(
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Status badge + Image
+              Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10.r),
+                    child: images.isNotEmpty
+                        ? Image.network(
+                            images[0]['url'] ?? '',
+                            width: 72.w,
+                            height: 72.w,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => _imgPlaceholder(),
+                          )
+                        : _imgPlaceholder(),
+                  ),
+                  Positioned(
+                    top: 4,
+                    left: 4,
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 6.w,
+                        vertical: 2.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: status == 'approved'
+                            ? AppColors.success
+                            : status == 'rejected'
+                            ? AppColors.error
+                            : AppColors.warning,
+                        borderRadius: BorderRadius.circular(4.r),
+                      ),
+                      child: Text(
+                        status.toUpperCase(),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 8.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(width: 12.w),
+
+              // Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      listing['title'] ?? '',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15.sp,
+                        color: AppColors.textPrimary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      '$sellerEmail • ${_timeAgo(listing['createdAt'])}',
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 11.sp,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    SizedBox(height: 4.h),
+                    Text(
+                      '৳${listing['price'] ?? 0}',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14.sp,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          SizedBox(height: 10.h),
+
+          // Featured toggle + Delete
+          Row(
+            children: [
+              Text(
+                'Featured',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              SizedBox(width: 8.w),
+              SizedBox(
+                height: 24,
+                child: Switch(
+                  value: isFeatured,
+                  onChanged: (_) => _toggleFeature(listing['_id']),
+                  activeColor: AppColors.primary,
+                ),
+              ),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: () => _delete(listing['_id']),
+                icon: const Icon(
+                  Icons.delete_outline,
+                  size: 18,
+                  color: AppColors.error,
+                ),
+                label: Text(
+                  'Delete',
+                  style: TextStyle(color: AppColors.error, fontSize: 13.sp),
+                ),
+                style: TextButton.styleFrom(padding: EdgeInsets.zero),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _imgPlaceholder() => Container(
+    width: 72.w,
+    height: 72.w,
+    decoration: BoxDecoration(
+      color: AppColors.background,
+      borderRadius: BorderRadius.circular(10.r),
+    ),
+    child: const Icon(Icons.image, color: AppColors.textMuted),
+  );
 }

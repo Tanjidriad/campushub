@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../core/api_client.dart';
 import '../core/constants.dart';
+import '../core/theme.dart';
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback onLoginSuccess;
@@ -37,7 +38,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final data = response.data;
       if (data['success'] == true) {
-        final user = data['user'];
+        final inner = data['data'] ?? {};
+        final user = inner['user'];
         final role = user?['role'] ?? '';
 
         if (role != 'admin' && role != 'superadmin') {
@@ -45,8 +47,10 @@ class _LoginScreenState extends State<LoginScreen> {
           return;
         }
 
-        await ApiClient().saveTokens(data['accessToken'], data['refreshToken']);
-
+        await ApiClient().saveTokens(
+          inner['accessToken'],
+          inner['refreshToken'],
+        );
         widget.onLoginSuccess();
       } else {
         setState(() => _error = data['message'] ?? 'Login failed');
@@ -68,6 +72,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: Center(
         child: SingleChildScrollView(
           padding: EdgeInsets.all(24.w),
@@ -76,15 +81,15 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               // Logo
               Container(
-                padding: EdgeInsets.all(16.w),
+                padding: EdgeInsets.all(20.w),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF6366F1).withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(20.r),
+                  color: AppColors.primaryLight,
+                  borderRadius: BorderRadius.circular(24.r),
                 ),
                 child: Icon(
                   Icons.admin_panel_settings_rounded,
                   size: 48.sp,
-                  color: const Color(0xFF6366F1),
+                  color: AppColors.primary,
                 ),
               ),
               SizedBox(height: 24.h),
@@ -93,13 +98,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: TextStyle(
                   fontSize: 28.sp,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: AppColors.textPrimary,
                 ),
               ),
               SizedBox(height: 8.h),
               Text(
                 'Sign in with your admin account',
-                style: TextStyle(fontSize: 14.sp, color: Colors.grey[400]),
+                style: TextStyle(fontSize: 14.sp, color: AppColors.textMuted),
               ),
               SizedBox(height: 40.h),
 
@@ -107,7 +112,7 @@ class _LoginScreenState extends State<LoginScreen> {
               TextField(
                 controller: _emailCtl,
                 keyboardType: TextInputType.emailAddress,
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: AppColors.textPrimary),
                 decoration: const InputDecoration(
                   labelText: 'Email',
                   prefixIcon: Icon(Icons.email_outlined),
@@ -119,7 +124,7 @@ class _LoginScreenState extends State<LoginScreen> {
               TextField(
                 controller: _passwordCtl,
                 obscureText: _obscurePassword,
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: AppColors.textPrimary),
                 onSubmitted: (_) => _login(),
                 decoration: InputDecoration(
                   labelText: 'Password',
@@ -142,22 +147,25 @@ class _LoginScreenState extends State<LoginScreen> {
                 Container(
                   padding: EdgeInsets.all(12.w),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8.r),
-                    border: Border.all(color: Colors.red.withOpacity(0.3)),
+                    color: AppColors.error.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(10.r),
+                    border: Border.all(color: AppColors.error.withOpacity(0.2)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.error_outline,
-                        color: Colors.red,
+                        color: AppColors.error,
                         size: 20,
                       ),
                       SizedBox(width: 8.w),
                       Expanded(
                         child: Text(
                           _error!,
-                          style: const TextStyle(color: Colors.red),
+                          style: TextStyle(
+                            color: AppColors.error,
+                            fontSize: 13.sp,
+                          ),
                         ),
                       ),
                     ],
@@ -174,11 +182,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: ElevatedButton(
                   onPressed: _loading ? null : _login,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6366F1),
+                    backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12.r),
+                      borderRadius: BorderRadius.circular(14.r),
                     ),
+                    elevation: 0,
                   ),
                   child: _loading
                       ? const SizedBox(

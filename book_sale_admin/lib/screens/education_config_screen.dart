@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../core/api_client.dart';
 import '../core/constants.dart';
+import '../core/theme.dart';
 
 class EducationConfigScreen extends StatefulWidget {
   const EducationConfigScreen({super.key});
@@ -49,18 +50,23 @@ class _EducationConfigScreenState extends State<EducationConfigScreen> {
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Configuration saved!'),
-            backgroundColor: Color(0xFF10B981),
+          SnackBar(
+            content: const Text('Configuration saved!'),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to save'),
-            backgroundColor: Colors.red,
+          SnackBar(
+            content: const Text('Failed to save'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -219,19 +225,14 @@ class _EducationConfigScreenState extends State<EducationConfigScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    if (_loading) return const Center(child: CircularProgressIndicator());
 
     if (_config == null) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'Failed to load config',
-              style: TextStyle(color: Colors.white),
-            ),
+            const Text('Failed to load config'),
             SizedBox(height: 8.h),
             ElevatedButton(onPressed: _load, child: const Text('Retry')),
           ],
@@ -242,221 +243,213 @@ class _EducationConfigScreenState extends State<EducationConfigScreen> {
     final levels = _config!['levels'] as List? ?? [];
     final bookTypes = _config!['bookTypes'] as List? ?? [];
 
-    return Stack(
-      children: [
-        RefreshIndicator(
-          onRefresh: _load,
-          child: ListView(
-            padding: EdgeInsets.all(16.w),
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: ListView(
+        padding: EdgeInsets.all(16.w),
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Education Config',
-                    style: TextStyle(
-                      fontSize: 28.sp,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  ElevatedButton.icon(
-                    onPressed: _saving ? null : _save,
-                    icon: _saving
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Icon(Icons.save, size: 18),
-                    label: Text(_saving ? 'Saving...' : 'Save'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF10B981),
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 8.h),
               Text(
-                'Configure education levels and book types for your marketplace.',
-                style: TextStyle(color: Colors.grey[400], fontSize: 13.sp),
+                'Education Config',
+                style: TextStyle(
+                  fontSize: 22.sp,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
               ),
-              SizedBox(height: 24.h),
-
-              // Education Levels
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Education Levels',
-                    style: TextStyle(
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: _addLevel,
-                    icon: const Icon(
-                      Icons.add_circle,
-                      color: Color(0xFF6366F1),
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 8.h),
-
-              ...List.generate(levels.length, (li) {
-                final level = levels[li];
-                final subLevels = level['subLevels'] as List? ?? [];
-                return Card(
-                  margin: EdgeInsets.only(bottom: 12.h),
-                  child: Padding(
-                    padding: EdgeInsets.all(12.w),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 10.w,
-                                vertical: 4.h,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(
-                                  0xFF6366F1,
-                                ).withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(8.r),
-                              ),
-                              child: Text(
-                                level['key'] ?? '',
-                                style: TextStyle(
-                                  color: const Color(0xFF6366F1),
-                                  fontSize: 11.sp,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: 8.w),
-                            Expanded(
-                              child: Text(
-                                level['label'] ?? '',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.add, size: 20),
-                              color: Colors.green,
-                              onPressed: () => _addSubLevel(li),
-                              tooltip: 'Add sub-level',
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline, size: 20),
-                              color: Colors.red,
-                              onPressed: () {
-                                setState(() => levels.removeAt(li));
-                              },
-                              tooltip: 'Remove level',
-                            ),
-                          ],
+              ElevatedButton.icon(
+                onPressed: _saving ? null : _save,
+                icon: _saving
+                    ? SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
                         ),
-                        if (subLevels.isNotEmpty) ...[
-                          SizedBox(height: 8.h),
-                          Wrap(
-                            spacing: 6.w,
-                            runSpacing: 6.h,
-                            children: List.generate(subLevels.length, (si) {
-                              final sub = subLevels[si];
-                              return Chip(
-                                label: Text(
-                                  sub['label'] ?? '',
-                                  style: TextStyle(fontSize: 12.sp),
-                                ),
-                                deleteIcon: const Icon(Icons.close, size: 16),
-                                onDeleted: () {
-                                  setState(() => subLevels.removeAt(si));
-                                },
-                                backgroundColor: const Color(0xFF334155),
-                                side: BorderSide.none,
-                              );
-                            }),
-                          ),
-                        ] else
-                          Padding(
-                            padding: EdgeInsets.only(top: 8.h),
-                            child: Text(
-                              'No sub-levels. Tap + to add.',
-                              style: TextStyle(
-                                color: Colors.grey[500],
-                                fontSize: 12.sp,
-                                fontStyle: FontStyle.italic,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
+                      )
+                    : const Icon(Icons.save, size: 18),
+                label: Text(_saving ? 'Saving...' : 'Save'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.success,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10.r),
                   ),
-                );
-              }),
-
-              SizedBox(height: 24.h),
-
-              // Book Types
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Book Types',
-                    style: TextStyle(
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: _addBookType,
-                    icon: const Icon(
-                      Icons.add_circle,
-                      color: Color(0xFF6366F1),
-                    ),
-                  ),
-                ],
+                ),
               ),
-              SizedBox(height: 8.h),
-              Wrap(
-                spacing: 8.w,
-                runSpacing: 8.h,
-                children: List.generate(bookTypes.length, (i) {
-                  final bt = bookTypes[i];
-                  return Chip(
-                    label: Text(
-                      '${bt['label']} (${bt['key']})',
-                      style: TextStyle(fontSize: 12.sp, color: Colors.white),
-                    ),
-                    deleteIcon: const Icon(Icons.close, size: 16),
-                    onDeleted: () {
-                      setState(() => bookTypes.removeAt(i));
-                    },
-                    backgroundColor: const Color(0xFF334155),
-                    side: BorderSide.none,
-                  );
-                }),
-              ),
-
-              SizedBox(height: 100.h),
             ],
           ),
-        ),
-      ],
+          SizedBox(height: 4.h),
+          Text(
+            'Configure education levels and book types.',
+            style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
+          ),
+          SizedBox(height: 20.h),
+
+          // Education Levels
+          Row(
+            children: [
+              Text(
+                'Education Levels',
+                style: TextStyle(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                onPressed: _addLevel,
+                icon: Icon(Icons.add_circle, color: AppColors.primary),
+              ),
+            ],
+          ),
+          SizedBox(height: 8.h),
+
+          ...List.generate(levels.length, (li) {
+            final level = levels[li];
+            final subLevels = level['subLevels'] as List? ?? [];
+            return Container(
+              margin: EdgeInsets.only(bottom: 12.h),
+              padding: EdgeInsets.all(14.w),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(14.r),
+                border: Border.all(color: AppColors.cardBorder),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 10.w,
+                          vertical: 4.h,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryLight,
+                          borderRadius: BorderRadius.circular(8.r),
+                        ),
+                        child: Text(
+                          level['key'] ?? '',
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 11.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 8.w),
+                      Expanded(
+                        child: Text(
+                          level['label'] ?? '',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                            fontSize: 15.sp,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.add, size: 20),
+                        color: AppColors.success,
+                        onPressed: () => _addSubLevel(li),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, size: 20),
+                        color: AppColors.error,
+                        onPressed: () => setState(() => levels.removeAt(li)),
+                      ),
+                    ],
+                  ),
+                  if (subLevels.isNotEmpty) ...[
+                    SizedBox(height: 10.h),
+                    Wrap(
+                      spacing: 6.w,
+                      runSpacing: 6.h,
+                      children: List.generate(subLevels.length, (si) {
+                        final sub = subLevels[si];
+                        return Chip(
+                          label: Text(
+                            sub['label'] ?? '',
+                            style: TextStyle(
+                              fontSize: 12.sp,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          deleteIcon: const Icon(Icons.close, size: 16),
+                          onDeleted: () =>
+                              setState(() => subLevels.removeAt(si)),
+                          backgroundColor: AppColors.background,
+                          side: BorderSide(color: AppColors.cardBorder),
+                        );
+                      }),
+                    ),
+                  ] else
+                    Padding(
+                      padding: EdgeInsets.only(top: 8.h),
+                      child: Text(
+                        'No sub-levels. Tap + to add.',
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 12.sp,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          }),
+
+          SizedBox(height: 20.h),
+
+          // Book Types
+          Row(
+            children: [
+              Text(
+                'Book Types',
+                style: TextStyle(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                onPressed: _addBookType,
+                icon: Icon(Icons.add_circle, color: AppColors.primary),
+              ),
+            ],
+          ),
+          SizedBox(height: 8.h),
+          Wrap(
+            spacing: 8.w,
+            runSpacing: 8.h,
+            children: List.generate(bookTypes.length, (i) {
+              final bt = bookTypes[i];
+              return Chip(
+                label: Text(
+                  '${bt['label']} (${bt['key']})',
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                deleteIcon: const Icon(Icons.close, size: 16),
+                onDeleted: () => setState(() => bookTypes.removeAt(i)),
+                backgroundColor: AppColors.background,
+                side: BorderSide(color: AppColors.cardBorder),
+              );
+            }),
+          ),
+          SizedBox(height: 80.h),
+        ],
+      ),
     );
   }
 }
