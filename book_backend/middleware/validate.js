@@ -33,7 +33,8 @@ const rules = {
             .notEmpty()
             .withMessage('Name is required')
             .isLength({ max: 50 })
-            .withMessage('Name cannot exceed 50 characters'),
+            .withMessage('Name cannot exceed 50 characters')
+            .escape(),
     ],
 
     login: [
@@ -66,13 +67,15 @@ const rules = {
             .notEmpty()
             .withMessage('Title is required')
             .isLength({ max: 100 })
-            .withMessage('Title cannot exceed 100 characters'),
+            .withMessage('Title cannot exceed 100 characters')
+            .escape(),
         body('description')
             .trim()
             .notEmpty()
             .withMessage('Description is required')
             .isLength({ max: 2000 })
-            .withMessage('Description cannot exceed 2000 characters'),
+            .withMessage('Description cannot exceed 2000 characters')
+            .escape(),
         body('category')
             .trim()
             .notEmpty()
@@ -186,6 +189,107 @@ const rules = {
             .optional()
             .isInt({ min: 1, max: 50 })
             .withMessage('Limit must be between 1 and 50'),
+    ],
+
+    // Profile update validation
+    updateProfile: [
+        body('name')
+            .optional()
+            .trim()
+            .isLength({ min: 1, max: 50 })
+            .withMessage('Name must be between 1 and 50 characters')
+            .escape(),
+        body('username')
+            .optional()
+            .trim()
+            .isLength({ min: 3, max: 20 })
+            .withMessage('Username must be between 3 and 20 characters')
+            .matches(/^[a-z0-9_]+$/)
+            .withMessage('Username can only contain lowercase letters, numbers, and underscores'),
+        body('phone')
+            .optional()
+            .trim()
+            .isLength({ max: 20 })
+            .withMessage('Phone number too long'),
+        body('bio')
+            .optional()
+            .trim()
+            .isLength({ max: 500 })
+            .withMessage('Bio cannot exceed 500 characters')
+            .escape(),
+        body('location')
+            .optional()
+            .trim()
+            .isLength({ max: 100 })
+            .withMessage('Location cannot exceed 100 characters')
+            .escape(),
+    ],
+
+    // Change password validation
+    changePassword: [
+        body('currentPassword')
+            .notEmpty()
+            .withMessage('Current password is required'),
+        body('newPassword')
+            .isLength({ min: 6 })
+            .withMessage('New password must be at least 6 characters'),
+    ],
+
+    // Push token validation
+    updatePushToken: [
+        body('pushToken')
+            .notEmpty()
+            .withMessage('Push token is required')
+            .isString()
+            .withMessage('Push token must be a string'),
+    ],
+
+    // Bulk listing IDs validation
+    bulkListingIds: [
+        body('listingIds')
+            .isArray({ min: 1 })
+            .withMessage('Please provide an array of listing IDs'),
+        body('listingIds.*')
+            .isMongoId()
+            .withMessage('Each listing ID must be a valid ID'),
+    ],
+
+    // Bulk reject (listingIds + reason)
+    bulkReject: [
+        body('listingIds')
+            .isArray({ min: 1 })
+            .withMessage('Please provide an array of listing IDs'),
+        body('listingIds.*')
+            .isMongoId()
+            .withMessage('Each listing ID must be a valid ID'),
+        body('reason')
+            .notEmpty()
+            .withMessage('Rejection reason is required')
+            .trim()
+            .isLength({ max: 500 })
+            .withMessage('Reason cannot exceed 500 characters'),
+    ],
+
+    // Category creation validation
+    createCategory: [
+        body('name')
+            .trim()
+            .notEmpty()
+            .withMessage('Category name is required')
+            .isLength({ max: 50 })
+            .withMessage('Category name cannot exceed 50 characters'),
+        body('description')
+            .optional()
+            .trim()
+            .isLength({ max: 200 })
+            .withMessage('Description cannot exceed 200 characters'),
+        body('icon')
+            .optional()
+            .trim(),
+        body('displayOrder')
+            .optional()
+            .isInt({ min: 0 })
+            .withMessage('Display order must be a non-negative integer'),
     ],
 };
 

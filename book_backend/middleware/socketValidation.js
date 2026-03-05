@@ -112,8 +112,8 @@ const validateSocketEvent = (eventName, data) => {
     const schema = schemas[eventName];
 
     if (!schema) {
-        // No schema defined = no validation
-        return { valid: true, errors: [], sanitizedData: data };
+        // Fail-closed: reject events without a defined schema
+        return { valid: false, errors: [`Unknown or unvalidated event: ${eventName}`], sanitizedData: null };
     }
 
     if (!data || typeof data !== 'object') {

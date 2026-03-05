@@ -95,7 +95,7 @@ const chatHandler = (io) => {
             try {
                 const conversation = await Conversation.findById(conversationId);
 
-                if (!conversation || !conversation.participants.includes(socket.user._id)) {
+                if (!conversation || !conversation.participants.some(p => p.toString() === socket.user._id.toString())) {
                     return socket.emit('error', { message: 'Conversation not found' });
                 }
 
@@ -140,7 +140,7 @@ const chatHandler = (io) => {
             try {
                 const conversation = await Conversation.findById(conversationId);
 
-                if (!conversation || !conversation.participants.includes(socket.user._id)) {
+                if (!conversation || !conversation.participants.some(p => p.toString() === socket.user._id.toString())) {
                     return socket.emit('error', { message: 'Conversation not found' });
                 }
 

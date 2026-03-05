@@ -156,8 +156,15 @@ const typingUsers = {
      */
     async removeFromAll(userId) {
         if (!redis) return [];
-        const keys = await redis.keys(`${TYPING_PREFIX}*`);
         const affectedConversations = [];
+
+        // Use SCAN instead of KEYS to avoid blocking Redis
+        const stream = redis.scanStream({ match: `${TYPING_PREFIX}*`, count: 100 });
+        const keys = [];
+        await new Promise((resolve) => {
+            stream.on('data', (batch) => keys.push(...batch));
+            stream.on('end', resolve);
+        });
 
         for (const key of keys) {
             const removed = await redis.srem(key, userId);
@@ -173,11 +180,13 @@ const typingUsers = {
 // ============== IN-MEMORY FALLBACK ==============
 
 // Fallback for when Redis is not available
+const MAX_FALLBACK_ENTRIES = 10000; // Prevent unbounded memory growth
 const inMemoryOnline = new Map();
 const inMemoryTyping = new Map();
 
 const fallbackOnlineUsers = {
     async add(userId, socketId) {
+        if (inMemoryOnline.size >= MAX_FALLBACK_ENTRIES && !inMemoryOnline.has(userId)) return;
         if (!inMemoryOnline.has(userId)) {
             inMemoryOnline.set(userId, new Set());
         }
@@ -209,6 +218,7 @@ const fallbackOnlineUsers = {
 
 const fallbackTypingUsers = {
     async start(conversationId, userId) {
+        if (inMemoryTyping.size >= MAX_FALLBACK_ENTRIES && !inMemoryTyping.has(conversationId)) return;
         if (!inMemoryTyping.has(conversationId)) {
             inMemoryTyping.set(conversationId, new Set());
         }

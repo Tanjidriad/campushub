@@ -35,9 +35,12 @@ const http = require('http');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const compression = require('compression');
+const mongoSanitize = require('express-mongo-sanitize');
 const rateLimit = require('express-rate-limit');
 const { Server } = require('socket.io');
 const passport = require('passport');
+const { logger } = require('./utils/logger');
 
 // Import configurations
 const connectDB = require('./config/db');
@@ -82,6 +85,11 @@ connectDB();
 
 // Security middleware
 app.use(helmet());
+app.use(compression());
+
+// Request correlation ID for tracing
+const correlationId = require('./middleware/correlationId');
+app.use(correlationId);
 
 // CORS — uses corsOptions defined at top of file (strict origin allowlist)
 app.use(cors(corsOptions));
@@ -117,9 +125,27 @@ app.use('/api/auth/register', authLimiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Logging (only in development)
+// Sanitize request data against NoSQL injection
+app.use(mongoSanitize());
+
+// Logging
 if (process.env.NODE_ENV === 'development') {
     app.use(morgan('dev'));
+} else {
+    // Production: use pino-http for structured JSON logging
+    app.use((req, res, next) => {
+        const start = Date.now();
+        res.on('finish', () => {
+            logger.info({
+                method: req.method,
+                url: req.originalUrl,
+                status: res.statusCode,
+                duration: Date.now() - start,
+                ip: req.ip,
+            }, `${req.method} ${req.originalUrl} ${res.statusCode}`);
+        });
+        next();
+    });
 }
 
 // Passport middleware
@@ -139,8 +165,9 @@ app.get('/health', (req, res) => {
 
 // Deep link redirect for password reset (email clients don't support custom URL schemes)
 app.get('/reset-password/:token', (req, res) => {
-    const token = req.params.token;
-    const appUrl = `${process.env.APP_URL}reset-password/${token}`;
+    const token = encodeURIComponent(req.params.token);
+    const baseUrl = (process.env.APP_URL || '').replace(/["'<>]/g, '');
+    const appUrl = `${baseUrl}reset-password/${token}`;
 
     res.send(`
         <!DOCTYPE html>
@@ -180,17 +207,12 @@ app.get('/reset-password/:token', (req, res) => {
                     margin: 8px;
                 }
                 .btn:hover { background: #4338CA; }
-                .btn-secondary {
-                    background: #E5E7EB;
-                    color: #374151;
-                }
-                .btn-secondary:hover { background: #D1D5DB; }
                 .note { font-size: 12px; color: #999; margin-top: 20px; }
             </style>
         </head>
         <body>
             <div class="container">
-                <h1>🔐 Reset Your Password</h1>
+                <h1>&#128272; Reset Your Password</h1>
                 <p>Click the button below to open the CampusHub Pro app and reset your password.</p>
                 <a href="${appUrl}" class="btn">Open App</a>
                 <p class="note">If the app doesn't open, make sure you have CampusHub Pro installed on your device.</p>
@@ -198,7 +220,7 @@ app.get('/reset-password/:token', (req, res) => {
             <script>
                 // Try to open the app automatically
                 setTimeout(function() {
-                    window.location.href = "${appUrl}";
+                    window.location.href = ${JSON.stringify(appUrl)};
                 }, 500);
             </script>
         </body>
@@ -307,15 +329,38 @@ process.on('uncaughtException', (err) => {
     process.exit(1);
 });
 
-// Graceful shutdown on SIGTERM (sent by Docker/Coolify/PM2 before killing process)
-process.on('SIGTERM', () => {
-    console.log('⏳ SIGTERM received — shutting down gracefully...');
+// Graceful shutdown helper
+const gracefulShutdown = (signal) => {
+    console.log(`⏳ ${signal} received — shutting down gracefully...`);
     server.close(() => {
+        // Close Socket.IO connections
+        io.close(() => {
+            console.log('✅ Socket.IO closed.');
+        });
+
+        // Close Redis
+        const { redis } = require('./config/redisClient');
+        if (redis) {
+            redis.quit().catch(() => { });
+            console.log('✅ Redis connection closed.');
+        }
+
+        // Close MongoDB
         mongoose.connection.close(false, () => {
             console.log('✅ MongoDB connection closed. Process exiting.');
             process.exit(0);
         });
     });
-});
+
+    // Force exit after 10s if graceful shutdown hangs
+    setTimeout(() => {
+        console.error('❌ Forced shutdown after timeout.');
+        process.exit(1);
+    }, 10000);
+};
+
+// Graceful shutdown on SIGTERM (Docker/Coolify/PM2) and SIGINT (Ctrl+C)
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 module.exports = { app, server, io };

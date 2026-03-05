@@ -1,10 +1,13 @@
 const User = require('../models/User');
 const Listing = require('../models/Listing');
 const Report = require('../models/Report');
-const { Notification } = require('../models');
+const { Notification, AuditLog } = require('../models');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { paginate, paginationMeta } = require('../utils/pagination');
 const { sendListingApprovedEmail, sendListingRejectedEmail } = require('../utils/sendEmail');
+const escapeRegex = require('../utils/escapeRegex');
+const logAudit = require('../utils/auditLog');
+const { toCSV, sendCSV } = require('../utils/csvExport');
 
 // ============== DASHBOARD ==============
 
@@ -135,7 +138,7 @@ exports.getRecentActivity = asyncHandler(async (req, res) => {
             case 'rejected':
                 title = 'Listing Rejected';
                 icon = 'cancel';
-                color: 'error';
+                color = 'error';
                 break;
             case 'pending':
                 title = 'New Listing Pending';
@@ -189,14 +192,19 @@ exports.getRecentActivity = asyncHandler(async (req, res) => {
 // @access  Admin
 exports.getUsers = asyncHandler(async (req, res) => {
     const { search, role, isBlocked, status, page, limit, sort = '-createdAt' } = req.query;
+
+    // Allowlist sort fields to prevent arbitrary field injection
+    const ALLOWED_SORT_FIELDS = ['createdAt', 'name', 'email', 'lastActive', '-createdAt', '-name', '-email', '-lastActive'];
+    const safeSort = ALLOWED_SORT_FIELDS.includes(sort) ? sort : '-createdAt';
     const { skip, limit: limitNum, page: pageNum } = paginate(page, limit);
 
     const query = {};
 
     if (search) {
+        const escaped = escapeRegex(search);
         query.$or = [
-            { name: { $regex: search, $options: 'i' } },
-            { email: { $regex: search, $options: 'i' } },
+            { name: { $regex: escaped, $options: 'i' } },
+            { email: { $regex: escaped, $options: 'i' } },
         ];
     }
     if (role) query.role = role;
@@ -216,7 +224,7 @@ exports.getUsers = asyncHandler(async (req, res) => {
     const [users, total] = await Promise.all([
         User.find(query)
             .select('-password -refreshToken -verificationToken -passwordResetToken')
-            .sort(sort)
+            .sort(safeSort)
             .skip(skip)
             .limit(limitNum)
             .lean(),
@@ -374,6 +382,16 @@ exports.toggleBan = asyncHandler(async (req, res) => {
             : `User unbanned and ${listingsAffected} listing(s) restored`,
         data: userResponse,
     });
+
+    // Audit log (fire-and-forget)
+    logAudit({
+        action: user.isBlocked ? 'user_banned' : 'user_unbanned',
+        performedBy: req.user._id,
+        targetType: 'User',
+        targetId: user._id,
+        details: { listingsAffected },
+        ip: req.ip,
+    });
 });
 
 // @desc    Change user role
@@ -428,6 +446,8 @@ exports.getAllListings = asyncHandler(async (req, res) => {
         limit,
         sort = '-createdAt'
     } = req.query;
+    const ALLOWED_LISTING_SORTS = ['createdAt', 'title', 'price', 'updatedAt', '-createdAt', '-title', '-price', '-updatedAt'];
+    const safeSort = ALLOWED_LISTING_SORTS.includes(sort) ? sort : '-createdAt';
     const { skip, limit: limitNum, page: pageNum } = paginate(page, limit);
 
     const query = {};
@@ -439,8 +459,8 @@ exports.getAllListings = asyncHandler(async (req, res) => {
             query._id = search;
         } else {
             query.$or = [
-                { title: { $regex: search, $options: 'i' } },
-                { description: { $regex: search, $options: 'i' } },
+                { title: { $regex: escapeRegex(search), $options: 'i' } },
+                { description: { $regex: escapeRegex(search), $options: 'i' } },
             ];
         }
     }
@@ -464,7 +484,7 @@ exports.getAllListings = asyncHandler(async (req, res) => {
         Listing.find(query)
             .populate('seller', 'name email avatar')
             .populate('approvedBy', 'name')
-            .sort(sort)
+            .sort(safeSort)
             .skip(skip)
             .limit(limitNum)
             .lean(),
@@ -571,6 +591,15 @@ exports.approveListing = asyncHandler(async (req, res) => {
         message: 'Listing approved',
         data: listing,
     });
+
+    logAudit({
+        action: 'listing_approved',
+        performedBy: req.user._id,
+        targetType: 'Listing',
+        targetId: listing._id,
+        details: { title: listing.title },
+        ip: req.ip,
+    });
 });
 
 // @desc    Reject listing
@@ -616,6 +645,15 @@ exports.rejectListing = asyncHandler(async (req, res) => {
         message: 'Listing rejected',
         data: listing,
     });
+
+    logAudit({
+        action: 'listing_rejected',
+        performedBy: req.user._id,
+        targetType: 'Listing',
+        targetId: listing._id,
+        details: { title: listing.title, reason },
+        ip: req.ip,
+    });
 });
 
 // @desc    Delete listing (admin)
@@ -639,6 +677,15 @@ exports.deleteListing = asyncHandler(async (req, res) => {
     }
 
     await listing.deleteOne();
+
+    logAudit({
+        action: 'listing_deleted',
+        performedBy: req.user._id,
+        targetType: 'Listing',
+        targetId: listing._id,
+        details: { title: listing.title },
+        ip: req.ip,
+    });
 
     res.json({
         success: true,
@@ -666,6 +713,14 @@ exports.toggleFeature = asyncHandler(async (req, res) => {
         success: true,
         message: listing.isFeatured ? 'Listing featured' : 'Listing unfeatured',
         data: { isFeatured: listing.isFeatured },
+    });
+
+    logAudit({
+        action: listing.isFeatured ? 'listing_featured' : 'listing_unfeatured',
+        performedBy: req.user._id,
+        targetType: 'Listing',
+        targetId: listing._id,
+        ip: req.ip,
     });
 });
 
@@ -1030,5 +1085,152 @@ exports.reviewReport = asyncHandler(async (req, res) => {
         data: report,
         actionResult,
         message,
+    });
+
+    logAudit({
+        action: 'report_reviewed',
+        performedBy: req.user._id,
+        targetType: 'Report',
+        targetId: report._id,
+        details: { status, actionTaken, resolution },
+        ip: req.ip,
+    });
+});
+
+// ============== AUDIT LOG ==============
+
+// @desc    Get audit logs
+// @route   GET /api/admin/audit-logs
+// @access  Admin
+exports.getAuditLogs = asyncHandler(async (req, res) => {
+    const { action, performedBy, page, limit } = req.query;
+    const { skip, limit: limitNum, page: pageNum } = paginate(page, limit);
+
+    const query = {};
+    if (action) query.action = action;
+    if (performedBy) query.performedBy = performedBy;
+
+    const [logs, total] = await Promise.all([
+        AuditLog.find(query)
+            .populate('performedBy', 'name email avatar')
+            .sort('-createdAt')
+            .skip(skip)
+            .limit(limitNum)
+            .lean(),
+        AuditLog.countDocuments(query),
+    ]);
+
+    res.json({
+        success: true,
+        data: logs,
+        pagination: paginationMeta(total, pageNum, limitNum),
+    });
+});
+
+// ============== DATA EXPORT ==============
+
+// @desc    Export users as CSV
+// @route   GET /api/admin/export/users
+// @access  Admin
+exports.exportUsers = asyncHandler(async (req, res) => {
+    const users = await User.find()
+        .select('name email username role isBlocked isOnline lastActive createdAt')
+        .lean();
+
+    const data = users.map((u) => ({
+        Name: u.name,
+        Email: u.email,
+        Username: u.username || '',
+        Role: u.role,
+        Blocked: u.isBlocked ? 'Yes' : 'No',
+        Online: u.isOnline ? 'Yes' : 'No',
+        'Last Active': u.lastActive ? new Date(u.lastActive).toISOString() : '',
+        'Registered At': new Date(u.createdAt).toISOString(),
+    }));
+
+    const csv = toCSV(data);
+    sendCSV(res, csv, `campushub-users-${Date.now()}.csv`);
+});
+
+// @desc    Export listings as CSV
+// @route   GET /api/admin/export/listings
+// @access  Admin
+exports.exportListings = asyncHandler(async (req, res) => {
+    const listings = await Listing.find()
+        .populate('seller', 'name email')
+        .select('title price priceType condition status seller category createdAt')
+        .lean();
+
+    const data = listings.map((l) => ({
+        Title: l.title,
+        Price: l.price || '',
+        'Price Type': l.priceType,
+        Condition: l.condition,
+        Status: l.status,
+        Category: l.category || '',
+        'Seller Name': l.seller?.name || '',
+        'Seller Email': l.seller?.email || '',
+        'Created At': new Date(l.createdAt).toISOString(),
+    }));
+
+    const csv = toCSV(data);
+    sendCSV(res, csv, `campushub-listings-${Date.now()}.csv`);
+});
+
+// ============== DETAIL ENDPOINTS ==============
+
+// @desc    Get single listing detail (admin)
+// @route   GET /api/admin/listings/:id
+// @access  Admin
+exports.getListingDetail = asyncHandler(async (req, res) => {
+    const listing = await Listing.findById(req.params.id)
+        .populate('seller', 'name email avatar phone')
+        .populate('approvedBy', 'name email')
+        .lean();
+
+    if (!listing) {
+        return res.status(404).json({
+            success: false,
+            message: 'Listing not found',
+        });
+    }
+
+    res.json({
+        success: true,
+        data: listing,
+    });
+});
+
+// @desc    Get single report detail (admin)
+// @route   GET /api/admin/reports/:id
+// @access  Admin
+exports.getReportDetail = asyncHandler(async (req, res) => {
+    const report = await Report.findById(req.params.id)
+        .populate('reporter', 'name email avatar')
+        .populate('reviewedBy', 'name email')
+        .lean();
+
+    if (!report) {
+        return res.status(404).json({
+            success: false,
+            message: 'Report not found',
+        });
+    }
+
+    // Populate the target based on type
+    if (report.targetType === 'user') {
+        report.target = await User.findById(report.targetId)
+            .select('name email avatar isBlocked')
+            .lean();
+    } else if (report.targetType === 'listing') {
+        report.target = await Listing.findById(report.targetId)
+            .select('title images price status seller')
+            .populate('seller', 'name email')
+            .lean();
+    }
+
+    res.json({
+        success: true,
+        data: report,
     });
 });

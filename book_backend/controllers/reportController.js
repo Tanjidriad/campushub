@@ -2,6 +2,7 @@ const Report = require('../models/Report');
 const User = require('../models/User');
 const Listing = require('../models/Listing');
 const ChatMessage = require('../models/ChatMessage');
+const { Notification } = require('../models');
 const { asyncHandler } = require('../middleware/errorHandler');
 
 // @desc    Create report
@@ -76,6 +77,19 @@ exports.createReport = asyncHandler(async (req, res) => {
         reason,
         description,
     });
+
+    // Notify all admin users about the new report
+    const admins = await User.find({ role: { $in: ['admin', 'superadmin'] } }).select('_id').lean();
+    const reporterName = req.user.name || 'A user';
+    for (const admin of admins) {
+        Notification.createNotification({
+            userId: admin._id,
+            type: 'new_report',
+            title: 'New Report Submitted',
+            body: `${reporterName} reported a ${targetType} for "${reason}"`,
+            data: { reportId: report._id },
+        }).catch(() => { }); // Fire-and-forget
+    }
 
     res.status(201).json({
         success: true,

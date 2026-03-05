@@ -51,6 +51,11 @@ const errorHandler = (err, req, res, next) => {
         }
     }
 
+    // In production, hide internal error messages for 500-level errors
+    if (process.env.NODE_ENV === 'production' && statusCode >= 500) {
+        message = 'Internal Server Error';
+    }
+
     res.status(statusCode).json({
         success: false,
         message,

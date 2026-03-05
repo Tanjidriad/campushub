@@ -36,9 +36,9 @@ router.post('/resend-verification', authController.resendVerification);
 router.post('/logout', authController.logout);
 router.get('/me', authController.getMe);
 router.delete('/me', authController.deleteAccount);
-router.put('/profile', authController.updateProfile);
+router.put('/profile', rules.updateProfile, validate, authController.updateProfile);
 router.put('/avatar', uploadAvatar, authController.updateAvatar);
-router.put('/password', authController.changePassword);
-router.put('/push-token', authController.updatePushToken);
+router.put('/password', rules.changePassword, validate, authController.changePassword);
+router.put('/push-token', rules.updatePushToken, validate, authController.updatePushToken);
 
 module.exports = router;

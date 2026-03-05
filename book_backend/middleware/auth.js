@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const hashToken = require('../utils/hashToken');
 
 // Protect routes - require authentication
 const protect = async (req, res, next) => {
@@ -103,7 +104,9 @@ const verifyRefreshToken = async (req, res, next) => {
         const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
         const user = await User.findById(decoded.id);
 
-        if (!user || user.refreshToken !== refreshToken) {
+        // Compare hashed version of incoming token with stored hash
+        const hashedIncoming = hashToken(refreshToken);
+        if (!user || user.refreshToken !== hashedIncoming) {
             return res.status(401).json({
                 success: false,
                 message: 'Invalid refresh token',

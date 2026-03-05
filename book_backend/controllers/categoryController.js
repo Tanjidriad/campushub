@@ -2,6 +2,7 @@ const Category = require('../models/Category');
 const Listing = require('../models/Listing');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { deleteImage, getPublicIdFromUrl } = require('../config/cloudinary');
+const escapeRegex = require('../utils/escapeRegex');
 
 // @desc    Get all categories
 // @route   GET /api/categories
@@ -44,7 +45,7 @@ exports.createCategory = asyncHandler(async (req, res) => {
 
     // Check if category already exists
     const existingCategory = await Category.findOne({
-        name: { $regex: new RegExp(`^${name}$`, 'i') }
+        name: { $regex: new RegExp(`^${escapeRegex(name)}$`, 'i') }
     });
 
     if (existingCategory) {
@@ -89,7 +90,7 @@ exports.updateCategory = asyncHandler(async (req, res) => {
     // Check if name is being changed and if new name already exists
     if (name && name !== category.name) {
         const existingCategory = await Category.findOne({
-            name: { $regex: new RegExp(`^${name}$`, 'i') },
+            name: { $regex: new RegExp(`^${escapeRegex(name)}$`, 'i') },
             _id: { $ne: req.params.id }
         });
 

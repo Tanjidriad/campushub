@@ -16,6 +16,8 @@ router.post(
     protect,
     requireAdmin,
     uploadCategoryImage,
+    rules.createCategory,
+    validate,
     categoryController.createCategory
 );
 

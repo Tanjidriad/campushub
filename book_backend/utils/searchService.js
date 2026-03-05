@@ -152,12 +152,21 @@ class SearchService {
                         }
                     },
                     { $unwind: '$seller' }, // Convert array to object
-                    // Project necessary fields (security: don't expose seller password/email)
+                    // Project necessary fields (security: don't expose sensitive seller data)
                     {
                         $project: {
                             'seller.password': 0,
                             'seller.email': 0,
-                            'seller.role': 0
+                            'seller.role': 0,
+                            'seller.refreshToken': 0,
+                            'seller.fcmTokens': 0,
+                            'seller.pushToken': 0,
+                            'seller.verificationToken': 0,
+                            'seller.verificationTokenExpires': 0,
+                            'seller.passwordResetToken': 0,
+                            'seller.passwordResetExpires': 0,
+                            'seller.blockedUsers': 0,
+                            'seller.googleId': 0,
                         }
                     }
                 ],

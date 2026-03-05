@@ -25,6 +25,7 @@ const notificationSchema = new mongoose.Schema(
                 'offer_accepted',
                 'offer_declined',
                 'offer_countered',
+                'new_report',
             ],
         },
         title: {

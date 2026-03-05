@@ -1,7 +1,8 @@
 const crypto = require('crypto');
 const User = require('../models/User');
-const Listing = require('../models/Listing'); // Import Listing model
+const Listing = require('../models/Listing');
 const { generateTokens } = require('../utils/generateToken');
+const hashToken = require('../utils/hashToken');
 const { sendVerificationEmail, sendPasswordResetEmail } = require('../utils/sendEmail');
 const { asyncHandler } = require('../middleware/errorHandler');
 
@@ -36,7 +37,7 @@ exports.register = asyncHandler(async (req, res) => {
 
     // Generate tokens
     const tokens = generateTokens(user._id);
-    user.refreshToken = tokens.refreshToken;
+    user.refreshToken = hashToken(tokens.refreshToken);
     await user.save();
 
     res.status(201).json({
@@ -98,7 +99,7 @@ exports.login = asyncHandler(async (req, res) => {
 
     // Generate tokens
     const tokens = generateTokens(user._id);
-    user.refreshToken = tokens.refreshToken;
+    user.refreshToken = hashToken(tokens.refreshToken);
     await user.save();
 
     res.json({
@@ -274,7 +275,7 @@ exports.resetPassword = asyncHandler(async (req, res) => {
 exports.refreshToken = asyncHandler(async (req, res) => {
     // req.user is set by verifyRefreshToken middleware
     const tokens = generateTokens(req.user._id);
-    req.user.refreshToken = tokens.refreshToken;
+    req.user.refreshToken = hashToken(tokens.refreshToken);
     await req.user.save();
 
     res.json({
@@ -470,12 +471,24 @@ exports.updatePushToken = asyncHandler(async (req, res) => {
 exports.googleCallback = asyncHandler(async (req, res) => {
     // req.user is set by Passport
     const tokens = generateTokens(req.user._id);
-    req.user.refreshToken = tokens.refreshToken;
+    req.user.refreshToken = hashToken(tokens.refreshToken);
     await req.user.save();
 
-    // Redirect to app with tokens
-    const redirectUrl = `${process.env.APP_URL}auth/callback?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`;
-    res.redirect(redirectUrl);
+    // Redirect to app with tokens via a bridge page (avoids leaking tokens in URL)
+    const appUrl = (process.env.APP_URL || '').replace(/["'<>]/g, '');
+    res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head><title>Redirecting...</title></head>
+        <body>
+            <p>Signing you in...</p>
+            <script>
+                var url = ${JSON.stringify(appUrl)} + 'auth/callback?accessToken=' + encodeURIComponent(${JSON.stringify(tokens.accessToken)}) + '&refreshToken=' + encodeURIComponent(${JSON.stringify(tokens.refreshToken)});
+                window.location.href = url;
+            </script>
+        </body>
+        </html>
+    `);
 });
 
 // @desc    Google OAuth for mobile (token exchange)
@@ -496,13 +509,33 @@ exports.googleMobile = asyncHandler(async (req, res) => {
 // @route   DELETE /api/auth/me
 // @access  Private
 exports.deleteAccount = asyncHandler(async (req, res) => {
-    const user = await User.findById(req.user.id);
+    const { password } = req.body;
+
+    const user = await User.findById(req.user.id).select('+password');
 
     if (!user) {
         return res.status(404).json({
             success: false,
             message: 'User not found',
         });
+    }
+
+    // Require re-authentication: password for email users, skip for Google-only
+    if (user.password) {
+        if (!password) {
+            return res.status(400).json({
+                success: false,
+                message: 'Password is required to delete your account',
+            });
+        }
+
+        const isMatch = await user.comparePassword(password);
+        if (!isMatch) {
+            return res.status(401).json({
+                success: false,
+                message: 'Incorrect password',
+            });
+        }
     }
 
     // Delete all listings by this user

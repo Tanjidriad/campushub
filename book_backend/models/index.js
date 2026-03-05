@@ -8,4 +8,7 @@ module.exports = {
     Report: require('./Report'),
     Notification: require('./Notification'),
     Offer: require('./Offer'),
+    Category: require('./Category'),
+    EducationConfig: require('./EducationConfig'),
+    AuditLog: require('./AuditLog'),
 };
