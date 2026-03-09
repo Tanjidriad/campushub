@@ -748,6 +748,45 @@ exports.getNearbyListings = asyncHandler(async (req, res) => {
     });
 });
 
+// @desc    Get similar listings (same category, excluding current listing and same seller)
+// @route   GET /api/listings/:id/similar
+// @access  Public
+exports.getSimilarListings = asyncHandler(async (req, res) => {
+    const listing = await Listing.findById(req.params.id);
+
+    if (!listing) {
+        return res.status(404).json({
+            success: false,
+            message: 'Listing not found',
+        });
+    }
+
+    const limit = Math.min(parseInt(req.query.limit) || 6, 20);
+
+    const similarListings = await Listing.find({
+        _id: { $ne: listing._id },
+        seller: { $ne: listing.seller },
+        category: listing.category,
+        status: 'approved',
+    })
+        .sort('-createdAt')
+        .limit(limit)
+        .populate('seller', 'name avatar phone averageRating totalReviews createdAt');
+
+    // Add isWishlisted flag if user is authenticated
+    if (req.user) {
+        const wishlistIds = req.user.wishlist.map(id => id.toString());
+        similarListings.forEach(item => {
+            item.isWishlisted = wishlistIds.includes(item._id.toString());
+        });
+    }
+
+    res.json({
+        success: true,
+        data: similarListings,
+    });
+});
+
 // Helper function to calculate distance between two points (Haversine formula)
 function calculateDistance(lat1, lon1, lat2, lon2) {
     const R = 3959; // Earth's radius in miles (use 6371 for km)
