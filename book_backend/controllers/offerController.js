@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Offer = require('../models/Offer');
 const Listing = require('../models/Listing');
 const Notification = require('../models/Notification');
@@ -38,25 +39,43 @@ exports.createOffer = asyncHandler(async (req, res) => {
         });
     }
 
-    // Check for existing pending offer
-    const existingOffer = await Offer.hasPendingOffer(listingId, buyerId);
-    if (existingOffer) {
-        return res.status(400).json({
-            success: false,
-            message: 'You already have a pending offer on this listing',
-            data: { existingOfferId: existingOffer._id },
-        });
-    }
+    // Use a transaction to prevent duplicate concurrent offers
+    const session = await mongoose.startSession();
+    let offer;
+    try {
+        await session.withTransaction(async () => {
+            // Check for existing pending offer inside the transaction
+            const existingOffer = await Offer.hasPendingOffer(listingId, buyerId);
+            if (existingOffer) {
+                throw Object.assign(new Error('You already have a pending offer on this listing'), {
+                    statusCode: 400,
+                    data: { existingOfferId: existingOffer._id },
+                });
+            }
 
-    // Create offer
-    const offer = await Offer.create({
-        listing: listingId,
-        buyer: buyerId,
-        seller: listing.seller._id,
-        amount,
-        message,
-        expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
-    });
+            // Create offer atomically
+            const [created] = await Offer.create([{
+                listing: listingId,
+                buyer: buyerId,
+                seller: listing.seller._id,
+                amount,
+                message,
+                expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
+            }], { session });
+            offer = created;
+        });
+    } catch (err) {
+        if (err.statusCode === 400) {
+            return res.status(400).json({
+                success: false,
+                message: err.message,
+                data: err.data,
+            });
+        }
+        throw err;
+    } finally {
+        session.endSession();
+    }
 
     // Create in-app notification for seller
     await Notification.createNotification({

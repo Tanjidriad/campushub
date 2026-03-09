@@ -49,17 +49,6 @@ const chatStorage = new CloudinaryStorage({
     },
 });
 
-// Multer upload middleware
-const uploadListingImages = multer({
-    storage: listingStorage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-}).array('images', parseInt(process.env.MAX_IMAGES_PER_LISTING) || 5);
-
-const uploadAvatar = multer({
-    storage: avatarStorage,
-    limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit
-}).single('avatar');
-
 // File filter to validate MIME types
 const imageFileFilter = (req, file, cb) => {
     const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
@@ -69,6 +58,19 @@ const imageFileFilter = (req, file, cb) => {
         cb(new Error('Invalid file type. Only JPEG, PNG, and WebP images are allowed.'), false);
     }
 };
+
+// Multer upload middleware
+const uploadListingImages = multer({
+    storage: listingStorage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    fileFilter: imageFileFilter,
+}).array('images', parseInt(process.env.MAX_IMAGES_PER_LISTING) || 5);
+
+const uploadAvatar = multer({
+    storage: avatarStorage,
+    limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit
+    fileFilter: imageFileFilter,
+}).single('avatar');
 
 const uploadCategoryImage = multer({
     storage: categoryStorage,

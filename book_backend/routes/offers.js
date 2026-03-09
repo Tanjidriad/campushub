@@ -1,22 +1,23 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/auth');
+const { validate, rules } = require('../middleware/validate');
 const offerController = require('../controllers/offerController');
 
 // All routes require authentication
 router.use(protect);
 
 router.route('/')
-    .get(offerController.getOffers)
-    .post(offerController.createOffer);
+    .get(rules.pagination, validate, offerController.getOffers)
+    .post(rules.createOffer, validate, offerController.createOffer);
 
 router.route('/:id')
-    .get(offerController.getOffer);
+    .get(rules.mongoId, validate, offerController.getOffer);
 
 router.route('/:id/respond')
-    .put(offerController.respondToOffer);
+    .put(rules.respondToOffer, validate, offerController.respondToOffer);
 
 router.route('/listing/:listingId')
-    .get(offerController.getListingOffers);
+    .get(rules.pagination, validate, offerController.getListingOffers);
 
 module.exports = router;

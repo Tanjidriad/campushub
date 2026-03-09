@@ -244,6 +244,46 @@ const rules = {
             .withMessage('Push token must be a string'),
     ],
 
+    // Offer validations
+    createOffer: [
+        body('listingId')
+            .notEmpty()
+            .withMessage('Listing ID is required')
+            .isMongoId()
+            .withMessage('Invalid listing ID format'),
+        body('amount')
+            .notEmpty()
+            .withMessage('Offer amount is required')
+            .isFloat({ min: 0.01 })
+            .withMessage('Amount must be a positive number'),
+        body('message')
+            .optional()
+            .trim()
+            .isLength({ max: 500 })
+            .withMessage('Message cannot exceed 500 characters')
+            .escape(),
+    ],
+
+    respondToOffer: [
+        body('action')
+            .notEmpty()
+            .withMessage('Action is required')
+            .isIn(['accept', 'decline', 'counter'])
+            .withMessage('Action must be accept, decline, or counter'),
+        body('counterAmount')
+            .if(body('action').equals('counter'))
+            .notEmpty()
+            .withMessage('Counter amount is required when countering')
+            .isFloat({ min: 0.01 })
+            .withMessage('Counter amount must be a positive number'),
+        body('message')
+            .optional()
+            .trim()
+            .isLength({ max: 500 })
+            .withMessage('Message cannot exceed 500 characters')
+            .escape(),
+    ],
+
     // Bulk listing IDs validation
     bulkListingIds: [
         body('listingIds')

@@ -121,6 +121,19 @@ const authLimiter = rateLimit({
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 
+// Very strict rate limit for password reset (prevent email enumeration & DoS on mail service)
+const passwordResetLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: process.env.NODE_ENV === 'production' ? 3 : 50, // 3 per hour in production
+    message: {
+        success: false,
+        message: 'Too many password reset attempts, please try again later',
+    },
+    skip: (req) => process.env.NODE_ENV === 'development',
+});
+app.use('/api/auth/forgot-password', passwordResetLimiter);
+app.use('/api/auth/reset-password', passwordResetLimiter);
+
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -154,12 +167,36 @@ app.use(passport.initialize());
 // ============== ROUTES ==============
 
 // Health check
-app.get('/health', (req, res) => {
-    res.json({
-        success: true,
+app.get('/health', async (req, res) => {
+    const checks = {};
+
+    // MongoDB check
+    checks.mongodb = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+
+    // Redis check (optional)
+    try {
+        const { redis } = require('./config/redisClient');
+        if (redis) {
+            await redis.ping();
+            checks.redis = 'connected';
+        } else {
+            checks.redis = 'not configured';
+        }
+    } catch {
+        checks.redis = 'disconnected';
+    }
+
+    const allHealthy = checks.mongodb === 'connected';
+    const status = allHealthy ? 'healthy' : 'degraded';
+
+    res.status(allHealthy ? 200 : 503).json({
+        success: allHealthy,
+        status,
         message: 'CampusHub Pro API is running',
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV,
+        version: require('./package.json').version,
+        checks,
     });
 });
 

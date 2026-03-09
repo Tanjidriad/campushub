@@ -23,6 +23,7 @@ const initialCategories = [
         description: 'Academic textbooks and course materials',
         icon: 'book',
         displayOrder: 1,
+        hasEducationConfig: true,
     },
     {
         name: 'Housing',
@@ -66,7 +67,7 @@ const seedCategories = async () => {
         if (existingCount > 0) {
             console.log(`⚠️  Database already has ${existingCount} categories`);
             console.log('Do you want to delete existing categories and reseed? (Ctrl+C to cancel)');
-            
+
             // Wait 3 seconds before proceeding
             await new Promise(resolve => setTimeout(resolve, 3000));
 

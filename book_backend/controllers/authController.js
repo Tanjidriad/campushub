@@ -269,11 +269,12 @@ exports.resetPassword = asyncHandler(async (req, res) => {
     });
 });
 
-// @desc    Refresh access token
+// @desc    Refresh access token (with rotation — old refresh token is invalidated)
 // @route   POST /api/auth/refresh-token
 // @access  Public
 exports.refreshToken = asyncHandler(async (req, res) => {
     // req.user is set by verifyRefreshToken middleware
+    // Rotate: generate brand-new token pair and invalidate the old refresh token
     const tokens = generateTokens(req.user._id);
     req.user.refreshToken = hashToken(tokens.refreshToken);
     await req.user.save();

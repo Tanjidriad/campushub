@@ -89,7 +89,7 @@ const optionalAuth = async (req, res, next) => {
     }
 };
 
-// Verify refresh token
+// Verify refresh token (with rotation — the stored hash is cleared on use to prevent replay)
 const verifyRefreshToken = async (req, res, next) => {
     try {
         const { refreshToken } = req.body;
@@ -107,11 +107,20 @@ const verifyRefreshToken = async (req, res, next) => {
         // Compare hashed version of incoming token with stored hash
         const hashedIncoming = hashToken(refreshToken);
         if (!user || user.refreshToken !== hashedIncoming) {
+            // Possible token reuse attack — invalidate all sessions for safety
+            if (user) {
+                user.refreshToken = undefined;
+                await user.save();
+            }
             return res.status(401).json({
                 success: false,
                 message: 'Invalid refresh token',
             });
         }
+
+        // Invalidate the old token immediately (rotation)
+        user.refreshToken = undefined;
+        await user.save();
 
         req.user = user;
         next();

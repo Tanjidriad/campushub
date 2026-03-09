@@ -39,6 +39,10 @@ const categorySchema = new mongoose.Schema(
             type: Number,
             default: 0,
         },
+        hasEducationConfig: {
+            type: Boolean,
+            default: false,
+        },
     },
     {
         timestamps: true,
