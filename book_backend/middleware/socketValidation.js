@@ -11,6 +11,7 @@ const schemas = {
         conversationId: { type: 'objectId', required: true },
         text: { type: 'string', maxLength: 2000 },
         image: { type: 'imageObject' },
+        location: { type: 'locationObject' },
     },
     'conversation:join': {
         conversationId: { type: 'objectId', required: true },
@@ -79,6 +80,19 @@ const validateField = (value, schema, fieldName) => {
             } else {
                 if (value.url && !validator.isURL(value.url, { protocols: ['https'] })) {
                     errors.push(`${fieldName}.url must be a valid HTTPS URL`);
+                }
+            }
+            break;
+
+        case 'locationObject':
+            if (typeof value !== 'object') {
+                errors.push(`${fieldName} must be an object`);
+            } else {
+                if (typeof value.latitude !== 'number' || value.latitude < -90 || value.latitude > 90) {
+                    errors.push(`${fieldName}.latitude must be a number between -90 and 90`);
+                }
+                if (typeof value.longitude !== 'number' || value.longitude < -180 || value.longitude > 180) {
+                    errors.push(`${fieldName}.longitude must be a number between -180 and 180`);
                 }
             }
             break;

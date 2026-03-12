@@ -89,7 +89,7 @@ chatMessageSchema.post('save', async function () {
             this.conversation,
             {
                 lastMessage: {
-                    text: this.text || (this.location ? '� Location' : '�📷 Image'),
+                    text: this.text || (this.location ? '\ud83d\udccd Location' : '\ud83d\udcf7 Image'),
                     sender: this.sender,
                     timestamp: this.createdAt,
                     hasImage: !!this.image?.url,

@@ -135,7 +135,7 @@ const chatHandler = (io) => {
             const validated = validate('message:send', data);
             if (!validated) return;
 
-            const { conversationId, text, image } = validated;
+            const { conversationId, text, image, location } = validated;
 
             try {
                 const conversation = await Conversation.findById(conversationId);
@@ -186,6 +186,14 @@ const chatHandler = (io) => {
                 if (image) {
                     messageData.image = image;
                     messageData.messageType = image && sanitizedText ? 'text' : 'image';
+                }
+                if (location) {
+                    messageData.location = {
+                        latitude: location.latitude,
+                        longitude: location.longitude,
+                    };
+                    messageData.messageType = 'location';
+                    if (!messageData.text) messageData.text = '📍 Location';
                 }
 
                 const message = await ChatMessage.create(messageData);
