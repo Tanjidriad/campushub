@@ -305,6 +305,15 @@ exports.updateListing = asyncHandler(async (req, res) => {
         }
     }
 
+    // Detect price drop before updating
+    if (price !== undefined && priceType !== 'free') {
+        const newPrice = parseFloat(price);
+        if (listing.price && newPrice < listing.price) {
+            listing.previousPrice = listing.price;
+            listing.priceDroppedAt = new Date();
+        }
+    }
+
     // Update fields
     if (title) listing.title = title;
     if (description) listing.description = description;
@@ -333,6 +342,52 @@ exports.updateListing = asyncHandler(async (req, res) => {
         success: true,
         data: listing,
     });
+});
+
+// @desc    Get highlights: recent price drops + new arrivals
+// @route   GET /api/listings/highlights
+// @access  Public
+exports.getHighlights = asyncHandler(async (req, res) => {
+    const since48h = new Date(Date.now() - 48 * 60 * 60 * 1000);
+    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    const [priceDrops, newArrivals] = await Promise.all([
+        Listing.find({
+            status: 'approved',
+            priceDroppedAt: { $gte: since48h },
+            previousPrice: { $exists: true, $ne: null },
+        })
+            .populate('seller', 'name avatar')
+            .sort({ priceDroppedAt: -1 })
+            .limit(10)
+            .lean(),
+        Listing.find({
+            status: 'approved',
+            createdAt: { $gte: since24h },
+        })
+            .populate('seller', 'name avatar')
+            .sort({ createdAt: -1 })
+            .limit(10)
+            .lean(),
+    ]);
+
+    // Merge and deduplicate, price drops first
+    const seen = new Set();
+    const highlights = [];
+    for (const listing of [...priceDrops, ...newArrivals]) {
+        const id = listing._id.toString();
+        if (!seen.has(id)) {
+            seen.add(id);
+            highlights.push({
+                ...listing,
+                highlightType: priceDrops.some(p => p._id.toString() === id)
+                    ? 'price_drop'
+                    : 'new_arrival',
+            });
+        }
+    }
+
+    res.json({ success: true, data: highlights });
 });
 
 // @desc    Delete listing

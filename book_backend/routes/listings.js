@@ -8,6 +8,7 @@ const { uploadListingImages } = require('../config/cloudinary');
 
 // Public routes (with optional auth for wishlist status)
 router.get('/', optionalAuth, rules.pagination, validate, listingController.getListings);
+router.get('/highlights', optionalAuth, listingController.getHighlights);
 router.get('/nearby', optionalAuth, rules.pagination, validate, listingController.getNearbyListings);
 router.get('/user/:userId', rules.mongoId, rules.pagination, validate, listingController.getListingsByUser);
 router.get('/:id/similar', optionalAuth, rules.mongoId, validate, listingController.getSimilarListings);

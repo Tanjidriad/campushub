@@ -162,6 +162,17 @@ const listingSchema = new mongoose.Schema(
             index: true,
         },
 
+        // Price drop tracking
+        previousPrice: {
+            type: Number,
+            default: null,
+        },
+        priceDroppedAt: {
+            type: Date,
+            default: null,
+            index: true,
+        },
+
         // Tags for enhanced search
         tags: [{
             type: String,
