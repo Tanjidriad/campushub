@@ -331,8 +331,12 @@ exports.updateListing = asyncHandler(async (req, res) => {
     if (district !== undefined) listing.district = district || null;
     if (upazila !== undefined) listing.upazila = upazila || null;
 
-    // Reset to pending if significant changes
-    if (title || description || category) {
+    // Reset to pending only if content actually changed (not just price/condition edits)
+    const contentChanged =
+        (title && title !== listing.title) ||
+        (description && description !== listing.description) ||
+        (category && category !== listing.category);
+    if (contentChanged) {
         listing.status = 'pending';
     }
 

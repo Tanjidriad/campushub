@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -9,6 +11,7 @@ class ApiClient {
   final _storage = const FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
+  Completer<bool>? _refreshCompleter;
 
   ApiClient._() {
     dio = Dio(
@@ -65,9 +68,17 @@ class ApiClient {
   }
 
   Future<bool> _refreshToken() async {
+    // If a refresh is already in progress, wait for it
+    if (_refreshCompleter != null) {
+      return _refreshCompleter!.future;
+    }
+    _refreshCompleter = Completer<bool>();
     try {
       final refresh = await _storage.read(key: StorageKeys.refreshToken);
-      if (refresh == null) return false;
+      if (refresh == null) {
+        _refreshCompleter!.complete(false);
+        return false;
+      }
 
       final response = await Dio().post(
         '${ApiConstants.apiBaseUrl}${ApiConstants.refreshToken}',
@@ -85,9 +96,16 @@ class ApiClient {
             value: response.data['refreshToken'],
           );
         }
+        _refreshCompleter!.complete(true);
         return true;
       }
-    } catch (_) {}
+      _refreshCompleter!.complete(false);
+    } catch (e) {
+      debugPrint('Token refresh failed: $e');
+      _refreshCompleter!.complete(false);
+    } finally {
+      _refreshCompleter = null;
+    }
     return false;
   }
 
@@ -96,8 +114,44 @@ class ApiClient {
     await _storage.write(key: StorageKeys.refreshToken, value: refresh);
   }
 
+  Future<void> saveUserData({
+    required String id,
+    required String name,
+    required String email,
+    required String role,
+    String? avatar,
+  }) async {
+    await _storage.write(key: StorageKeys.userId, value: id);
+    await _storage.write(key: StorageKeys.userName, value: name);
+    await _storage.write(key: StorageKeys.userEmail, value: email);
+    await _storage.write(key: StorageKeys.userRole, value: role);
+    if (avatar != null) {
+      await _storage.write(key: StorageKeys.userAvatar, value: avatar);
+    }
+  }
+
+  Future<Map<String, String?>> getSavedUserData() async {
+    return {
+      'id': await _storage.read(key: StorageKeys.userId),
+      'name': await _storage.read(key: StorageKeys.userName),
+      'email': await _storage.read(key: StorageKeys.userEmail),
+      'role': await _storage.read(key: StorageKeys.userRole),
+      'avatar': await _storage.read(key: StorageKeys.userAvatar),
+    };
+  }
+
   Future<void> clearTokens() async {
-    await _storage.deleteAll();
+    for (final key in [
+      StorageKeys.accessToken,
+      StorageKeys.refreshToken,
+      StorageKeys.userId,
+      StorageKeys.userName,
+      StorageKeys.userEmail,
+      StorageKeys.userRole,
+      StorageKeys.userAvatar,
+    ]) {
+      await _storage.delete(key: key);
+    }
   }
 
   Future<bool> hasToken() async {

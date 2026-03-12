@@ -1,0 +1,40 @@
+﻿Analyzing book_sale_admin...                                    
+
+   info - 'encryptedSharedPreferences' is deprecated and shouldn't be used. EncryptedSharedPreferences is deprecated and will be removed in v11. The Jetpack Security library is deprecated by Google. Your data will be automatically migrated to custom ciphers on first access. Remove this parameter - it will be ignored - lib\core\api_client.dart:10:30 - deprecated_member_use
+   info - The type parameter name 'Type' matches a visible type name - lib\core\usecases\usecase.dart:5:24 - avoid_types_as_parameter_names
+   info - Statements in an if should be enclosed in a block - lib\features\listings\presentation\pages\listings_screen.dart:63:7 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\listings\presentation\pages\listings_screen.dart:65:7 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\listings\presentation\pages\listings_screen.dart:113:7 - curly_braces_in_flow_control_structures
+   info - Unnecessary 'const' keyword - lib\features\listings\presentation\pages\listings_screen.dart:131:22 - unnecessary_const
+   info - Statements in an if should be enclosed in a block - lib\features\listings\presentation\pages\listings_screen.dart:539:15 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\listings\presentation\pages\listings_screen.dart:541:15 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\listings\presentation\pages\listings_screen.dart:543:15 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\listings\presentation\pages\listings_screen.dart:572:27 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\listings\presentation\pages\listings_screen.dart:574:27 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\features\listings\presentation\pages\listings_screen.dart:576:27 - curly_braces_in_flow_control_structures
+   info - Unnecessary use of multiple underscores - lib\main.dart:38:20 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\dashboard_screen.dart:152:61 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\dashboard_screen.dart:325:63 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\dashboard_screen.dart:435:28 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\dashboard_screen.dart:465:46 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\dashboard_screen.dart:492:34 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\dashboard_screen.dart:535:29 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\dashboard_screen.dart:536:29 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\login_screen.dart:150:44 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\login_screen.dart:152:63 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\reports_screen.dart:134:45 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\settings_screen.dart:59:55 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\users_screen.dart:457:24 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\users_screen.dart:459:43 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\users_screen.dart:501:22 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\users_screen.dart:503:41 - deprecated_member_use
+
+flutter : 28 issues found. (ran in 1.9s)
+At line:1 char:1
++ flutter analyze 2>&1 | Out-File -FilePath 
+analyze_results.txt -Encodi ...
++ ~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (28 issues found. 
+    (ran in 1.9s):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
