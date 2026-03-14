@@ -314,6 +314,12 @@ exports.updateListing = asyncHandler(async (req, res) => {
         }
     }
 
+    // Detect content changes BEFORE updating fields
+    const contentChanged =
+        (title && title !== listing.title) ||
+        (description && description !== listing.description) ||
+        (category && category !== listing.category);
+
     // Update fields
     if (title) listing.title = title;
     if (description) listing.description = description;
@@ -331,11 +337,7 @@ exports.updateListing = asyncHandler(async (req, res) => {
     if (district !== undefined) listing.district = district || null;
     if (upazila !== undefined) listing.upazila = upazila || null;
 
-    // Reset to pending only if content actually changed (not just price/condition edits)
-    const contentChanged =
-        (title && title !== listing.title) ||
-        (description && description !== listing.description) ||
-        (category && category !== listing.category);
+    // Reset to pending only if title/description/category actually changed
     if (contentChanged) {
         listing.status = 'pending';
     }

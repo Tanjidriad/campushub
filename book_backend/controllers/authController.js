@@ -492,19 +492,6 @@ exports.googleCallback = asyncHandler(async (req, res) => {
     `);
 });
 
-// @desc    Google OAuth for mobile (token exchange)
-// @route   POST /api/auth/google/mobile
-// @access  Public
-exports.googleMobile = asyncHandler(async (req, res) => {
-    const { idToken, accessToken: googleAccessToken } = req.body;
-
-    // This would need Google API client to verify the idToken
-    // For now, we'll provide the structure
-    return res.status(501).json({
-        success: false,
-        message: 'Google mobile OAuth requires Google API client setup',
-    });
-});
 
 // @desc    Delete account
 // @route   DELETE /api/auth/me

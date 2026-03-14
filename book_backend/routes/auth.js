@@ -27,7 +27,7 @@ router.get(
     authController.googleCallback
 );
 
-router.post('/google/mobile', authController.googleMobile);
+// Google mobile OAuth — not yet implemented; route removed to avoid 501 stub
 
 // Protected routes
 router.use(protect);

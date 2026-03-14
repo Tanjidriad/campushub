@@ -193,6 +193,7 @@ app.get('/health', async (req, res) => {
         success: allHealthy,
         status,
         message: 'CampusHub Pro API is running',
+        uptime: Math.floor(process.uptime()),
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV,
         version: require('./package.json').version,

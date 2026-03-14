@@ -41,7 +41,7 @@ exports.getCategory = asyncHandler(async (req, res) => {
 // @route   POST /api/admin/categories
 // @access  Private/Admin
 exports.createCategory = asyncHandler(async (req, res) => {
-    const { name, description, icon, displayOrder } = req.body;
+    const { name, description, icon, displayOrder, hasEducationConfig } = req.body;
 
     // Check if category already exists
     const existingCategory = await Category.findOne({
@@ -58,6 +58,7 @@ exports.createCategory = asyncHandler(async (req, res) => {
         description,
         icon,
         displayOrder: displayOrder || 0,
+        hasEducationConfig: hasEducationConfig === true || hasEducationConfig === 'true',
     };
 
     // If an image file was uploaded via multer, save its Cloudinary URL
@@ -78,7 +79,7 @@ exports.createCategory = asyncHandler(async (req, res) => {
 // @route   PUT /api/admin/categories/:id
 // @access  Private/Admin
 exports.updateCategory = asyncHandler(async (req, res) => {
-    const { name, description, icon, displayOrder } = req.body;
+    const { name, description, icon, displayOrder, hasEducationConfig } = req.body;
 
     const category = await Category.findById(req.params.id);
 
@@ -104,6 +105,9 @@ exports.updateCategory = asyncHandler(async (req, res) => {
     category.description = description !== undefined ? description : category.description;
     category.icon = icon || category.icon;
     category.displayOrder = displayOrder !== undefined ? displayOrder : category.displayOrder;
+    if (hasEducationConfig !== undefined) {
+        category.hasEducationConfig = hasEducationConfig === true || hasEducationConfig === 'true';
+    }
 
     // If a new image was uploaded, delete the old one and save the new URL
     if (req.file && req.file.path) {

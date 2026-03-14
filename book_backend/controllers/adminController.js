@@ -1041,18 +1041,16 @@ exports.reviewReport = asyncHandler(async (req, res) => {
         }
 
         if (userToWarn) {
-            // Create a notification for the user (if Notification model exists)
             try {
-                const Notification = require('../models/Notification');
-                await Notification.create({
-                    user: userToWarn._id,
-                    type: 'warning',
+                await Notification.createNotification({
+                    userId: userToWarn._id,
+                    type: 'account_warning',
                     title: 'Warning from Admin',
-                    message: resolution || 'You have received a warning regarding a report filed against you. Please review our community guidelines.',
+                    body: resolution || 'You have received a warning regarding a report filed against you. Please review our community guidelines.',
                 });
                 actionResult = { type: 'warning_sent', userId: userToWarn._id, userName: userToWarn.name };
             } catch (e) {
-                // Notification model might not exist, just log warning
+                // Preserve report review success even if notification creation fails.
                 actionResult = { type: 'warning_logged', userId: userToWarn._id };
             }
         }
