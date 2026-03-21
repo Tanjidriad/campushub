@@ -41,4 +41,13 @@ module.exports = {
 
         return message;
     },
+
+    /**
+     * Emit an offer updated event to a conversation room in real-time.
+     */
+    emitOfferUpdated(conversationId, offerData) {
+        if (_io) {
+            _io.to(`conversation:${conversationId}`).emit('offer:updated', offerData);
+        }
+    },
 };

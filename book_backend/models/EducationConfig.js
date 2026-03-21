@@ -5,10 +5,23 @@ const subLevelSchema = new mongoose.Schema({
     label: { type: String, required: true, trim: true },
 }, { _id: false });
 
-const levelSchema = new mongoose.Schema({
+const departmentSchema = new mongoose.Schema({
     key: { type: String, required: true, trim: true },
     label: { type: String, required: true, trim: true },
     subLevels: [subLevelSchema],
+}, { _id: false });
+
+const streamSchema = new mongoose.Schema({
+    key: { type: String, required: true, trim: true },
+    label: { type: String, required: true, trim: true },
+    departments: [departmentSchema],
+}, { _id: false });
+
+const levelSchema = new mongoose.Schema({
+    key: { type: String, required: true, trim: true },
+    label: { type: String, required: true, trim: true },
+    subLevels: [subLevelSchema],      // For flat levels (School, College)
+    streams: [streamSchema],           // For nested levels (University)
 }, { _id: false });
 
 const bookTypeSchema = new mongoose.Schema({

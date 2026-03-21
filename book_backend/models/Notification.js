@@ -76,7 +76,10 @@ notificationSchema.index({ createdAt: -1 });
 // Auto-delete old notifications (30 days)
 notificationSchema.index({ createdAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
 
-// Static method to create and potentially send push notification
+// Static method to create and (optionally) trigger a push notification.
+// NOTE: This template only persists notifications to MongoDB.
+// If you want to send push notifications, wire this up to your
+// FCM/OneSignal service in notificationService.js.
 notificationSchema.statics.createNotification = async function ({
     userId,
     type,

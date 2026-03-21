@@ -3,7 +3,8 @@ const Offer = require('../models/Offer');
 const Listing = require('../models/Listing');
 const Notification = require('../models/Notification');
 const Conversation = require('../models/Conversation');
-const { emitSystemMessage } = require('../socket/socketManager');
+const ChatMessage = require('../models/ChatMessage');
+const { emitSystemMessage, emitOfferUpdated } = require('../socket/socketManager');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { paginate, paginationMeta } = require('../utils/pagination');
 const { sendOfferNotification } = require('../utils/notificationService');
@@ -47,10 +48,12 @@ exports.createOffer = asyncHandler(async (req, res) => {
             // Check for existing pending offer inside the transaction
             const existingOffer = await Offer.hasPendingOffer(listingId, buyerId);
             if (existingOffer) {
-                throw Object.assign(new Error('You already have a pending offer on this listing'), {
-                    statusCode: 400,
-                    data: { existingOfferId: existingOffer._id },
-                });
+                // Auto-cancel the old pending offer so the user can create a new one
+                // This handles cases where the user deleted the chat or wants to change amount
+                existingOffer.status = 'declined';
+                existingOffer.respondedAt = new Date();
+                await existingOffer.save({ session });
+                console.log(`♻️ Auto-cancelled existing offer ${existingOffer._id} for new offer`);
             }
 
             // Create offer atomically
@@ -65,16 +68,23 @@ exports.createOffer = asyncHandler(async (req, res) => {
             offer = created;
         });
     } catch (err) {
-        if (err.statusCode === 400) {
-            return res.status(400).json({
-                success: false,
-                message: err.message,
-                data: err.data,
-            });
-        }
         throw err;
     } finally {
         session.endSession();
+    }
+
+    // Find conversation to attach ID to the notification
+    let conversationId = null;
+    try {
+        const conversation = await Conversation.findOne({
+            participants: { $all: [buyerId, listing.seller._id] },
+            listing: listing._id,
+        });
+        if (conversation) {
+            conversationId = conversation._id.toString();
+        }
+    } catch (err) {
+        console.error('Failed to find conversation for offer notification:', err);
     }
 
     // Create in-app notification for seller
@@ -87,6 +97,7 @@ exports.createOffer = asyncHandler(async (req, res) => {
             listingId: listing._id,
             offerId: offer._id,
             userId: buyerId,
+            ...(conversationId && { conversationId })
         },
     });
 
@@ -94,10 +105,12 @@ exports.createOffer = asyncHandler(async (req, res) => {
     await sendOfferNotification(listing.seller._id, {
         type: 'new_offer',
         buyerName: req.user.name,
+        buyerId: buyerId,
         amount,
         listingTitle: listing.title,
         offerId: offer._id.toString(),
         listingId: listing._id.toString(),
+        conversationId,
     });
 
     // Populate and return
@@ -233,14 +246,18 @@ exports.respondToOffer = asyncHandler(async (req, res) => {
         });
     }
 
-    // Only the recipient can respond (seller for buyer's offer, buyer for counter)
-    const isSellerResponding = offer.seller.toString() === userId.toString();
-    const isBuyerRespondingToCounter = offer.buyer._id.toString() === userId.toString() && offer.status === 'countered';
+    const isSeller = offer.seller.toString() === userId.toString();
+    const isBuyer = offer.buyer._id.toString() === userId.toString();
 
-    if (!isSellerResponding && !isBuyerRespondingToCounter) {
+    // Round 1 and 3 are odd -> seller's turn to respond
+    // Round 2 is even -> buyer's turn to respond
+    const isSellerTurn = offer.roundNumber % 2 !== 0;
+    const isBuyerTurn = offer.roundNumber % 2 === 0;
+
+    if (!((isSeller && isSellerTurn) || (isBuyer && isBuyerTurn))) {
         return res.status(403).json({
             success: false,
-            message: 'Not authorized to respond to this offer',
+            message: 'Not your turn to respond to this offer',
         });
     }
 
@@ -263,7 +280,7 @@ exports.respondToOffer = asyncHandler(async (req, res) => {
     }
 
     let notificationType, notificationTitle, notificationBody;
-    const recipientId = isSellerResponding ? offer.buyer._id : offer.seller;
+    const recipientId = isSeller ? offer.buyer._id : offer.seller;
 
     switch (action) {
         case 'accept':
@@ -272,6 +289,28 @@ exports.respondToOffer = asyncHandler(async (req, res) => {
             notificationType = 'offer_accepted';
             notificationTitle = '🎉 Offer Accepted!';
             notificationBody = `Your offer of $${offer.amount.toFixed(2)} for "${offer.listing.title}" was accepted!`;
+            
+            // Mark the listing as sold using updateOne with $set to ensure it executes at the DB level reliably
+            await Listing.updateOne(
+                { _id: offer.listing._id },
+                {
+                    $set: {
+                        status: 'sold',
+                        soldTo: offer.buyer._id,
+                        soldPrice: offer.amount,
+                        soldAt: new Date()
+                    }
+                }
+            );
+
+            // Update the populated object for the response
+            offer.listing.status = 'sold';
+
+            // Auto-decline other pending offers for this listing
+            await Offer.updateMany(
+                { listing: offer.listing._id, _id: { $ne: offer._id }, status: { $in: ['pending', 'countered'] } },
+                { $set: { status: 'declined', respondedAt: new Date() } }
+            );
             break;
 
         case 'decline':
@@ -308,6 +347,37 @@ exports.respondToOffer = asyncHandler(async (req, res) => {
 
     await offer.save();
 
+    // Update the ChatMessage metadata so the bubble persists the new state across reloads
+    try {
+        await ChatMessage.updateMany(
+            { messageType: 'offer', 'metadata.offerId': offer._id.toString() },
+            { 
+                $set: { 
+                    'metadata.status': offer.status,
+                    'metadata.counterAmount': offer.counterAmount,
+                    'metadata.roundNumber': offer.roundNumber
+                } 
+            }
+        );
+    } catch (err) {
+        console.error('Failed to update ChatMessage metadata for offer:', err);
+    }
+
+    // Find conversation to attach ID to the notification
+    let conversationId = null;
+    let conversation = null;
+    try {
+        conversation = await Conversation.findOne({
+            participants: { $all: [offer.buyer._id, offer.seller] },
+            listing: offer.listing._id,
+        });
+        if (conversation) {
+            conversationId = conversation._id.toString();
+        }
+    } catch (err) {
+        console.error('Failed to find conversation for offer notification:', err);
+    }
+
     // Create in-app notification
     await Notification.createNotification({
         userId: recipientId,
@@ -317,17 +387,20 @@ exports.respondToOffer = asyncHandler(async (req, res) => {
         data: {
             listingId: offer.listing._id,
             offerId: offer._id,
+            ...(conversationId && { conversationId })
         },
     });
 
     // Send FCM push
     await sendOfferNotification(recipientId, {
         type: notificationType,
-        buyerName: isSellerResponding ? offer.buyer.name : req.user.name,
+        buyerName: isSeller ? offer.buyer.name : req.user.name,
+        buyerId: isSeller ? offer.buyer._id : req.user._id,
         amount: action === 'counter' ? counterAmount : offer.amount,
         listingTitle: offer.listing.title,
         offerId: offer._id.toString(),
         listingId: offer.listing._id.toString(),
+        conversationId,
     });
 
     // Send system message in chat if conversation exists (real-time via Socket.io)
@@ -338,16 +411,13 @@ exports.respondToOffer = asyncHandler(async (req, res) => {
         });
 
         if (conversation) {
-            let systemText;
-            if (action === 'accept') {
-                systemText = `✅ Offer of $${offer.amount.toFixed(2)} accepted! 🎉`;
-            } else if (action === 'decline') {
-                systemText = `❌ Offer of $${offer.amount.toFixed(2)} was declined.`;
-            } else if (action === 'counter') {
-                systemText = `🔄 Counter offer: $${counterAmount.toFixed(2)}`;
-            }
-
-            await emitSystemMessage(conversation._id.toString(), userId, systemText);
+            // Broadcast the updated offer state so the bubble updates on frontends
+            emitOfferUpdated(conversation._id.toString(), {
+                offerId: offer._id.toString(),
+                status: offer.status,
+                counterAmount: offer.counterAmount,
+                roundNumber: offer.roundNumber,
+            });
         }
     } catch (err) {
         console.error('Failed to send system message:', err);
@@ -357,7 +427,7 @@ exports.respondToOffer = asyncHandler(async (req, res) => {
     const updatedOffer = await Offer.findById(offer._id)
         .populate('buyer', 'name avatar')
         .populate('seller', 'name avatar')
-        .populate('listing', 'title price images condition location')
+        .populate('listing', 'title price images condition location status soldTo soldPrice soldAt')
         .lean();
 
     res.json({

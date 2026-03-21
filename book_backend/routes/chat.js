@@ -2,11 +2,13 @@ const express = require('express');
 const router = express.Router();
 const chatController = require('../controllers/chatController');
 const { protect } = require('../middleware/auth');
+const { requireVerified } = require('../middleware/roles');
 const { uploadChatImage } = require('../config/cloudinary');
 const { validate, rules } = require('../middleware/validate');
 
 // All routes require authentication
 router.use(protect);
+router.use(requireVerified);
 
 // Conversations
 router.get('/conversations', rules.pagination, validate, chatController.getConversations);

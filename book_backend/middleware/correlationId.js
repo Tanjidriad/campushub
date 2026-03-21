@@ -1,4 +1,4 @@
-const { v4: uuidv4 } = require('uuid');
+const { randomUUID } = require('crypto');
 
 /**
  * Middleware that adds a unique correlation ID to every request.
@@ -7,7 +7,7 @@ const { v4: uuidv4 } = require('uuid');
  * - Attaches to response headers for tracing
  */
 const correlationId = (req, res, next) => {
-    const id = req.headers['x-correlation-id'] || uuidv4();
+    const id = req.headers['x-correlation-id'] || randomUUID();
     req.correlationId = id;
     res.setHeader('x-correlation-id', id);
     next();

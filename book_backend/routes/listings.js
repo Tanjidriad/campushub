@@ -15,6 +15,7 @@ router.get('/:id/similar', optionalAuth, rules.mongoId, validate, listingControl
 
 // Protected routes
 router.use(protect);
+router.use(requireVerified);
 
 // User's listings (MUST be before /:id route to avoid matching as ID)
 router.get('/my-listings', listingController.getMyListings);
@@ -23,10 +24,9 @@ router.get('/wishlist', listingController.getWishlist);
 // Single listing by ID (MUST be last among GET routes)
 router.get('/:id', rules.mongoId, validate, listingController.getListing);
 
-// Create listing (requires verified email)
+// Create listing
 router.post(
     '/',
-    requireVerified,
     uploadListingImages,
     rules.createListing,
     validate,

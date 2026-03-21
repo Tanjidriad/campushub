@@ -23,9 +23,15 @@ const seedReports = async () => {
     try {
         await connectDB();
 
-        // Get some existing users and listings to create reports
-        const users = await User.find().limit(5).lean();
-        const listings = await Listing.find().limit(5).lean();
+        // Get some existing users and listings to create reports (deterministic selection)
+        const users = await User.find()
+            .sort({ createdAt: 1, _id: 1 })
+            .limit(5)
+            .lean();
+        const listings = await Listing.find()
+            .sort({ createdAt: 1, _id: 1 })
+            .limit(5)
+            .lean();
 
         if (users.length < 2) {
             console.log('❌ Need at least 2 users in database to create reports');

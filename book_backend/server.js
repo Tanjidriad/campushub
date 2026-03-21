@@ -331,16 +331,19 @@ const runScheduledTasks = async () => {
     }
 };
 
-// Run on startup and every hour
-runScheduledTasks();
-setInterval(runScheduledTasks, 60 * 60 * 1000);
+// Run on startup and every hour (skip in test to avoid open handles)
+if (process.env.NODE_ENV !== 'test') {
+    runScheduledTasks();
+    setInterval(runScheduledTasks, 60 * 60 * 1000);
+}
 
 // ============== START SERVER ==============
 
 const PORT = process.env.PORT || 5000;
 
-server.listen(PORT, () => {
-    console.log(`
+if (process.env.NODE_ENV !== 'test') {
+    server.listen(PORT, () => {
+        console.log(`
   ╔═══════════════════════════════════════════════════╗
   ║                                                   ║
   ║   🚀 CampusHub Pro API Server                     ║
@@ -352,7 +355,8 @@ server.listen(PORT, () => {
   ║                                                   ║
   ╚═══════════════════════════════════════════════════╝
   `);
-});
+    });
+}
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err) => {

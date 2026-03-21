@@ -10,9 +10,9 @@ const User = require('../models/User');
  * @param {string} recipientId - User ID of the recipient
  * @param {object} sender - Sender info { name, avatar }
  * @param {object} message - Message content { text, messageType }
- * @param {string} conversationId - Conversation ID
+ * @param {object} conversation/conversationId - Populated conversation object or ID
  */
-const sendChatNotification = async (recipientId, sender, message, conversationId) => {
+const sendChatNotification = async (recipientId, sender, message, conversation) => {
     if (!isFirebaseAvailable()) {
         return { sent: false, reason: 'firebase_not_available' };
     }
@@ -35,10 +35,19 @@ const sendChatNotification = async (recipientId, sender, message, conversationId
             body: messagePreview,
             data: {
                 type: 'chat_message',
-                conversationId: conversationId.toString(),
+                // Support both populated conversation and raw ID
+                conversationId: conversation._id ? conversation._id.toString() : conversation.toString(),
                 senderId: sender.id?.toString() || '',
-                senderName: sender.name,
+                senderName: sender.name || '',
+                senderAvatar: sender.avatar || '',
                 messageType: message.messageType || 'text',
+                listingId: conversation.listing?._id?.toString() || conversation.listing?.toString() || '',
+                listingTitle: conversation.listing?.title || '',
+                listingImage: conversation.listing?.images && conversation.listing.images.length > 0 
+                    ? (conversation.listing.images[0].url || conversation.listing.images[0] || '').toString() 
+                    : '',
+                listingPrice: conversation.listing?.price?.toString() || '',
+                sellerId: conversation.listing?.seller?.toString() || '',
             },
             badge: 1,
         };
@@ -66,17 +75,25 @@ const sendChatNotification = async (recipientId, sender, message, conversationId
 };
 
 /**
- * Send notification for new listing match (future feature)
+ * Send notification for new listing match (future feature).
+ *
+ * NOTE: This is intentionally left as a stub in this template.
+ * Saved searches / listing match notifications are not implemented
+ * in the mobile app and are out of scope for the base product.
  */
 const sendListingMatchNotification = async (userId, listing) => {
-    // TODO: Implement when adding saved searches feature
+    return { sent: false, reason: 'not_implemented_in_template' };
 };
 
 /**
- * Send notification for order/transaction updates (future feature)
+ * Send notification for order/transaction updates (future feature).
+ *
+ * NOTE: This is intentionally left as a stub in this template.
+ * If you add transactions/orders later, you can implement this
+ * using your FCM/notification provider.
  */
 const sendTransactionNotification = async (userId, transaction, type) => {
-    // TODO: Implement when adding transactions
+    return { sent: false, reason: 'not_implemented_in_template' };
 };
 
 /**
@@ -126,6 +143,9 @@ const sendOfferNotification = async (recipientId, offerData) => {
                 type: offerData.type,
                 offerId: offerData.offerId,
                 listingId: offerData.listingId,
+                ...(offerData.conversationId && { conversationId: offerData.conversationId }),
+                senderId: offerData.buyerId || '',
+                senderName: offerData.buyerName || '',
             },
             badge: 1,
         };

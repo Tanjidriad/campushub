@@ -1,8 +1,10 @@
 # CampusHub Pro - Backend API
 
-A production-ready Node.js backend for a student marketplace app. Built with Express, MongoDB, Socket.io, and Cloudinary.
+Node.js/Express backend for the CampusHub Pro / book sale marketplace template. Built with Express, MongoDB, Socket.io, and Cloudinary.
 
 ## 🚀 Quick Start
+
+See `Documentation/02-Installation-Backend.md` at the project root for a full, step‑by‑step installation guide.
 
 ### Prerequisites
 - Node.js v18+
@@ -10,7 +12,7 @@ A production-ready Node.js backend for a student marketplace app. Built with Exp
 - Cloudinary account
 - SMTP service (Gmail, SendGrid, etc.)
 
-### Installation
+### Installation (short version)
 
 ```bash
 # Install dependencies
@@ -24,7 +26,9 @@ cp .env.example .env
 npm run dev
 ```
 
-## ⚙️ Environment Variables
+## ⚙️ Environment Variables (overview)
+
+See `.env.example` for a complete list and inline descriptions.
 
 | Variable | Description |
 |----------|-------------|
@@ -34,6 +38,8 @@ npm run dev
 | `CLOUDINARY_*` | Cloudinary credentials |
 | `SMTP_*` | Email service credentials |
 | `GOOGLE_CLIENT_*` | Google OAuth credentials (optional) |
+| `FRONTEND_URL` | Comma‑separated list of allowed web origins for CORS |
+| `APP_URL` | Base app URL scheme used in deep links (password reset, etc.) |
 
 ## 📡 API Endpoints
 

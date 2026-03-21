@@ -6,6 +6,13 @@ const hashToken = require('../utils/hashToken');
 const { sendVerificationEmail, sendPasswordResetEmail } = require('../utils/sendEmail');
 const { asyncHandler } = require('../middleware/errorHandler');
 
+const resolveRequestBaseUrl = (req) => {
+    const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+    const host = req.get('host');
+    if (!host) return '';
+    return `${proto}://${host}`.replace(/\/+$/, '');
+};
+
 // @desc    Register new user
 // @route   POST /api/auth/register
 // @access  Public
@@ -33,7 +40,7 @@ exports.register = asyncHandler(async (req, res) => {
     await user.save();
 
     // Send verification email
-    await sendVerificationEmail(user, verificationToken);
+    await sendVerificationEmail(user, verificationToken, resolveRequestBaseUrl(req));
 
     // Generate tokens
     const tokens = generateTokens(user._id);
@@ -204,7 +211,7 @@ exports.resendVerification = asyncHandler(async (req, res) => {
     const verificationToken = user.generateVerificationToken();
     await user.save();
 
-    await sendVerificationEmail(user, verificationToken);
+    await sendVerificationEmail(user, verificationToken, resolveRequestBaseUrl(req));
 
     res.json({
         success: true,

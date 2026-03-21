@@ -41,9 +41,40 @@ class SearchService {
         // 2. Search Logic (if query exists)
         if (query) {
             // ... (keep existing search logic) ...
-            // Clean query
-            const cleanQuery = query.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // Escape regex chars
-            if (!cleanQuery) return { listings: [], total: 0 };
+            // Clean query (escape regex chars once, then reuse across pipeline stages)
+            const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const trimmed = query.trim();
+            if (!trimmed) return { listings: [], total: 0 };
+
+            const cleanQuery = escapeRegex(trimmed); // escaped phrase used in anchored scoring
+
+            // Build a cheaper pre-filter before computing scores.
+            // This significantly reduces the number of documents that must run $regexMatch.
+            // Also bound the number of fuzzy tokens to avoid very large regexes.
+            const rawTerms = trimmed
+                .split(/\s+/)
+                .map(t => t.trim())
+                .filter(t => t.length > 2);
+            const maxFuzzyTerms = 4;
+            const boundedTerms = rawTerms.slice(0, maxFuzzyTerms);
+
+            const escapedTerms = boundedTerms.map(escapeRegex);
+            const fuzzyRegex = escapedTerms.length ? new RegExp(escapedTerms.join('|'), 'i') : null;
+            const fuzzyPattern = escapedTerms.length ? escapedTerms.join('|') : null;
+            const tagExact = boundedTerms[0] ? boundedTerms[0].toLowerCase() : '';
+
+            // Early fuzzy match: restrict candidate docs before scoring.
+            if (fuzzyRegex) {
+                searchPipeline.push({
+                    $match: {
+                        $or: [
+                            { title: { $regex: fuzzyRegex } },
+                            { description: { $regex: fuzzyRegex } },
+                            { tags: { $in: escapedTerms.map(t => new RegExp(`^${t}`, 'i')) } },
+                        ],
+                    },
+                });
+            }
 
             searchPipeline.push({
                 $addFields: {
@@ -55,73 +86,56 @@ class SearchService {
                                 $cond: [
                                     { $regexMatch: { input: "$title", regex: `^${cleanQuery}$`, options: "i" } },
                                     100,
-                                    0
-                                ]
+                                    0,
+                                ],
                             },
                             // Title Begins With (80 points)
                             {
                                 $cond: [
                                     { $regexMatch: { input: "$title", regex: `^${cleanQuery}`, options: "i" } },
                                     80,
-                                    0
-                                ]
+                                    0,
+                                ],
                             },
                             // Description Contains Query (50 points)
                             {
                                 $cond: [
-                                    { $regexMatch: { input: "$description", regex: cleanQuery, options: "i" } },
+                                    { $regexMatch: { input: "$description", regex: fuzzyPattern || cleanQuery, options: "i" } },
                                     50,
-                                    0
-                                ]
+                                    0,
+                                ],
                             },
-                            // Partial/Fuzzy Match in Title (30 points)
+                            // Partial Match in Title (30 points)
                             {
                                 $cond: [
-                                    { $regexMatch: { input: "$title", regex: cleanQuery, options: "i" } },
+                                    { $regexMatch: { input: "$title", regex: fuzzyPattern || cleanQuery, options: "i" } },
                                     30,
-                                    0
-                                ]
+                                    0,
+                                ],
                             },
-                            // Match in Tags (20 points)
-                            {
-                                $cond: [
-                                    { $in: [cleanQuery.toLowerCase(), { $ifNull: ["$tags", []] }] },
-                                    20,
-                                    0
-                                ]
-                            },
+                            // Match in Tags (20 points) - use first fuzzy token
+                            ...(tagExact
+                                ? [{
+                                    $cond: [
+                                        { $in: [tagExact, { $ifNull: ["$tags", []] }] },
+                                        20,
+                                        0,
+                                    ],
+                                }]
+                                : [{ $literal: 0 }]),
                             // Boost for Condition 'New' (5 points)
                             {
-                                $cond: [{ $eq: ["$condition", "new"] }, 5, 0]
-                            }
-                        ]
-                    }
-                }
+                                $cond: [{ $eq: ["$condition", "new"] }, 5, 0],
+                            },
+                        ],
+                    },
+                },
             });
 
-            // Filter out zero-score results (irrelevant)
-            // Note: If using $text, MongoDB requires it to be the first stage usually, 
-            // but since we are doing custom aggregation, we might need a workaround for $text inside $addFields or just rely on regex.
-            // For true "Dynamic Search" without Atlas Search, Regex is robust for small-medium datasets.
+            // Filter out low-relevance candidates (e.g. only "new" boost without query match).
+            // Without this, documents can be returned solely due to the Condition='new' boost.
+            searchPipeline.push({ $match: { searchScore: { $gt: 5 } } });
 
-            // To support "Fuzzy" (typo tolerance) properly without Atlas text search, 
-            // we can split query into words and match any.
-            const terms = cleanQuery.split(/\s+/).filter(t => t.length > 2).join('|');
-            const fuzzyRegex = terms ? new RegExp(terms, 'i') : null;
-
-            if (fuzzyRegex) {
-                searchPipeline.push({
-                    $match: {
-                        $or: [
-                            { title: { $regex: fuzzyRegex } },
-                            { description: { $regex: fuzzyRegex } },
-                            { tags: { $in: cleanQuery.split(/\s+/).map(t => new RegExp(`^${t}`, 'i')) } }
-                        ]
-                    }
-                });
-            }
-
-            // Re-filter to ensure score > 0 effectively (implicit by match above)
             searchPipeline.push({ $sort: { searchScore: -1, createdAt: -1 } });
 
         } else {

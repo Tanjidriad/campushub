@@ -23,13 +23,18 @@ const chatMessageSchema = new mongoose.Schema(
         },
         messageType: {
             type: String,
-            enum: ['text', 'image', 'system', 'location'],
+            enum: ['text', 'image', 'system', 'location', 'offer'],
             default: 'text',
         },
         location: {
             latitude: Number,
             longitude: Number,
             address: String,
+        },
+        // Flexible metadata field for offer messages (offerId, amount, status, etc.)
+        metadata: {
+            type: mongoose.Schema.Types.Mixed,
+            default: null,
         },
 
         // Delivery status
@@ -77,7 +82,7 @@ chatMessageSchema.index({ sender: 1, createdAt: -1 });
 
 // Validate that message has either text or image
 chatMessageSchema.pre('validate', function () {
-    if (!this.text && !this.image?.url && !this.location && this.messageType !== 'system') {
+    if (!this.text && !this.image?.url && !this.location && this.messageType !== 'system' && this.messageType !== 'offer') {
         throw new Error('Message must have content (text, image, or location)');
     }
 });

@@ -93,7 +93,10 @@ exports.createReview = asyncHandler(async (req, res) => {
         type: 'new_review',
         title: 'New Review Received',
         body: `${req.user.name} gave you a ${rating}-star review`,
-        data: { userId: req.user._id },
+        data: { 
+            userId: req.user._id,
+            ...(listingId && { listingId })
+        },
     });
 
     res.status(201).json({

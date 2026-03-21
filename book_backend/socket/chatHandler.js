@@ -36,6 +36,9 @@ const chatHandler = (io) => {
             if (user.isBlocked) {
                 return next(new Error('Account suspended'));
             }
+            if (!user.isVerified) {
+                return next(new Error('EMAIL_NOT_VERIFIED'));
+            }
 
             socket.user = user;
             next();
@@ -135,10 +138,10 @@ const chatHandler = (io) => {
             const validated = validate('message:send', data);
             if (!validated) return;
 
-            const { conversationId, text, image, location } = validated;
+            const { conversationId, text, image, location, messageType: clientMessageType, metadata } = validated;
 
             try {
-                const conversation = await Conversation.findById(conversationId);
+                const conversation = await Conversation.findById(conversationId).populate('listing', 'title images price seller');
 
                 if (!conversation || !conversation.participants.some(p => p.toString() === socket.user._id.toString())) {
                     return socket.emit('error', { message: 'Conversation not found' });
@@ -179,7 +182,7 @@ const chatHandler = (io) => {
                 const messageData = {
                     conversation: conversationId,
                     sender: socket.user._id,
-                    messageType: 'text',
+                    messageType: clientMessageType || 'text',
                 };
 
                 if (sanitizedText) messageData.text = sanitizedText;
@@ -194,6 +197,9 @@ const chatHandler = (io) => {
                     };
                     messageData.messageType = 'location';
                     if (!messageData.text) messageData.text = '📍 Location';
+                }
+                if (metadata && typeof metadata === 'object') {
+                    messageData.metadata = metadata;
                 }
 
                 const message = await ChatMessage.create(messageData);
@@ -243,7 +249,7 @@ const chatHandler = (io) => {
                             text: messageData.text,
                             messageType: messageData.messageType,
                         },
-                        conversationId
+                        conversation
                     ).catch(err => console.error('Push notification failed:', err));
                 }
 

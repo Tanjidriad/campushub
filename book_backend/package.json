@@ -8,6 +8,7 @@
         "dev": "nodemon server.js",
         "test": "jest --coverage",
         "build": "echo 'Node.js API ready - no build needed'",
+        "seed:demo": "node seedDemo.js",
         "test:auth": "jest --testPathPattern=auth",
         "test:listings": "jest --testPathPattern=listings",
         "test:chat": "jest --testPathPattern=chat"

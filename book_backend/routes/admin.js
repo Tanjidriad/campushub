@@ -4,10 +4,12 @@ const adminController = require('../controllers/adminController');
 const { protect } = require('../middleware/auth');
 const { requireAdmin, requireSuperAdmin } = require('../middleware/roles');
 const { validate, rules } = require('../middleware/validate');
+const { demoGuard } = require('../middleware/demoGuard');
 
 // All routes require admin access
 router.use(protect);
 router.use(requireAdmin);
+router.use(demoGuard);
 
 // Dashboard
 router.get('/dashboard', adminController.getDashboard);

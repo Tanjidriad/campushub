@@ -18,7 +18,6 @@ exports.updateEducationConfig = asyncHandler(async (req, res) => {
     const config = await EducationConfig.getConfig();
 
     if (levels !== undefined) {
-        // Validate structure
         if (!Array.isArray(levels)) {
             return res.status(400).json({
                 success: false,
@@ -37,6 +36,29 @@ exports.updateEducationConfig = asyncHandler(async (req, res) => {
                     success: false,
                     message: 'subLevels must be an array',
                 });
+            }
+            // Validate streams (optional nested hierarchy)
+            if (level.streams) {
+                if (!Array.isArray(level.streams)) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'streams must be an array',
+                    });
+                }
+                for (const stream of level.streams) {
+                    if (!stream.key || !stream.label) {
+                        return res.status(400).json({
+                            success: false,
+                            message: 'Each stream must have a key and label',
+                        });
+                    }
+                    if (stream.departments && !Array.isArray(stream.departments)) {
+                        return res.status(400).json({
+                            success: false,
+                            message: 'departments must be an array',
+                        });
+                    }
+                }
             }
         }
         config.levels = levels;

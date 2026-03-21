@@ -58,6 +58,13 @@ const userSchema = new mongoose.Schema(
             enum: ['student', 'admin', 'superadmin'],
             default: 'student',
         },
+        // When enabled, admin user is locked into a read-only demo experience.
+        // Used by `demoGuard` middleware to block state-mutating admin actions.
+        isDemo: {
+            type: Boolean,
+            default: false,
+            index: true,
+        },
         isVerified: {
             type: Boolean,
             default: false,

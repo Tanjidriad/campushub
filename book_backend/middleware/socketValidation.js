@@ -12,6 +12,8 @@ const schemas = {
         text: { type: 'string', maxLength: 2000 },
         image: { type: 'imageObject' },
         location: { type: 'locationObject' },
+        messageType: { type: 'string', maxLength: 20 },
+        metadata: { type: 'object' },
     },
     'conversation:join': {
         conversationId: { type: 'objectId', required: true },
@@ -112,6 +114,12 @@ const validateField = (value, schema, fieldName) => {
                         }
                     }
                 }
+            }
+            break;
+
+        case 'object':
+            if (typeof value !== 'object' || Array.isArray(value)) {
+                errors.push(`${fieldName} must be an object`);
             }
             break;
     }
