@@ -25,7 +25,13 @@ const allowedOrigins = process.env.FRONTEND_URL
 const corsOptions = {
     origin: (origin, callback) => {
         // Allow requests with no origin header (mobile apps, Postman, curl)
-        if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+        // Auto-allow Vercel and Netlify for easy frontend deployments
+        if (!origin || 
+            allowedOrigins.includes(origin) || 
+            origin.endsWith('.vercel.app') || 
+            origin.endsWith('.netlify.app')) {
+            return callback(null, true);
+        }
         callback(new Error(`CORS: origin '${origin}' not in allowed list`));
     },
     credentials: true,
