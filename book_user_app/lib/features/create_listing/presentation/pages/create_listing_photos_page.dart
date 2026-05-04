@@ -1,3 +1,6 @@
+import 'package:book_user_app/core/theme/app_palette.dart';
+import 'package:book_user_app/core/widgets/app_snackbar.dart';
+import 'package:book_user_app/l10n/app_localizations.dart';
 // ignore_for_file: deprecated_member_use
 
 import 'dart:io';
@@ -24,15 +27,18 @@ class _CreateListingPhotosPageState extends State<CreateListingPhotosPage> {
 
   Future<void> _pickImage() async {
     // Pick multiple images
-    final List<XFile> images = await _picker.pickMultiImage();
+    final List<XFile> images = await _picker.pickMultiImage(
+      maxWidth: 1280,
+      maxHeight: 1280,
+      imageQuality: 80,
+    );
     if (images.isNotEmpty) {
       if (_selectedPhotos.length + images.length > 10) {
         // Show invalid snackbar
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('You can only upload up to 10 photos'),
-            ),
+          AppSnackBar.showWarning(
+            context,
+            AppLocalizations.of(context)!.maxPhotosWarning,
           );
         }
         return;
@@ -57,6 +63,7 @@ class _CreateListingPhotosPageState extends State<CreateListingPhotosPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -80,7 +87,7 @@ class _CreateListingPhotosPageState extends State<CreateListingPhotosPage> {
                   ),
                   Expanded(
                     child: Text(
-                      'Create Listing',
+                      l10n.createListing,
                       textAlign: TextAlign.center,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
@@ -96,9 +103,9 @@ class _CreateListingPhotosPageState extends State<CreateListingPhotosPage> {
                       child: Align(
                         alignment: Alignment.centerRight,
                         child: Text(
-                          'Help',
+                          l10n.help,
                           style: theme.textTheme.bodyMedium?.copyWith(
-                            color: const Color(0xFF507295),
+                            color: AppColors.of(context).textSecondary,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -119,15 +126,15 @@ class _CreateListingPhotosPageState extends State<CreateListingPhotosPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Step 1 of 4',
+                        l10n.stepOneOfFour,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w500,
                         ),
                       ),
                       Text(
-                        '25% completed',
+                        l10n.twentyFivePercentCompleted,
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: const Color(0xFF507295),
+                          color: AppColors.of(context).textSecondary,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -139,8 +146,8 @@ class _CreateListingPhotosPageState extends State<CreateListingPhotosPage> {
                     width: double.infinity,
                     decoration: BoxDecoration(
                       color: isDark
-                          ? Colors.grey[700]
-                          : const Color(0xFFD1DBE6),
+                          ? AppColors.of(context).textPrimary
+                          : AppColors.of(context).border,
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: FractionallySizedBox(
@@ -166,7 +173,7 @@ class _CreateListingPhotosPageState extends State<CreateListingPhotosPage> {
                   children: [
                     SizedBox(height: 24.h),
                     Text(
-                      'Add Photos',
+                      l10n.addPhotos,
                       style: theme.textTheme.headlineLarge?.copyWith(
                         fontSize: 32.sp,
                         fontWeight: FontWeight.bold,
@@ -176,9 +183,9 @@ class _CreateListingPhotosPageState extends State<CreateListingPhotosPage> {
                     ),
                     SizedBox(height: 8.h),
                     Text(
-                      'Upload up to 10 photos. Choose your best shot as the cover.',
+                      l10n.addPhotosSubtitle,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: const Color(0xFF507295),
+                        color: AppColors.of(context).textSecondary,
                         height: 1.5,
                       ),
                     ),
@@ -190,12 +197,12 @@ class _CreateListingPhotosPageState extends State<CreateListingPhotosPage> {
                       decoration: BoxDecoration(
                         color: isDark
                             ? theme.colorScheme.primary.withOpacity(0.1)
-                            : Colors.blue[50],
+                            : AppColors.of(context).accent.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(8.r),
                         border: Border.all(
                           color: isDark
                               ? theme.colorScheme.primary.withOpacity(0.2)
-                              : Colors.blue[100]!,
+                              : AppColors.of(context).accent.withOpacity(0.2),
                         ),
                       ),
                       child: Row(
@@ -212,7 +219,7 @@ class _CreateListingPhotosPageState extends State<CreateListingPhotosPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'QUICK TIP',
+                                  l10n.quickTip,
                                   style: theme.textTheme.labelSmall?.copyWith(
                                     color: theme.colorScheme.primary,
                                     fontWeight: FontWeight.bold,
@@ -221,7 +228,7 @@ class _CreateListingPhotosPageState extends State<CreateListingPhotosPage> {
                                 ),
                                 SizedBox(height: 2.h),
                                 Text(
-                                  'Good lighting helps items sell 50% faster! Try using natural light near a window.',
+                                  l10n.lightingTip,
                                   style: theme.textTheme.bodyMedium?.copyWith(
                                     fontSize: 14.sp,
                                     height: 1.4,
@@ -247,8 +254,8 @@ class _CreateListingPhotosPageState extends State<CreateListingPhotosPage> {
                                 borderRadius: BorderRadius.circular(12.r),
                                 border: Border.all(
                                   color: isDark
-                                      ? Colors.grey[700]!
-                                      : Colors.grey[200]!,
+                                      ? AppColors.of(context).textPrimary
+                                      : AppColors.of(context).border,
                                 ),
                                 image: DecorationImage(
                                   image: FileImage(
@@ -268,21 +275,21 @@ class _CreateListingPhotosPageState extends State<CreateListingPhotosPage> {
                                 vertical: 4.h,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.6),
+                                color: AppColors.of(context).overlay,
                                 borderRadius: BorderRadius.circular(999),
                               ),
                               child: Row(
                                 children: [
                                   Icon(
                                     Icons.star,
-                                    color: Colors.white,
+                                    color: AppColors.of(context).onPrimary,
                                     size: 12.sp,
                                   ),
                                   SizedBox(width: 6.w),
                                   Text(
-                                    'Cover Photo',
+                                    l10n.coverPhoto,
                                     style: TextStyle(
-                                      color: Colors.white,
+                                      color: AppColors.of(context).onPrimary,
                                       fontSize: 12.sp,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -302,12 +309,14 @@ class _CreateListingPhotosPageState extends State<CreateListingPhotosPage> {
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   color: isDark
-                                      ? Colors.black.withOpacity(0.6)
-                                      : Colors.white.withOpacity(0.9),
+                                      ? AppColors.of(context).overlay
+                                      : AppColors.of(
+                                          context,
+                                        ).surface.withOpacity(0.9),
                                 ),
                                 child: Icon(
                                   Icons.delete,
-                                  color: Colors.red,
+                                  color: AppColors.of(context).error,
                                   size: 18.sp,
                                 ),
                               ),
@@ -324,12 +333,12 @@ class _CreateListingPhotosPageState extends State<CreateListingPhotosPage> {
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(12.r),
                               color: isDark
-                                  ? Colors.grey[800]
-                                  : Colors.grey[100],
+                                  ? AppColors.of(context).textPrimary
+                                  : AppColors.of(context).subtleFill,
                               border: Border.all(
                                 color: isDark
-                                    ? Colors.grey[700]!
-                                    : Colors.grey[200]!,
+                                    ? AppColors.of(context).textPrimary
+                                    : AppColors.of(context).border,
                               ),
                             ),
                             child: Column(
@@ -342,7 +351,7 @@ class _CreateListingPhotosPageState extends State<CreateListingPhotosPage> {
                                 ),
                                 SizedBox(height: 8.h),
                                 Text(
-                                  "Add Cover Photo",
+                                  l10n.addCoverPhoto,
                                   style: theme.textTheme.bodyMedium,
                                 ),
                               ],
@@ -419,7 +428,7 @@ class _CreateListingPhotosPageState extends State<CreateListingPhotosPage> {
                                   ),
                                   SizedBox(height: 4.h),
                                   Text(
-                                    'Add More',
+                                    l10n.addMore,
                                     style: TextStyle(
                                       color: theme.colorScheme.primary,
                                       fontSize: 10.sp,
@@ -454,12 +463,12 @@ class _CreateListingPhotosPageState extends State<CreateListingPhotosPage> {
                                 child: Container(
                                   padding: EdgeInsets.all(2.w),
                                   decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.5),
+                                    color: AppColors.of(context).overlay,
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(
                                     Icons.close,
-                                    color: Colors.white,
+                                    color: AppColors.of(context).onPrimary,
                                     size: 12.sp,
                                   ),
                                 ),
@@ -486,14 +495,10 @@ class _CreateListingPhotosPageState extends State<CreateListingPhotosPage> {
         ),
         decoration: BoxDecoration(
           color: theme.scaffoldBackgroundColor,
-          border: Border(
-            top: BorderSide(
-              color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
-            ),
-          ),
+          border: Border(top: BorderSide(color: AppColors.of(context).border)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: AppColors.of(context).textPrimary.withOpacity(0.05),
               blurRadius: 6,
               offset: const Offset(0, -4),
             ),
@@ -506,17 +511,17 @@ class _CreateListingPhotosPageState extends State<CreateListingPhotosPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '${_selectedPhotos.length} photos selected',
+                  l10n.photosSelected(_selectedPhotos.length),
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey,
+                    color: AppColors.of(context).textSecondary,
                   ),
                 ),
                 GestureDetector(
                   onTap: _clearAll,
                   child: Text(
-                    'Clear All',
+                    l10n.clearAll,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: Colors.red,
+                      color: AppColors.of(context).error,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -530,11 +535,7 @@ class _CreateListingPhotosPageState extends State<CreateListingPhotosPage> {
               child: ElevatedButton(
                 onPressed: () {
                   if (_selectedPhotos.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Please select at least one photo'),
-                      ),
-                    );
+                    AppSnackBar.showWarning(context, l10n.pleaseSelectPhoto);
                     return;
                   }
 
@@ -549,18 +550,18 @@ class _CreateListingPhotosPageState extends State<CreateListingPhotosPage> {
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: theme.colorScheme.primary,
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppColors.of(context).onPrimary,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8.r),
                   ),
                   elevation: 4,
-                  shadowColor: Colors.blue.withOpacity(0.3),
+                  shadowColor: AppColors.of(context).accent.withOpacity(0.3),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      'Next: Details',
+                      l10n.nextDetails,
                       style: TextStyle(
                         fontSize: 16.sp,
                         fontWeight: FontWeight.bold,

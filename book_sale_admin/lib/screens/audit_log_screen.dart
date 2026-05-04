@@ -133,21 +133,81 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
     );
   }
 
+  bool _exporting = false;
+
+  Future<void> _exportCsv(String type) async {
+    setState(() => _exporting = true);
+    try {
+      final endpoint = type == 'users'
+          ? ApiConstants.exportUsers
+          : ApiConstants.exportListings;
+      await _apiClient.dio.get(endpoint);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$type CSV exported successfully'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to export $type: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
+
   Widget _buildHeader() {
     return Padding(
       padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 0),
-      child: Row(
+      child: Column(
         children: [
-          Icon(Icons.history_rounded, size: 28, color: AppColors.primary),
-          SizedBox(width: 10.w),
-          Text(
-            'Audit Log',
-            style: AppTextStyles.h3.copyWith(color: context.textPrimary),
+          Row(
+            children: [
+              Icon(Icons.history_rounded, size: 28, color: AppColors.primary),
+              SizedBox(width: 10.w),
+              Text(
+                'Audit Log',
+                style: AppTextStyles.h3.copyWith(color: context.textPrimary),
+              ),
+              const Spacer(),
+              Text(
+                '${_logs.length} entries',
+                style:
+                    AppTextStyles.labelSmall.copyWith(color: context.textMuted),
+              ),
+            ],
           ),
-          const Spacer(),
-          Text(
-            '${_logs.length} entries',
-            style: AppTextStyles.labelSmall.copyWith(color: context.textMuted),
+          SizedBox(height: 12.h),
+          Row(
+            children: [
+              Expanded(
+                child: _ExportButton(
+                  icon: Icons.people_outline,
+                  label: 'Export Users',
+                  color: AppColors.info,
+                  loading: _exporting,
+                  onTap: () => _exportCsv('users'),
+                ),
+              ),
+              SizedBox(width: 8.w),
+              Expanded(
+                child: _ExportButton(
+                  icon: Icons.book_outlined,
+                  label: 'Export Listings',
+                  color: AppColors.accent,
+                  loading: _exporting,
+                  onTap: () => _exportCsv('listings'),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -281,8 +341,9 @@ class _AuditLogTile extends StatelessWidget {
 
   Color _colorForAction(String action) {
     if (action.contains('banned')) return AppColors.error;
-    if (action.contains('approved') || action.contains('unbanned'))
+    if (action.contains('approved') || action.contains('unbanned')) {
       return AppColors.success;
+    }
     if (action.contains('rejected')) return AppColors.warning;
     if (action.contains('deleted')) return AppColors.error;
     if (action.contains('featured')) return AppColors.accent;
@@ -302,5 +363,60 @@ class _AuditLogTile extends StatelessWidget {
     } catch (_) {
       return '';
     }
+  }
+}
+
+class _ExportButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final bool loading;
+  final VoidCallback onTap;
+
+  const _ExportButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.loading,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: color.withAlpha(20),
+      borderRadius: AppRadius.md,
+      child: InkWell(
+        onTap: loading ? null : onTap,
+        borderRadius: AppRadius.md,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (loading)
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: color,
+                  ),
+                )
+              else
+                Icon(icon, size: 18, color: color),
+              SizedBox(width: 8.w),
+              Text(
+                label,
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

@@ -146,7 +146,7 @@ class _AdminShellLayoutState extends State<AdminShellLayout>
                 color: context.textSecondary,
               ),
               onPressed: () {
-                // TODO: Show notifications
+
               },
             ),
             IconButton(
@@ -162,7 +162,7 @@ class _AdminShellLayoutState extends State<AdminShellLayout>
             color: context.navBarColor,
             border: Border(
               top: BorderSide(
-                color: context.cardBorder.withOpacity(0.5),
+                color: context.cardBorder.withValues(alpha: 0.5),
                 width: 0.5,
               ),
             ),
@@ -701,8 +701,12 @@ class _BottomNavItem extends StatelessWidget {
           gradient: isActive
               ? LinearGradient(
                   colors: [
-                    AppColors.primary.withOpacity(context.isDark ? 0.2 : 0.12),
-                    AppColors.primary.withOpacity(context.isDark ? 0.08 : 0.04),
+                    AppColors.primary.withValues(
+                      alpha: context.isDark ? 0.2 : 0.12,
+                    ),
+                    AppColors.primary.withValues(
+                      alpha: context.isDark ? 0.08 : 0.04,
+                    ),
                   ],
                 )
               : null,
@@ -731,24 +735,5 @@ class _BottomNavItem extends StatelessWidget {
 }
 
 // ─── Header Icon Button ──────────────────────────────────────
-class _HeaderIconButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
 
-  const _HeaderIconButton({required this.icon, required this.onTap});
 
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10.r),
-        child: Container(
-          padding: EdgeInsets.all(8.w),
-          child: Icon(icon, size: 22, color: context.textSecondary),
-        ),
-      ),
-    );
-  }
-}

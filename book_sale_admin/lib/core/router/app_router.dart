@@ -124,11 +124,11 @@ GoRouter createRouter(AuthBloc authBloc) {
               initialLocation: i == navigationShell.currentIndex,
             ),
             navItems: shellNavItems,
-            child: navigationShell,
             isDark: isDark,
             onToggleTheme: () =>
                 context.read<ThemeBloc>().add(ToggleThemeEvent()),
             onLogout: () => _confirmLogout(context),
+            child: navigationShell,
           );
         },
         branches: [

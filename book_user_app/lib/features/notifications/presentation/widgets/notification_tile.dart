@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:book_user_app/l10n/app_localizations.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:intl/intl.dart';
@@ -19,7 +20,8 @@ class NotificationTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = _getNotificationStyle(notification.type);
+    final l10n = AppLocalizations.of(context)!;
+    final style = _getNotificationStyle(context, notification.type);
     final isRead = notification.isRead;
 
     return Dismissible(
@@ -28,12 +30,16 @@ class NotificationTile extends StatelessWidget {
       background: Container(
         margin: EdgeInsets.symmetric(vertical: 6.h),
         decoration: BoxDecoration(
-          color: AppPalette.error,
+          color: AppColors.of(context).error,
           borderRadius: BorderRadius.circular(12.r),
         ),
         alignment: Alignment.centerRight,
         padding: EdgeInsets.only(right: 20.w),
-        child: Icon(Iconsax.trash, color: Colors.white, size: 24.sp),
+        child: Icon(
+          Iconsax.trash,
+          color: AppColors.of(context).onPrimary,
+          size: 24.sp,
+        ),
       ),
       onDismissed: (_) => onDelete(),
       child: GestureDetector(
@@ -41,11 +47,11 @@ class NotificationTile extends StatelessWidget {
         child: Container(
           margin: EdgeInsets.symmetric(vertical: 6.h, horizontal: 2.w),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.of(context).card,
             borderRadius: BorderRadius.circular(12.r),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: AppColors.of(context).textPrimary.withOpacity(0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -99,7 +105,7 @@ class NotificationTile extends StatelessWidget {
                                     color: style.color,
                                     shape: BoxShape.circle,
                                     border: Border.all(
-                                      color: Colors.white,
+                                      color: AppColors.of(context).card,
                                       width: 2,
                                     ),
                                     boxShadow: [
@@ -126,14 +132,16 @@ class NotificationTile extends StatelessWidget {
                                 children: [
                                   Expanded(
                                     child: Text(
-                                      _getTitle(notification.type) ??
+                                      _getTitle(l10n, notification.type) ??
                                           notification.title,
                                       style: TextStyle(
                                         fontSize: 14.sp,
                                         fontWeight: FontWeight.w600,
                                         color: isRead
-                                            ? AppPalette.textSecondary
-                                            : AppPalette.textPrimary,
+                                            ? AppColors.of(
+                                                context,
+                                              ).textSecondary
+                                            : AppColors.of(context).textPrimary,
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
@@ -141,11 +149,16 @@ class NotificationTile extends StatelessWidget {
                                   ),
                                   SizedBox(width: 8.w),
                                   Text(
-                                    _getTimeAgo(notification.createdAt),
+                                    _getTimeAgo(
+                                      context,
+                                      notification.createdAt,
+                                    ),
                                     style: TextStyle(
                                       fontSize: 10.sp,
                                       fontWeight: FontWeight.w500,
-                                      color: AppPalette.textSecondary,
+                                      color: AppColors.of(
+                                        context,
+                                      ).textSecondary,
                                     ),
                                   ),
                                 ],
@@ -156,10 +169,10 @@ class NotificationTile extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: 12.sp,
                                   color: isRead
-                                      ? AppPalette.textSecondary.withOpacity(
-                                          0.8,
-                                        )
-                                      : AppPalette.textSecondary,
+                                      ? AppColors.of(
+                                          context,
+                                        ).textSecondary.withOpacity(0.8)
+                                      : AppColors.of(context).textSecondary,
                                   height: 1.4,
                                 ),
                                 maxLines: 2,
@@ -172,7 +185,7 @@ class NotificationTile extends StatelessWidget {
                                     children: [
                                       _buildActionButton(
                                         context,
-                                        'View Details',
+                                        l10n.viewDetails,
                                         style.color,
                                         onTap,
                                       ),
@@ -220,35 +233,36 @@ class NotificationTile extends StatelessWidget {
     );
   }
 
-  String _getTimeAgo(DateTime dateTime) {
+  String _getTimeAgo(BuildContext context, DateTime dateTime) {
+    final l10n = AppLocalizations.of(context)!;
     final now = DateTime.now();
     final difference = now.difference(dateTime);
 
     if (difference.inDays > 7) {
       return DateFormat('MMM d').format(dateTime);
     } else if (difference.inDays > 1) {
-      return '${difference.inDays}d ago';
+      return l10n.daysAgo(difference.inDays);
     } else if (difference.inDays == 1) {
-      return 'Yesterday';
+      return l10n.yesterday;
     } else if (difference.inHours > 0) {
-      return '${difference.inHours}h ago';
+      return l10n.hoursAgo(difference.inHours);
     } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}m ago';
+      return l10n.minutesAgo(difference.inMinutes);
     } else {
-      return 'Just now';
+      return l10n.justNow;
     }
   }
 
-  String? _getTitle(String type) {
+  String? _getTitle(AppLocalizations l10n, String type) {
     switch (type) {
       case 'listing_approved':
-        return 'Listing Approved';
+        return l10n.listingApproved;
       case 'listing_rejected':
-        return 'Listing Rejected';
+        return l10n.listingRejected;
       case 'price_drop':
-        return 'Price Drop Alert';
+        return l10n.priceDropAlert;
       case 'account_warning':
-        return 'Account Warning';
+        return l10n.accountWarning;
       default:
         return null; // Use original title
     }
@@ -265,26 +279,44 @@ class NotificationTile extends StatelessWidget {
     }
   }
 
-  _NotificationStyle _getNotificationStyle(String type) {
+  _NotificationStyle _getNotificationStyle(BuildContext context, String type) {
     switch (type) {
       case 'listing_approved':
-        return _NotificationStyle(AppPalette.primary, Iconsax.verify5);
+        return _NotificationStyle(
+          AppColors.of(context).primary,
+          Iconsax.verify5,
+        );
       case 'listing_rejected':
-        return _NotificationStyle(AppPalette.error, Iconsax.close_circle5);
+        return _NotificationStyle(
+          AppColors.of(context).error,
+          Iconsax.close_circle5,
+        );
       case 'listing_expired':
-        return _NotificationStyle(AppPalette.warning, Iconsax.timer_15);
+        return _NotificationStyle(
+          AppColors.of(context).warning,
+          Iconsax.timer_15,
+        );
       case 'price_drop':
-        return _NotificationStyle(AppPalette.accent, Iconsax.discount_shape5);
+        return _NotificationStyle(
+          AppColors.of(context).accent,
+          Iconsax.discount_shape5,
+        );
       case 'wishlist_sold':
-        return _NotificationStyle(AppPalette.warning, Iconsax.heart_slash5);
+        return _NotificationStyle(
+          AppColors.of(context).warning,
+          Iconsax.heart_slash5,
+        );
       case 'account_warning':
-        return _NotificationStyle(AppPalette.error, Iconsax.warning_25);
+        return _NotificationStyle(
+          AppColors.of(context).error,
+          Iconsax.warning_25,
+        );
       case 'new_review':
-        return _NotificationStyle(AppPalette.warning, Iconsax.star1);
+        return _NotificationStyle(AppColors.of(context).warning, Iconsax.star1);
       case 'system':
       default:
         return _NotificationStyle(
-          AppPalette.textSecondary,
+          AppColors.of(context).textSecondary,
           Iconsax.info_circle5,
         );
     }

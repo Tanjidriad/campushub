@@ -1,6 +1,9 @@
+import 'package:book_user_app/core/theme/app_palette.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:book_user_app/l10n/app_localizations.dart';
 
 class ListingInfoBar extends StatelessWidget {
   final String listingId;
@@ -8,6 +11,7 @@ class ListingInfoBar extends StatelessWidget {
   final String? imageUrl;
   final double? price;
   final String? sellerId;
+  final bool isSold;
   final String? currentUserId;
   final VoidCallback? onViewListing;
   final VoidCallback? onMarkAsSold;
@@ -20,6 +24,7 @@ class ListingInfoBar extends StatelessWidget {
     this.imageUrl,
     this.price,
     this.sellerId,
+    this.isSold = false,
     this.currentUserId,
     this.onViewListing,
     this.onMarkAsSold,
@@ -32,14 +37,12 @@ class ListingInfoBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint(
-      '🏷️ ListingInfoBar → currentUserId: $currentUserId, sellerId: $sellerId, isSeller: $isSeller',
-    );
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
-        border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+        color: AppColors.of(context).surface.withOpacity(0.95),
+        border: Border(bottom: BorderSide(color: AppColors.of(context).border)),
       ),
       child: Row(
         children: [
@@ -50,18 +53,18 @@ class ListingInfoBar extends StatelessWidget {
               width: 48.w,
               height: 48.w,
               decoration: BoxDecoration(
-                color: Colors.grey[200],
+                color: AppColors.of(context).border,
                 borderRadius: BorderRadius.circular(8.r),
                 image: imageUrl != null && imageUrl!.isNotEmpty
                     ? DecorationImage(
-                        image: NetworkImage(imageUrl!),
+                        image: CachedNetworkImageProvider(imageUrl!),
                         fit: BoxFit.cover,
                       )
                     : null,
-                border: Border.all(color: Colors.grey[100]!),
+                border: Border.all(color: AppColors.of(context).subtleFill),
               ),
               child: imageUrl == null || imageUrl!.isEmpty
-                  ? Icon(Icons.image, color: Colors.grey[400])
+                  ? Icon(Icons.image, color: AppColors.of(context).textLight)
                   : null,
             ),
           ),
@@ -89,7 +92,7 @@ class ListingInfoBar extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 14.sp,
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFF007AFF),
+                      color: AppColors.of(context).accent,
                     ),
                   ),
                 ],
@@ -100,18 +103,23 @@ class ListingInfoBar extends StatelessWidget {
           // View Listing Button
           IconButton(
             icon: const Icon(Icons.visibility_outlined),
-            color: Colors.grey[500],
+            color: AppColors.of(context).textSecondary,
             onPressed: onViewListing,
             tooltip: 'View Listing',
           ),
 
-          // Action Button - Different for Seller vs Buyer
-          if (isSeller)
-            // SELLER: Mark as Sold
+          // Action Button - show only when we know the seller, and react to sold state
+          if (sellerId == null || sellerId!.isEmpty)
+            const SizedBox.shrink()
+          else if (isSold)
+            // SOLD: disabled button for both seller and buyer
             ElevatedButton.icon(
-              onPressed: onMarkAsSold,
+              onPressed: null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF34C759), // Green for sold
+                backgroundColor: AppColors.of(context).border,
+                disabledBackgroundColor:
+                    AppColors.of(context).border.withOpacity(0.25),
+                disabledForegroundColor: AppColors.of(context).textSecondary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8.r),
                 ),
@@ -121,14 +129,40 @@ class ListingInfoBar extends StatelessWidget {
               icon: Icon(
                 Icons.check_circle_outline,
                 size: 16.sp,
-                color: Colors.white,
+                color: AppColors.of(context).textSecondary,
               ),
               label: Text(
-                'Mark Sold',
+                l10n.sold,
                 style: TextStyle(
                   fontSize: 12.sp,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: AppColors.of(context).textSecondary,
+                ),
+              ),
+            )
+          else if (isSeller)
+            // SELLER: Mark as Sold
+            ElevatedButton.icon(
+              onPressed: onMarkAsSold,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.of(context).success,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                elevation: 0,
+              ),
+              icon: Icon(
+                Icons.check_circle_outline,
+                size: 16.sp,
+                color: AppColors.of(context).onPrimary,
+              ),
+              label: Text(
+                l10n.markSold,
+                style: TextStyle(
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.of(context).onPrimary,
                 ),
               ),
             )
@@ -137,7 +171,7 @@ class ListingInfoBar extends StatelessWidget {
             ElevatedButton.icon(
               onPressed: onMakeOffer,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF007AFF), // Blue for offer
+                backgroundColor: AppColors.of(context).accent, // Blue for offer
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8.r),
                 ),
@@ -147,14 +181,14 @@ class ListingInfoBar extends StatelessWidget {
               icon: Icon(
                 Icons.local_offer_outlined,
                 size: 16.sp,
-                color: Colors.white,
+                color: AppColors.of(context).onPrimary,
               ),
               label: Text(
-                'Make Offer',
+                l10n.makeAnOffer,
                 style: TextStyle(
                   fontSize: 12.sp,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: AppColors.of(context).onPrimary,
                 ),
               ),
             ),

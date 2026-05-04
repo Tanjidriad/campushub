@@ -187,6 +187,18 @@ const listingSchema = new mongoose.Schema(
             default: null,
             index: true,
         },
+        // Science, Arts, Commerce, CSE, EEE
+        stream: {
+            type: String,
+            trim: true,
+            default: null,
+        },
+        // CSE, EEE, BBA, English, etc.
+        department: {
+            type: String,
+            trim: true,
+            default: null,
+        },
         // "Class 6", "Class 10", "HSC 1st Year", "Semester 3", etc.
         classOrSemester: {
             type: String,

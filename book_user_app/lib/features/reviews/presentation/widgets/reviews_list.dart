@@ -1,3 +1,6 @@
+import 'package:book_user_app/core/theme/app_palette.dart';
+import 'package:book_user_app/l10n/app_localizations.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:book_user_app/features/reviews/domain/entities/review.dart';
 import 'package:book_user_app/features/reviews/presentation/bloc/reviews_bloc.dart';
 import 'package:book_user_app/features/reviews/presentation/bloc/reviews_state.dart';
@@ -14,6 +17,7 @@ class ReviewsList extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<ReviewsBloc, ReviewsState>(
       builder: (context, state) {
+        final l10n = AppLocalizations.of(context)!;
         if (state is ReviewsLoading) {
           return const AppLoaderFullPage();
         } else if (state is ReviewsError) {
@@ -27,10 +31,10 @@ class ReviewsList extends StatelessWidget {
                   Icon(
                     Icons.rate_review_outlined,
                     size: 48.sp,
-                    color: Colors.grey,
+                    color: AppColors.of(context).textSecondary,
                   ),
                   SizedBox(height: 16.h),
-                  const Text("No reviews yet"),
+                  Text(l10n.noReviewsYet),
                 ],
               ),
             );
@@ -61,15 +65,19 @@ class ReviewItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
 
     return Container(
       padding: EdgeInsets.all(12.w),
       decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(12.r),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.of(context).textPrimary.withOpacity(0.12),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
         ],
       ),
       child: Column(
@@ -80,10 +88,13 @@ class ReviewItem extends StatelessWidget {
               CircleAvatar(
                 radius: 20.r,
                 backgroundImage: review.reviewerAvatar != null
-                    ? NetworkImage(review.reviewerAvatar!)
+                    ? CachedNetworkImageProvider(review.reviewerAvatar!)
                     : null,
                 child: review.reviewerAvatar == null
-                    ? const Icon(Icons.person, color: Colors.grey)
+                    ? Icon(
+                        Icons.person,
+                        color: AppColors.of(context).textSecondary,
+                      )
                     : null,
               ),
               SizedBox(width: 12.w),
@@ -100,7 +111,7 @@ class ReviewItem extends StatelessWidget {
                     Text(
                       DateFormat('MMM d, y').format(review.createdAt),
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.grey,
+                        color: AppColors.of(context).textSecondary,
                       ),
                     ),
                   ],
@@ -108,7 +119,11 @@ class ReviewItem extends StatelessWidget {
               ),
               Row(
                 children: [
-                  Icon(Icons.star, color: Colors.amber, size: 16.sp),
+                  Icon(
+                    Icons.star,
+                    color: AppColors.of(context).warning,
+                    size: 16.sp,
+                  ),
                   SizedBox(width: 4.w),
                   Text(
                     review.rating.toString(),
@@ -127,13 +142,13 @@ class ReviewItem extends StatelessWidget {
             Container(
               padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
               decoration: BoxDecoration(
-                color: isDark ? Colors.grey[800] : Colors.grey[100],
+                color: AppColors.of(context).subtleFill,
                 borderRadius: BorderRadius.circular(4.r),
               ),
               child: Text(
-                'Item: ${review.listingTitle}',
+                l10n.itemLabel(review.listingTitle!),
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: Colors.grey[600],
+                  color: AppColors.of(context).textSecondary,
                 ),
               ),
             ),

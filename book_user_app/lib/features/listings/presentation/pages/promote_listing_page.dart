@@ -1,12 +1,14 @@
 import 'package:book_user_app/core/theme/app_palette.dart';
+import 'package:book_user_app/core/widgets/app_cached_image.dart';
+import 'package:book_user_app/core/widgets/app_snackbar.dart';
 import 'package:book_user_app/features/listings/domain/entities/listing.dart';
 import 'package:book_user_app/features/listings/presentation/bloc/listings_bloc.dart';
 import 'package:book_user_app/features/listings/presentation/bloc/listings_event.dart';
 import 'package:book_user_app/features/listings/presentation/bloc/listings_state.dart';
+import 'package:book_user_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
 
 class PromoteListingPage extends StatefulWidget {
@@ -21,50 +23,61 @@ class PromoteListingPage extends StatefulWidget {
 class _PromoteListingPageState extends State<PromoteListingPage> {
   String _selectedPlan = '7days';
 
-  // Colors from the HTML design
-  static const _primaryColor = Color(0xFF4A90E2);
-  static const _accentGreen = Color(0xFF50C878);
-  static const _textMain = Color(0xFF0E141B);
-  static const _textSecondary = Color(0xFF507295);
-  static const _backgroundLight = Color(0xFFF8FAFB);
+  // Theme-aware color aliases
+  Color get _primaryColor => AppColors.of(context).accent;
+  Color get _accentGreen => AppColors.of(context).success;
+  Color get _textMain => AppColors.of(context).textPrimary;
+  Color get _textSecondary => AppColors.of(context).textSecondary;
+  Color get _backgroundLight => AppColors.of(context).background;
 
-  static const _plans = [
-    _Plan('3days', '3 Days', '\$2.99', 'Good for quick sales', null),
-    _Plan('7days', '7 Days', '\$4.99', 'Recommended duration', 'Most Popular'),
-    _Plan('30days', '30 Days', '\$14.99', 'Maximum exposure', 'Best Value'),
+  List<_Plan> _getPlans(AppLocalizations l10n) => [
+    _Plan('3days', l10n.threeDays, '\$2.99', l10n.goodForQuickSales, null),
+    _Plan(
+      '7days',
+      l10n.sevenDays,
+      '\$4.99',
+      l10n.recommendedDuration,
+      l10n.mostPopular,
+    ),
+    _Plan(
+      '30days',
+      l10n.thirtyDays,
+      '\$14.99',
+      l10n.maximumExposure,
+      l10n.bestValue,
+    ),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return BlocListener<ListingsBloc, ListingsState>(
       listener: (context, state) {
-        if (state is ListingPromoted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('🎉 Listing promoted successfully!'),
-              backgroundColor: _accentGreen,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10.r),
-              ),
-            ),
-          );
-          context.pop();
-        } else if (state is ListingsError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: AppPalette.error,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+        debugPrint(
+          '🔵 PromotePage BlocListener: state=$state, mounted=$mounted',
+        );
+        if (!mounted) return;
+        try {
+          if (state is ListingPromoted) {
+            debugPrint(
+              '🔵 PromotePage: ListingPromoted received, about to pop',
+            );
+            Navigator.of(context).pop(true);
+            debugPrint('🔵 PromotePage: pop called successfully');
+          } else if (state is ListingsError) {
+            debugPrint('🔵 PromotePage: ListingsError: ${state.message}');
+            AppSnackBar.showError(context, state.message);
+          }
+        } catch (e, stack) {
+          debugPrint('🔴 PromotePage BlocListener CRASH: $e');
+          debugPrint('🔴 Stack: $stack');
         }
       },
       child: Scaffold(
         backgroundColor: _backgroundLight,
         appBar: AppBar(
           title: Text(
-            'Promote Listing',
+            l10n.promoteListing,
             style: TextStyle(
               fontSize: 18.sp,
               fontWeight: FontWeight.bold,
@@ -73,11 +86,14 @@ class _PromoteListingPageState extends State<PromoteListingPage> {
           ),
           centerTitle: true,
           elevation: 0,
-          backgroundColor: Colors.white.withOpacity(0.9),
+          backgroundColor: AppColors.of(context).surface.withOpacity(0.9),
           foregroundColor: _textMain,
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(1),
-            child: Container(color: Colors.grey[100], height: 1),
+            child: Container(
+              color: AppColors.of(context).subtleFill,
+              height: 1,
+            ),
           ),
         ),
         body: SingleChildScrollView(
@@ -101,13 +117,14 @@ class _PromoteListingPageState extends State<PromoteListingPage> {
   // ─── Preview Section ──────────────────────────────────────────────
 
   Widget _buildPreviewSection() {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: EdgeInsets.only(left: 4.w, bottom: 12.h),
           child: Text(
-            'PREVIEW ON FEED',
+            l10n.previewOnFeed,
             style: TextStyle(
               fontSize: 12.sp,
               fontWeight: FontWeight.bold,
@@ -118,12 +135,12 @@ class _PromoteListingPageState extends State<PromoteListingPage> {
         ),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.of(context).card,
             borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(color: Colors.grey[100]!),
+            border: Border.all(color: AppColors.of(context).subtleFill),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.06),
+                color: AppColors.of(context).textPrimary.withOpacity(0.06),
                 blurRadius: 30,
                 offset: const Offset(0, 8),
               ),
@@ -142,12 +159,12 @@ class _PromoteListingPageState extends State<PromoteListingPage> {
                     child: Container(
                       height: 192.h,
                       width: double.infinity,
-                      color: Colors.grey[200],
+                      color: AppColors.of(context).border,
                       child: widget.listing.primaryImageUrl != null
-                          ? Image.network(
-                              widget.listing.primaryImageUrl!,
+                          ? AppCachedImage(
+                              imageUrl: widget.listing.primaryImageUrl,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => _imagePlaceholder(),
+                              errorWidget: _imagePlaceholder(),
                             )
                           : _imagePlaceholder(),
                     ),
@@ -185,7 +202,9 @@ class _PromoteListingPageState extends State<PromoteListingPage> {
                         borderRadius: BorderRadius.circular(6.r),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: AppColors.of(
+                              context,
+                            ).textPrimary.withOpacity(0.1),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),
@@ -193,14 +212,18 @@ class _PromoteListingPageState extends State<PromoteListingPage> {
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.star, size: 16.sp, color: Colors.white),
+                          Icon(
+                            Icons.star,
+                            size: 16.sp,
+                            color: AppColors.of(context).onPrimary,
+                          ),
                           SizedBox(width: 4.w),
                           Text(
-                            'FEATURED',
+                            l10n.featuredBadge,
                             style: TextStyle(
                               fontSize: 12.sp,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              color: AppColors.of(context).card,
                               letterSpacing: 0.5,
                             ),
                           ),
@@ -263,7 +286,7 @@ class _PromoteListingPageState extends State<PromoteListingPage> {
                             borderRadius: BorderRadius.circular(100.r),
                           ),
                           child: Text(
-                            'Promoted',
+                            l10n.promoted,
                             style: TextStyle(
                               fontSize: 10.sp,
                               fontWeight: FontWeight.w500,
@@ -282,7 +305,7 @@ class _PromoteListingPageState extends State<PromoteListingPage> {
         SizedBox(height: 8.h),
         Center(
           child: Text(
-            'This is how your listing will appear to other students.',
+            l10n.previewDescription,
             style: TextStyle(fontSize: 12.sp, color: _textSecondary),
           ),
         ),
@@ -292,22 +315,27 @@ class _PromoteListingPageState extends State<PromoteListingPage> {
 
   Widget _imagePlaceholder() {
     return Center(
-      child: Icon(Iconsax.image, size: 40.sp, color: Colors.grey[400]),
+      child: Icon(
+        Iconsax.image,
+        size: 40.sp,
+        color: AppColors.of(context).textLight,
+      ),
     );
   }
 
   // ─── Benefits Section ─────────────────────────────────────────────
 
   Widget _buildBenefitsSection() {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.of(context).card,
         borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: Colors.grey[100]!),
+        border: Border.all(color: AppColors.of(context).subtleFill),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: AppColors.of(context).textPrimary.withOpacity(0.02),
             blurRadius: 2,
             offset: const Offset(0, 1),
           ),
@@ -321,7 +349,7 @@ class _PromoteListingPageState extends State<PromoteListingPage> {
               Icon(Icons.auto_awesome, color: _primaryColor, size: 20.sp),
               SizedBox(width: 8.w),
               Text(
-                'Why Feature?',
+                l10n.whyFeature,
                 style: TextStyle(
                   fontSize: 16.sp,
                   fontWeight: FontWeight.bold,
@@ -336,15 +364,15 @@ class _PromoteListingPageState extends State<PromoteListingPage> {
             children: [
               _buildBenefitItem(
                 Icons.visibility_outlined,
-                '5x More\nViews',
+                l10n.fiveXMoreViews,
                 Colors.blue,
               ),
               _buildBenefitItem(
                 Icons.rocket_launch_outlined,
-                'Sell 2x\nFaster',
+                l10n.sellTwoXFaster,
                 Colors.green,
               ),
-              _buildBenefitItem(Icons.verified, 'Build\nTrust', Colors.orange),
+              _buildBenefitItem(Icons.verified, l10n.buildTrust, Colors.orange),
             ],
           ),
         ],
@@ -381,13 +409,15 @@ class _PromoteListingPageState extends State<PromoteListingPage> {
   // ─── Plan Selection ───────────────────────────────────────────────
 
   Widget _buildPlanSelection() {
+    final l10n = AppLocalizations.of(context)!;
+    final plans = _getPlans(l10n);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: EdgeInsets.only(left: 4.w, bottom: 12.h),
           child: Text(
-            'Select Duration',
+            l10n.selectDuration,
             style: TextStyle(
               fontSize: 16.sp,
               fontWeight: FontWeight.bold,
@@ -395,7 +425,7 @@ class _PromoteListingPageState extends State<PromoteListingPage> {
             ),
           ),
         ),
-        ..._plans.map((plan) => _buildPlanCard(plan)),
+        ...plans.map((plan) => _buildPlanCard(plan)),
       ],
     );
   }
@@ -415,17 +445,17 @@ class _PromoteListingPageState extends State<PromoteListingPage> {
             margin: EdgeInsets.only(bottom: 12.h),
             padding: EdgeInsets.all(16.w),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.of(context).card,
               borderRadius: BorderRadius.circular(12.r),
               border: Border.all(
                 color: isSelected
                     ? _primaryColor.withOpacity(0.5)
-                    : Colors.grey[200]!,
+                    : AppColors.of(context).border,
                 width: 1,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.02),
+                  color: AppColors.of(context).textPrimary.withOpacity(0.02),
                   blurRadius: 4,
                   offset: const Offset(0, 1),
                 ),
@@ -440,10 +470,12 @@ class _PromoteListingPageState extends State<PromoteListingPage> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isSelected ? _primaryColor : Colors.grey[300]!,
+                      color: isSelected
+                          ? _primaryColor
+                          : AppColors.of(context).border,
                       width: isSelected ? 6 : 2,
                     ),
-                    color: Colors.white,
+                    color: AppColors.of(context).card,
                   ),
                 ),
                 SizedBox(width: 16.w),
@@ -515,7 +547,7 @@ class _PromoteListingPageState extends State<PromoteListingPage> {
                   borderRadius: BorderRadius.circular(100.r),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: AppColors.of(context).textPrimary.withOpacity(0.1),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),
@@ -526,7 +558,7 @@ class _PromoteListingPageState extends State<PromoteListingPage> {
                   style: TextStyle(
                     fontSize: 10.sp,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: AppColors.of(context).card,
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -540,7 +572,9 @@ class _PromoteListingPageState extends State<PromoteListingPage> {
   // ─── Bottom Bar ───────────────────────────────────────────────────
 
   Widget _buildBottomBar() {
-    final selectedPlanData = _plans.firstWhere((p) => p.id == _selectedPlan);
+    final l10n = AppLocalizations.of(context)!;
+    final plans = _getPlans(l10n);
+    final selectedPlanData = plans.firstWhere((p) => p.id == _selectedPlan);
 
     return BlocBuilder<ListingsBloc, ListingsState>(
       builder: (context, state) {
@@ -549,11 +583,13 @@ class _PromoteListingPageState extends State<PromoteListingPage> {
         return Container(
           padding: EdgeInsets.fromLTRB(20.w, 16.h, 20.w, 32.h),
           decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border(top: BorderSide(color: Colors.grey[100]!)),
+            color: AppColors.of(context).card,
+            border: Border(
+              top: BorderSide(color: AppColors.of(context).subtleFill),
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: AppColors.of(context).textPrimary.withOpacity(0.05),
                 blurRadius: 20,
                 offset: const Offset(0, -4),
               ),
@@ -631,7 +667,7 @@ class _PromoteListingPageState extends State<PromoteListingPage> {
                               },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _primaryColor,
-                          foregroundColor: Colors.white,
+                          foregroundColor: AppColors.of(context).onPrimary,
                           elevation: 8,
                           shadowColor: _primaryColor.withOpacity(0.4),
                           shape: RoundedRectangleBorder(
@@ -642,9 +678,9 @@ class _PromoteListingPageState extends State<PromoteListingPage> {
                             ? SizedBox(
                                 width: 24.w,
                                 height: 24.w,
-                                child: const CircularProgressIndicator(
+                                child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: Colors.white,
+                                  color: AppColors.of(context).card,
                                 ),
                               )
                             : Row(

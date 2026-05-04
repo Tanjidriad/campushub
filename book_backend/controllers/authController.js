@@ -332,7 +332,7 @@ exports.getMe = asyncHandler(async (req, res) => {
 // @route   PUT /api/auth/profile
 // @access  Private
 exports.updateProfile = asyncHandler(async (req, res) => {
-    const { name, username, phone, bio, location } = req.body;
+    const { name, username, phone, bio, location, educationLevel, stream, department, classOrSemester } = req.body;
 
     // If username is being updated, check if it's already taken
     if (username) {
@@ -355,6 +355,10 @@ exports.updateProfile = asyncHandler(async (req, res) => {
     if (phone !== undefined) updateData.phone = phone;
     if (bio !== undefined) updateData.bio = bio;
     if (location !== undefined) updateData.location = location;
+    if (educationLevel !== undefined) updateData.educationLevel = educationLevel || null;
+    if (stream !== undefined) updateData.stream = stream || null;
+    if (department !== undefined) updateData.department = department || null;
+    if (classOrSemester !== undefined) updateData.classOrSemester = classOrSemester || null;
 
     const user = await User.findByIdAndUpdate(
         req.user.id,
@@ -482,7 +486,7 @@ exports.googleCallback = asyncHandler(async (req, res) => {
     req.user.refreshToken = hashToken(tokens.refreshToken);
     await req.user.save();
 
-    // Redirect to app with tokens via a bridge page (avoids leaking tokens in URL)
+    // Redirect to app with tokens in URL fragment (not sent to server logs/history on HTTP requests)
     const appUrl = (process.env.APP_URL || '').replace(/["'<>]/g, '');
     res.send(`
         <!DOCTYPE html>
@@ -491,7 +495,7 @@ exports.googleCallback = asyncHandler(async (req, res) => {
         <body>
             <p>Signing you in...</p>
             <script>
-                var url = ${JSON.stringify(appUrl)} + 'auth/callback?accessToken=' + encodeURIComponent(${JSON.stringify(tokens.accessToken)}) + '&refreshToken=' + encodeURIComponent(${JSON.stringify(tokens.refreshToken)});
+                var url = ${JSON.stringify(appUrl)} + 'auth/callback#accessToken=' + encodeURIComponent(${JSON.stringify(tokens.accessToken)}) + '&refreshToken=' + encodeURIComponent(${JSON.stringify(tokens.refreshToken)});
                 window.location.href = url;
             </script>
         </body>

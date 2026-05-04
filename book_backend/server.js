@@ -17,19 +17,34 @@ if (missingVars.length > 0) {
     process.exit(1);
 }
 
+const isProduction = process.env.NODE_ENV === 'production';
+const hasWeakSecret = (value = '') => {
+    const normalized = value.toLowerCase();
+    return normalized.includes('change_me') ||
+        normalized.includes('your_') ||
+        normalized.includes('secret') ||
+        value.length < 32;
+};
+
+if (isProduction && (hasWeakSecret(process.env.JWT_SECRET) || hasWeakSecret(process.env.JWT_REFRESH_SECRET))) {
+    console.error('❌ Refusing to boot: JWT secrets are weak or placeholders in production.');
+    process.exit(1);
+}
+
+if (isProduction && !process.env.FRONTEND_URL) {
+    console.error('❌ Refusing to boot: FRONTEND_URL is required in production for strict CORS.');
+    process.exit(1);
+}
+
 // Build CORS allowed origins from env (comma-separated list) or fall back to localhost only
 const allowedOrigins = process.env.FRONTEND_URL
-    ? process.env.FRONTEND_URL.split(',').map(o => o.trim())
+    ? process.env.FRONTEND_URL.split(',').map(o => o.trim()).filter(Boolean)
     : ['http://localhost:3000', 'http://localhost:5000'];
 
 const corsOptions = {
     origin: (origin, callback) => {
         // Allow requests with no origin header (mobile apps, Postman, curl)
-        // Auto-allow Vercel and Netlify for easy frontend deployments
-        if (!origin || 
-            allowedOrigins.includes(origin) || 
-            origin.endsWith('.vercel.app') || 
-            origin.endsWith('.netlify.app')) {
+        if (!origin || allowedOrigins.includes(origin)) {
             return callback(null, true);
         }
         callback(new Error(`CORS: origin '${origin}' not in allowed list`));
@@ -326,14 +341,14 @@ const runScheduledTasks = async () => {
     try {
         const expiredCount = await Listing.expireListings();
         if (expiredCount > 0) {
-            console.log(`⏰ Auto-expired ${expiredCount} listings`);
+            logger.info({ expiredCount }, 'Auto-expired listings');
         }
         const unfeaturedCount = await Listing.expireFeatured();
         if (unfeaturedCount > 0) {
-            console.log(`⭐ Un-featured ${unfeaturedCount} expired promotions`);
+            logger.info({ unfeaturedCount }, 'Un-featured expired promotions');
         }
     } catch (error) {
-        console.error('Error in scheduled tasks:', error);
+        logger.error({ err: error }, 'Scheduled tasks failed');
     }
 };
 
@@ -349,60 +364,54 @@ const PORT = process.env.PORT || 5000;
 
 if (process.env.NODE_ENV !== 'test') {
     server.listen(PORT, () => {
-        console.log(`
-  ╔═══════════════════════════════════════════════════╗
-  ║                                                   ║
-  ║   🚀 CampusHub Pro API Server                     ║
-  ║                                                   ║
-  ║   Environment: ${process.env.NODE_ENV || 'development'}                        ║
-  ║   Port: ${PORT}                                       ║
-  ║   Health: http://localhost:${PORT}/health             ║
-  ║   API: http://localhost:${PORT}/api                   ║
-  ║                                                   ║
-  ╚═══════════════════════════════════════════════════╝
-  `);
+        logger.info({
+            environment: process.env.NODE_ENV || 'development',
+            port: PORT,
+            healthPath: '/health',
+            apiPath: '/api',
+        }, 'CampusHub API server started');
     });
 }
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err) => {
-    console.error('Unhandled Rejection:', err);
+    logger.fatal({ err }, 'Unhandled Rejection');
     // Close server & exit process
     server.close(() => process.exit(1));
 });
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (err) => {
-    console.error('Uncaught Exception:', err);
+    logger.fatal({ err }, 'Uncaught Exception');
     process.exit(1);
 });
 
 // Graceful shutdown helper
 const gracefulShutdown = (signal) => {
-    console.log(`⏳ ${signal} received — shutting down gracefully...`);
+    logger.info({ signal }, 'Shutdown signal received, closing gracefully');
     server.close(() => {
         // Close Socket.IO connections
         io.close(() => {
-            console.log('✅ Socket.IO closed.');
+            logger.info('Socket.IO closed');
         });
 
         // Close Redis
         const { redis } = require('./config/redisClient');
         if (redis) {
             redis.quit().catch(() => { });
-            console.log('✅ Redis connection closed.');
+            logger.info('Redis connection closed');
         }
 
         // Close MongoDB
         mongoose.connection.close(false, () => {
-            console.log('✅ MongoDB connection closed. Process exiting.');
+            logger.info('MongoDB connection closed. Process exiting.');
             process.exit(0);
         });
     });
 
     // Force exit after 10s if graceful shutdown hangs
     setTimeout(() => {
-        console.error('❌ Forced shutdown after timeout.');
+        logger.error('Forced shutdown after timeout.');
         process.exit(1);
     }, 10000);
 };

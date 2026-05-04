@@ -1,9 +1,11 @@
 import 'package:book_user_app/core/theme/app_palette.dart';
+import 'package:book_user_app/core/services/education_config_service.dart';
 import 'package:book_user_app/features/categories/presentation/bloc/categories_bloc.dart';
 import 'package:book_user_app/features/categories/presentation/bloc/categories_state.dart';
 import 'package:book_user_app/features/listings/presentation/bloc/listings_bloc.dart';
 import 'package:book_user_app/features/listings/presentation/bloc/listings_event.dart';
 import 'package:book_user_app/features/listings/presentation/bloc/listings_state.dart';
+import 'package:book_user_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -21,6 +23,11 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   String? _selectedCategorySlug;
   RangeValues _priceRange = const RangeValues(0, 500);
   String? _selectedCondition; // null means all
+
+  // Education filter state
+  String? _selectedEducationLevel;
+  String? _selectedClassOrSemester;
+  EducationConfig? _educationConfig;
 
   final double _minPriceLimit = 0;
   final double _maxPriceLimit = 1000;
@@ -47,6 +54,16 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
         state.maxPrice ?? _maxPriceLimit,
       );
       _selectedCondition = state.condition;
+      _selectedEducationLevel = state.educationLevel;
+      _selectedClassOrSemester = state.classOrSemester;
+    }
+    _loadEducationConfig();
+  }
+
+  Future<void> _loadEducationConfig() async {
+    final config = await EducationConfigService().fetchConfig();
+    if (mounted) {
+      setState(() => _educationConfig = config);
     }
   }
 
@@ -64,6 +81,8 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
         condition: _selectedCondition,
         sortBy: currentSort,
         sortOrder: currentOrder,
+        educationLevel: _selectedEducationLevel,
+        classOrSemester: _selectedClassOrSemester,
       ),
     );
     Navigator.pop(context);
@@ -74,15 +93,18 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       _selectedCategorySlug = null; // null = All
       _priceRange = const RangeValues(0, 1000);
       _selectedCondition = null;
+      _selectedEducationLevel = null;
+      _selectedClassOrSemester = null;
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       height: 0.85.sh, // Take up 85% of screen height
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.of(context).card,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(24.r),
           topRight: Radius.circular(24.r),
@@ -97,7 +119,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
               width: 48.w,
               height: 6.h,
               decoration: BoxDecoration(
-                color: Colors.grey[300],
+                color: AppColors.of(context).border,
                 borderRadius: BorderRadius.circular(3.r),
               ),
             ),
@@ -116,11 +138,11 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                   constraints: const BoxConstraints(),
                 ),
                 Text(
-                  "Filter & Sort",
+                  l10n.filterAndSort,
                   style: TextStyle(
                     fontSize: 18.sp,
                     fontWeight: FontWeight.bold,
-                    color: AppPalette.textPrimary,
+                    color: AppColors.of(context).textPrimary,
                   ),
                 ),
                 TextButton(
@@ -131,9 +153,9 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                   child: Text(
-                    "Reset",
+                    l10n.reset,
                     style: TextStyle(
-                      color: AppPalette.accent,
+                      color: AppColors.of(context).accent,
                       fontSize: 16.sp,
                       fontWeight: FontWeight.bold,
                     ),
@@ -159,11 +181,11 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "Category",
+                          l10n.category,
                           style: TextStyle(
                             fontSize: 16.sp,
                             fontWeight: FontWeight.bold,
-                            color: AppPalette.textPrimary,
+                            color: AppColors.of(context).textPrimary,
                           ),
                         ),
                         SizedBox(height: 12.h),
@@ -171,7 +193,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                           builder: (context, state) {
                             // Build list of {name, slug} pairs; 'All' has slug=null
                             final List<Map<String, String?>> categories = [
-                              {'name': 'All', 'slug': null},
+                              {'name': l10n.all, 'slug': null},
                             ];
                             if (state is CategoriesLoaded) {
                               for (final c in state.categories) {
@@ -201,13 +223,13 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                                     ),
                                     decoration: BoxDecoration(
                                       color: isSelected
-                                          ? AppPalette.primary
-                                          : AppPalette.gray50,
+                                          ? AppColors.of(context).primary
+                                          : AppColors.of(context).subtleFill,
                                       borderRadius: BorderRadius.circular(20.r),
                                       border: Border.all(
                                         color: isSelected
                                             ? Colors.transparent
-                                            : AppPalette.gray200,
+                                            : AppColors.of(context).border,
                                       ),
                                     ),
                                     child: Text(
@@ -216,8 +238,8 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                                         fontSize: 14.sp,
                                         fontWeight: FontWeight.w500,
                                         color: isSelected
-                                            ? Colors.white
-                                            : AppPalette.textPrimary,
+                                            ? AppColors.of(context).onPrimary
+                                            : AppColors.of(context).textPrimary,
                                       ),
                                     ),
                                   ),
@@ -239,11 +261,11 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "Condition",
+                          l10n.condition,
                           style: TextStyle(
                             fontSize: 16.sp,
                             fontWeight: FontWeight.bold,
-                            color: AppPalette.textPrimary,
+                            color: AppColors.of(context).textPrimary,
                           ),
                         ),
                         SizedBox(height: 12.h),
@@ -271,13 +293,13 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                                 ),
                                 decoration: BoxDecoration(
                                   color: isSelected
-                                      ? AppPalette.primary
-                                      : AppPalette.gray50,
+                                      ? AppColors.of(context).primary
+                                      : AppColors.of(context).subtleFill,
                                   borderRadius: BorderRadius.circular(20.r),
                                   border: Border.all(
                                     color: isSelected
                                         ? Colors.transparent
-                                        : AppPalette.gray200,
+                                        : AppColors.of(context).border,
                                   ),
                                 ),
                                 child: Text(
@@ -286,8 +308,8 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                                     fontSize: 14.sp,
                                     fontWeight: FontWeight.w500,
                                     color: isSelected
-                                        ? Colors.white
-                                        : AppPalette.textPrimary,
+                                        ? AppColors.of(context).onPrimary
+                                        : AppColors.of(context).textPrimary,
                                   ),
                                 ),
                               ),
@@ -314,7 +336,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                               style: TextStyle(
                                 fontSize: 16.sp,
                                 fontWeight: FontWeight.bold,
-                                color: AppPalette.textPrimary,
+                                color: AppColors.of(context).textPrimary,
                               ),
                             ),
                             Text(
@@ -322,7 +344,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                               style: TextStyle(
                                 fontSize: 14.sp,
                                 fontWeight: FontWeight.bold,
-                                color: AppPalette.accent,
+                                color: AppColors.of(context).accent,
                               ),
                             ),
                           ],
@@ -330,15 +352,17 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                         SizedBox(height: 24.h),
                         SliderTheme(
                           data: SliderThemeData(
-                            activeTrackColor: AppPalette.accent,
-                            inactiveTrackColor: AppPalette.gray200,
-                            thumbColor: Colors.white,
+                            activeTrackColor: AppColors.of(context).accent,
+                            inactiveTrackColor: AppColors.of(context).border,
+                            thumbColor: AppColors.of(context).card,
                             trackHeight: 4.h,
                             rangeThumbShape: RoundRangeSliderThumbShape(
                               enabledThumbRadius: 12.r,
                               elevation: 2,
                             ),
-                            overlayColor: AppPalette.accent.withOpacity(0.2),
+                            overlayColor: AppColors.of(
+                              context,
+                            ).accent.withOpacity(0.2),
                           ),
                           child: RangeSlider(
                             values: _priceRange,
@@ -373,6 +397,157 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                     ),
                   ),
 
+                  Divider(height: 1, indent: 24.w, endIndent: 24.w),
+
+                  // Education Level Section
+                  Padding(
+                    padding: EdgeInsets.all(24.w),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Education Level',
+                          style: TextStyle(
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.of(context).textPrimary,
+                          ),
+                        ),
+                        SizedBox(height: 12.h),
+                        Builder(
+                          builder: (context) {
+                            final config = _educationConfig ?? EducationConfig.fallback;
+                            final levels = <Map<String, String?>>[
+                              {'key': null, 'label': 'All'},
+                              ...config.levels.map((l) => {'key': l.key, 'label': l.label}),
+                            ];
+                            return Wrap(
+                              spacing: 8.w,
+                              runSpacing: 8.h,
+                              children: levels.map((level) {
+                                final key = level['key'];
+                                final label = level['label']!;
+                                final isSelected = _selectedEducationLevel == key;
+                                return GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedEducationLevel = key;
+                                      _selectedClassOrSemester = null;
+                                    });
+                                  },
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 16.w,
+                                      vertical: 8.h,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? AppColors.of(context).primary
+                                          : AppColors.of(context).subtleFill,
+                                      borderRadius: BorderRadius.circular(20.r),
+                                      border: Border.all(
+                                        color: isSelected
+                                            ? Colors.transparent
+                                            : AppColors.of(context).border,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      label,
+                                      style: TextStyle(
+                                        fontSize: 14.sp,
+                                        fontWeight: FontWeight.w500,
+                                        color: isSelected
+                                            ? AppColors.of(context).onPrimary
+                                            : AppColors.of(context).textPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            );
+                          },
+                        ),
+
+                        // Sub-level (Class / Semester) chips
+                        if (_selectedEducationLevel != null)
+                          Builder(
+                            builder: (context) {
+                              final config = _educationConfig ?? EducationConfig.fallback;
+                              final levelObj = config.levels
+                                  .where((l) => l.key == _selectedEducationLevel)
+                                  .toList();
+                              if (levelObj.isEmpty) return const SizedBox.shrink();
+                              final level = levelObj.first;
+                              final subLabels = level.subLevels.map((s) => s.label).toList();
+                              if (subLabels.isEmpty) return const SizedBox.shrink();
+
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SizedBox(height: 16.h),
+                                  Text(
+                                    'Class / Semester',
+                                    style: TextStyle(
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.of(context).textSecondary,
+                                    ),
+                                  ),
+                                  SizedBox(height: 8.h),
+                                  Wrap(
+                                    spacing: 8.w,
+                                    runSpacing: 8.h,
+                                    children: subLabels.map((label) {
+                                      final isSelected = _selectedClassOrSemester == label;
+                                      return GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            _selectedClassOrSemester =
+                                                isSelected ? null : label;
+                                          });
+                                        },
+                                        child: Container(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 14.w,
+                                            vertical: 6.h,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: isSelected
+                                                ? AppColors.of(context)
+                                                      .primary
+                                                      .withOpacity(0.15)
+                                                : AppColors.of(context).subtleFill,
+                                            borderRadius: BorderRadius.circular(16.r),
+                                            border: Border.all(
+                                              color: isSelected
+                                                  ? AppColors.of(context).primary
+                                                  : AppColors.of(context).border,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            label,
+                                            style: TextStyle(
+                                              fontSize: 13.sp,
+                                              fontWeight: isSelected
+                                                  ? FontWeight.w600
+                                                  : FontWeight.w400,
+                                              color: isSelected
+                                                  ? AppColors.of(context).primary
+                                                  : AppColors.of(context).textPrimary,
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
+
                   // (Sort is now available inline above the listings)
                 ],
               ),
@@ -383,11 +558,13 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
           Container(
             padding: EdgeInsets.all(24.w),
             decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border(top: BorderSide(color: AppPalette.gray100)),
+              color: AppColors.of(context).card,
+              border: Border(
+                top: BorderSide(color: AppColors.of(context).subtleFill),
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: AppColors.of(context).textPrimary.withOpacity(0.05),
                   blurRadius: 10,
                   offset: const Offset(0, -4),
                 ),
@@ -399,7 +576,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
               child: ElevatedButton(
                 onPressed: _applyFilters,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppPalette.primary,
+                  backgroundColor: AppColors.of(context).primary,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12.r),
                   ),
@@ -410,7 +587,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                   style: TextStyle(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: AppColors.of(context).card,
                   ),
                 ),
               ),
@@ -430,15 +607,15 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
           style: TextStyle(
             fontSize: 12.sp,
             fontWeight: FontWeight.w500,
-            color: AppPalette.textSecondary,
+            color: AppColors.of(context).textSecondary,
           ),
         ),
         SizedBox(height: 4.h),
         Container(
           padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
           decoration: BoxDecoration(
-            color: AppPalette.gray50,
-            border: Border.all(color: AppPalette.gray200),
+            color: AppColors.of(context).subtleFill,
+            border: Border.all(color: AppColors.of(context).border),
             borderRadius: BorderRadius.circular(8.r),
           ),
           child: Row(
@@ -446,7 +623,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
               Text(
                 "\$",
                 style: TextStyle(
-                  color: AppPalette.textSecondary,
+                  color: AppColors.of(context).textSecondary,
                   fontSize: 14.sp,
                 ),
               ),
@@ -456,7 +633,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                 style: TextStyle(
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w500,
-                  color: AppPalette.textPrimary,
+                  color: AppColors.of(context).textPrimary,
                 ),
               ),
             ],

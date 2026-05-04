@@ -104,3 +104,81 @@ class MarkAsRead extends ChatEvent {
 class LeaveConversation extends ChatEvent {
   const LeaveConversation();
 }
+
+/// Block user
+class BlockUser extends ChatEvent {
+  final String userId;
+
+  const BlockUser(this.userId);
+
+  @override
+  List<Object?> get props => [userId];
+}
+
+/// Unblock user
+class UnblockUser extends ChatEvent {
+  final String userId;
+
+  const UnblockUser(this.userId);
+
+  @override
+  List<Object?> get props => [userId];
+}
+
+/// Check if other user is blocked
+class CheckBlockStatus extends ChatEvent {
+  final String otherUserId;
+
+  const CheckBlockStatus(this.otherUserId);
+
+  @override
+  List<Object?> get props => [otherUserId];
+}
+
+/// Send an offer message (renders chat bubble for an already-created offer)
+class SendOfferMessage extends ChatEvent {
+  final String offerId;
+  final String listingId;
+  final double amount;
+  final String listingTitle;
+  final String? listingImage;
+  final double listingPrice;
+
+  const SendOfferMessage({
+    required this.offerId,
+    required this.listingId,
+    required this.amount,
+    required this.listingTitle,
+    this.listingImage,
+    required this.listingPrice,
+  });
+
+  @override
+  List<Object?> get props => [offerId, listingId, amount, listingTitle, listingImage, listingPrice];
+}
+
+/// Respond to an offer inline from the chat bubble
+class RespondToOfferInChat extends ChatEvent {
+  final String offerId;
+  final String action; // 'accept', 'decline', 'counter'
+  final double? counterAmount;
+
+  const RespondToOfferInChat({
+    required this.offerId,
+    required this.action,
+    this.counterAmount,
+  });
+
+  @override
+  List<Object?> get props => [offerId, action, counterAmount];
+}
+
+/// Received an offer status update from the socket
+class OfferUpdatedReceived extends ChatEvent {
+  final Map<String, dynamic> data;
+
+  const OfferUpdatedReceived(this.data);
+
+  @override
+  List<Object?> get props => [data];
+}

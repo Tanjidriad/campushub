@@ -34,9 +34,6 @@ class FCMService {
   void Function(String conversationId, Map<String, String> extras)?
   onNotificationTap;
 
-  /// Callback for offer notification taps.
-  void Function(String offerId)? onOfferNotificationTap;
-
   static const _maxRetries = 3;
   static const _notificationGroupKey = 'com.campushub.chat_messages';
   static const _channelId = 'chat_messages';
@@ -276,27 +273,27 @@ class FCMService {
   void _navigateFromData(Map<String, dynamic> data) {
     final type = data['type'];
 
-    // Handle offer notifications
-    if (type == 'new_offer' ||
+    // Handle both chat messages and offer notifications by routing to the chat detail page
+    if (type == 'chat_message' ||
+        type == 'new_offer' ||
         type == 'offer_accepted' ||
         type == 'offer_declined' ||
         type == 'offer_countered') {
-      final offerId = (data['offerId'] ?? '').toString();
-      if (offerId.isNotEmpty && onOfferNotificationTap != null) {
-        onOfferNotificationTap!(offerId);
-      }
+      
+      final conversationId = (data['conversationId'] ?? '').toString();
+      if (conversationId.isEmpty || onNotificationTap == null) return;
+
+      onNotificationTap!(conversationId, {
+        'name': (data['senderName'] ?? '').toString(),
+        'userId': (data['senderId'] ?? '').toString(),
+        'avatar': (data['senderAvatar'] ?? '').toString(),
+        'listingId': (data['listingId'] ?? '').toString(),
+        'listingTitle': (data['listingTitle'] ?? '').toString(),
+        'listingImage': (data['listingImage'] ?? '').toString(),
+        'listingPrice': (data['listingPrice'] ?? '').toString(),
+        'sellerId': (data['sellerId'] ?? '').toString(),
+      });
       return;
     }
-
-    // Handle chat notifications
-    if (type != 'chat_message') return;
-
-    final conversationId = (data['conversationId'] ?? '').toString();
-    if (conversationId.isEmpty || onNotificationTap == null) return;
-
-    onNotificationTap!(conversationId, {
-      'name': (data['senderName'] ?? '').toString(),
-      'userId': (data['senderId'] ?? '').toString(),
-    });
   }
 }

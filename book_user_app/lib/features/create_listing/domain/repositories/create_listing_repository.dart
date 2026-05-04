@@ -16,6 +16,8 @@ abstract class CreateListingRepository {
     String? meetupPreferences,
     required List<String> imagePaths,
     String? educationLevel,
+    String? stream,
+    String? department,
     String? classOrSemester,
     String? subject,
     String? bookType,

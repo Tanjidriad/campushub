@@ -11,6 +11,7 @@ import '../../domain/usecases/resend_verification_usecase.dart';
 import '../../domain/usecases/reset_password_usecase.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
+import 'package:book_user_app/features/auth/domain/usecases/change_password_usecase.dart';
 import '../../domain/usecases/update_profile_usecase.dart';
 import '../../domain/usecases/update_avatar_usecase.dart';
 
@@ -24,6 +25,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final ResetPasswordUseCase resetPasswordUseCase;
   final UpdateProfileUseCase updateProfileUseCase;
   final UpdateAvatarUseCase updateAvatarUseCase;
+  final ChangePasswordUseCase changePasswordUseCase;
 
   AuthBloc({
     required this.loginUseCase,
@@ -35,6 +37,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required this.resetPasswordUseCase,
     required this.updateProfileUseCase,
     required this.updateAvatarUseCase,
+    required this.changePasswordUseCase,
   }) : super(const AuthInitial()) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
     on<AuthLoginRequested>(_onLoginRequested);
@@ -47,6 +50,33 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthResetPasswordRequested>(_onResetPasswordRequested);
     on<AuthUpdateProfileRequested>(_onUpdateProfileRequested);
     on<AuthUpdateAvatarRequested>(_onUpdateAvatarRequested);
+    on<AuthChangePasswordRequested>(_onChangePasswordRequested);
+  }
+
+  Future<void> _onChangePasswordRequested(
+    AuthChangePasswordRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    final currentUser = state is AuthAuthenticated
+        ? (state as AuthAuthenticated).user
+        : null;
+    emit(const AuthChangePasswordLoading());
+    final result = await changePasswordUseCase(
+      ChangePasswordParams(
+        currentPassword: event.currentPassword,
+        newPassword: event.newPassword,
+      ),
+    );
+    result.fold(
+      (failure) => emit(AuthError(failure.message)),
+      (_) {
+        emit(const AuthChangePasswordSuccess());
+        if (currentUser != null) {
+          // Keep auth identity state stable after password update.
+          emit(AuthAuthenticated(currentUser));
+        }
+      },
+    );
   }
 
   Future<void> _onForgotPasswordRequested(
@@ -88,8 +118,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     result.fold((failure) => emit(const AuthUnauthenticated()), (user) {
       emit(AuthAuthenticated(user));
-      // Register FCM token when user session is restored
-      sl<FCMService>().registerToken();
+      if (user.isVerified) {
+        // Register FCM token only for verified users because backend
+        // protects token endpoints with requireVerified.
+        sl<FCMService>().registerToken();
+      }
     });
   }
 
@@ -105,8 +138,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     result.fold((failure) => emit(AuthError(failure.message)), (user) {
       emit(AuthAuthenticated(user));
-      // Register FCM token on successful login
-      sl<FCMService>().registerToken();
+      if (user.isVerified) {
+        // Register FCM token only for verified users because backend
+        // protects token endpoints with requireVerified.
+        sl<FCMService>().registerToken();
+      }
     });
   }
 
@@ -195,6 +231,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         phone: event.phone,
         bio: event.bio,
         location: event.location,
+        educationLevel: event.educationLevel,
+        stream: event.stream,
+        department: event.department,
+        classOrSemester: event.classOrSemester,
       ),
     );
 

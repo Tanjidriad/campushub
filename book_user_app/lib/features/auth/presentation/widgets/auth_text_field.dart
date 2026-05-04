@@ -38,18 +38,18 @@ class AuthTextField extends StatelessWidget {
       style: TextStyle(
         fontSize: 16.sp,
         fontWeight: FontWeight.w500,
-        color: AppPalette.textPrimary,
+        color: AppColors.of(context).textPrimary,
       ),
       decoration: InputDecoration(
         hintText: hintText,
         prefixIcon: Icon(
           prefixIcon,
-          color: AppPalette.textSecondary,
+          color: AppColors.of(context).textSecondary,
           size: 22.sp,
         ),
         suffixIcon: suffixIcon,
         filled: true,
-        fillColor: AppPalette.surface,
+        fillColor: AppColors.of(context).surface,
         contentPadding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 18.h),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16.r),
@@ -57,11 +57,11 @@ class AuthTextField extends StatelessWidget {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16.r),
-          borderSide: BorderSide(color: AppPalette.border, width: 1),
+          borderSide: BorderSide(color: AppColors.of(context).border, width: 1),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16.r),
-          borderSide: BorderSide(color: AppPalette.primary, width: 1.5),
+          borderSide: BorderSide(color: AppColors.of(context).primary, width: 1.5),
         ),
       ),
     );

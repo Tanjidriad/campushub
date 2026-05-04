@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:book_user_app/l10n/app_localizations.dart';
 import 'package:iconsax/iconsax.dart';
 
 class ResetPasswordPage extends StatefulWidget {
@@ -34,29 +35,23 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   }
 
   void _handleSubmit() {
-    debugPrint('🔴 _handleSubmit called');
-    debugPrint('🔴 Token: ${widget.token}');
-
-    final password = _passwordController.text.trim();
-    final confirmPassword = _confirmPasswordController.text.trim();
+    final l10n = AppLocalizations.of(context)!;
+    final password = _passwordController.text;
+    final confirmPassword = _confirmPasswordController.text;
 
     if (password.isEmpty) {
-      AppSnackBar.showWarning(context, 'Please enter a new password');
+      AppSnackBar.showWarning(context, l10n.newPasswordRequired);
       return;
     }
     if (password.length < 6) {
-      AppSnackBar.showWarning(
-        context,
-        'Password must be at least 6 characters',
-      );
+      AppSnackBar.showWarning(context, l10n.passwordMinLength);
       return;
     }
     if (password != confirmPassword) {
-      AppSnackBar.showWarning(context, 'Passwords do not match');
+      AppSnackBar.showWarning(context, l10n.passwordsDoNotMatch);
       return;
     }
 
-    debugPrint('🔴 Dispatching AuthResetPasswordRequested event');
     context.read<AuthBloc>().add(
       AuthResetPasswordRequested(token: widget.token, newPassword: password),
     );
@@ -64,25 +59,26 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthResetPasswordSuccess) {
-          AppSnackBar.showSuccess(
-            context,
-            'Password reset successfully! Please login.',
-          );
+          AppSnackBar.showSuccess(context, l10n.passwordResetSuccess);
           context.go('/login');
         } else if (state is AuthError) {
           AppSnackBar.showError(context, state.message);
         }
       },
       child: Scaffold(
-        backgroundColor: AppPalette.background,
+        backgroundColor: AppColors.of(context).background,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppPalette.textPrimary),
+            icon: Icon(
+              Icons.arrow_back,
+              color: AppColors.of(context).textPrimary,
+            ),
             onPressed: () => context.go('/login'),
           ),
         ),
@@ -93,37 +89,37 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
             children: [
               SizedBox(height: 20.h),
               Text(
-                "Reset Password",
+                l10n.resetPasswordTitle,
                 style: TextStyle(
                   fontSize: 28.sp,
                   fontWeight: FontWeight.bold,
-                  color: AppPalette.textPrimary,
+                  color: AppColors.of(context).textPrimary,
                 ),
               ),
               SizedBox(height: 12.h),
               Text(
-                "Please enter your new password below.",
+                l10n.resetPasswordDescription,
                 style: TextStyle(
                   fontSize: 14.sp,
-                  color: AppPalette.textSecondary,
+                  color: AppColors.of(context).textSecondary,
                   height: 1.5,
                 ),
               ),
               SizedBox(height: 32.h),
-              _buildLabel("New Password"),
+              _buildLabel(l10n.newPasswordLabel),
               BlocBuilder<AuthBloc, AuthState>(
                 builder: (context, state) {
                   final isLoading = state is AuthResetPasswordLoading;
                   return AuthTextField(
                     controller: _passwordController,
-                    hintText: "Enter new password",
+                    hintText: l10n.enterNewPasswordHint,
                     prefixIcon: Iconsax.lock,
                     isObscure: _obscurePassword,
                     enabled: !isLoading,
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword ? Iconsax.eye_slash : Iconsax.eye,
-                        color: AppPalette.textSecondary,
+                        color: AppColors.of(context).textSecondary,
                       ),
                       onPressed: () {
                         setState(() {
@@ -135,13 +131,13 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                 },
               ),
               SizedBox(height: 16.h),
-              _buildLabel("Confirm Password"),
+              _buildLabel(l10n.confirmPassword),
               BlocBuilder<AuthBloc, AuthState>(
                 builder: (context, state) {
                   final isLoading = state is AuthResetPasswordLoading;
                   return AuthTextField(
                     controller: _confirmPasswordController,
-                    hintText: "Confirm new password",
+                    hintText: l10n.confirmNewPasswordHint,
                     prefixIcon: Iconsax.lock,
                     isObscure: _obscureConfirmPassword,
                     enabled: !isLoading,
@@ -150,7 +146,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                         _obscureConfirmPassword
                             ? Iconsax.eye_slash
                             : Iconsax.eye,
-                        color: AppPalette.textSecondary,
+                        color: AppColors.of(context).textSecondary,
                       ),
                       onPressed: () {
                         setState(() {
@@ -170,7 +166,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                     child: ElevatedButton(
                       onPressed: isLoading ? null : _handleSubmit,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppPalette.primary,
+                        backgroundColor: AppColors.of(context).primary,
                         padding: EdgeInsets.symmetric(vertical: 16.h),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16.r),
@@ -180,15 +176,14 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                       child: isLoading
                           ? SizedBox(
                               height: 24.h,
-                              width: 24.h,
                               child: const AppLoaderSmall(),
                             )
                           : Text(
-                              "Reset Password",
+                              l10n.resetPasswordButton,
                               style: TextStyle(
                                 fontSize: 16.sp,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                                color: AppColors.of(context).onPrimary,
                               ),
                             ),
                     ),
@@ -210,7 +205,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
         style: TextStyle(
           fontSize: 14.sp,
           fontWeight: FontWeight.w600,
-          color: AppPalette.textPrimary,
+          color: AppColors.of(context).textPrimary,
         ),
       ),
     );

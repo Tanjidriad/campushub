@@ -1,3 +1,4 @@
+import 'package:book_user_app/core/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -27,7 +28,7 @@ class SectionHeader extends StatelessWidget {
             style: TextStyle(
               fontSize: 18.sp,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF1F2937),
+              color: AppColors.of(context).textPrimary,
             ),
           ),
           if (actionText != null)
@@ -38,7 +39,7 @@ class SectionHeader extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 13.sp,
                   fontWeight: FontWeight.w600,
-                  color: const Color(0xFF16A34A), // Green action text
+                  color: AppColors.of(context).success, // Green action text
                 ),
               ),
             ),

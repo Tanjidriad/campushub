@@ -180,7 +180,19 @@ class ListingRepositoryImpl implements ListingRepository {
     String? category,
     String? priceType,
     double? price,
+    String? currency,
     String? condition,
+    String? locationName,
+    String? locationAddress,
+    String? meetupPreferences,
+    List<String>? tags,
+    String? educationLevel,
+    String? classOrSemester,
+    String? subject,
+    String? bookType,
+    String? division,
+    String? district,
+    String? upazila,
   }) async {
     try {
       final result = await remoteDataSource.updateListing(
@@ -190,7 +202,19 @@ class ListingRepositoryImpl implements ListingRepository {
         category: category,
         priceType: priceType,
         price: price,
+        currency: currency,
         condition: condition,
+        locationName: locationName,
+        locationAddress: locationAddress,
+        meetupPreferences: meetupPreferences,
+        tags: tags,
+        educationLevel: educationLevel,
+        classOrSemester: classOrSemester,
+        subject: subject,
+        bookType: bookType,
+        division: division,
+        district: district,
+        upazila: upazila,
       );
       return Right(result);
     } on ApiException catch (e) {
@@ -217,6 +241,20 @@ class ListingRepositoryImpl implements ListingRepository {
       return Left(
         const ServerFailure('Failed to delete listing. Please try again.'),
       );
+    }
+  }
+
+  @override
+  Future<Either<Failure, Listing>> deleteListingImage(String listingId, String imageId) async {
+    try {
+      final result = await remoteDataSource.deleteListingImage(listingId, imageId);
+      return Right(result);
+    } on ApiException catch (e) {
+      return Left(_handleApiException(e));
+    } on DioException catch (e) {
+      return Left(_handleDioException(e));
+    } catch (e) {
+      return Left(const ServerFailure('Failed to delete image. Please try again.'));
     }
   }
 
@@ -320,6 +358,36 @@ class ListingRepositoryImpl implements ListingRepository {
           'Failed to mark listing as sold. Please try again.',
         ),
       );
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<Listing>>> getSimilarListings(
+    String listingId,
+  ) async {
+    try {
+      final result = await remoteDataSource.getSimilarListings(listingId);
+      return Right(result);
+    } on ApiException catch (e) {
+      return Left(_handleApiException(e));
+    } on DioException catch (e) {
+      return Left(_handleDioException(e));
+    } catch (e) {
+      return Left(const ServerFailure('Failed to fetch similar listings.'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<Listing>>> getRecommendedListings({int limit = 10}) async {
+    try {
+      final result = await remoteDataSource.getRecommendedListings(limit: limit);
+      return Right(result);
+    } on ApiException catch (e) {
+      return Left(_handleApiException(e));
+    } on DioException catch (e) {
+      return Left(_handleDioException(e));
+    } catch (e) {
+      return Left(const ServerFailure('Failed to fetch recommended listings.'));
     }
   }
 

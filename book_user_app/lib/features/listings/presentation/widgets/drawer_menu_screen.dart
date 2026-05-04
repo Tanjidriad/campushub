@@ -1,7 +1,10 @@
 import 'package:book_user_app/core/theme/app_palette.dart';
+import 'package:book_user_app/core/theme/display_preferences_cubit.dart';
 import 'package:book_user_app/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:book_user_app/features/auth/presentation/bloc/auth_event.dart';
 import 'package:book_user_app/features/auth/presentation/bloc/auth_state.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:book_user_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -14,8 +17,9 @@ class DrawerMenuScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      backgroundColor: AppPalette.primary,
+      backgroundColor: AppColors.of(context).primary,
       body: SafeArea(
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 24.h),
@@ -41,7 +45,9 @@ class DrawerMenuScreen extends StatelessWidget {
                     children: [
                       CircleAvatar(
                         radius: 28.r,
-                        backgroundColor: Colors.white.withValues(alpha: 0.2),
+                        backgroundColor: AppColors.of(
+                          context,
+                        ).onPrimary.withValues(alpha: 0.2),
                         backgroundImage:
                             avatarUrl != null && avatarUrl.isNotEmpty
                             ? CachedNetworkImageProvider(avatarUrl)
@@ -49,7 +55,7 @@ class DrawerMenuScreen extends StatelessWidget {
                         child: avatarUrl == null || avatarUrl.isEmpty
                             ? Icon(
                                 Iconsax.user,
-                                color: Colors.white,
+                                color: AppColors.of(context).onPrimary,
                                 size: 28.sp,
                               )
                             : null,
@@ -62,7 +68,7 @@ class DrawerMenuScreen extends StatelessWidget {
                             Text(
                               userName,
                               style: TextStyle(
-                                color: Colors.white,
+                                color: AppColors.of(context).onPrimary,
                                 fontSize: 18.sp,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -74,7 +80,9 @@ class DrawerMenuScreen extends StatelessWidget {
                               Text(
                                 userBio,
                                 style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.7),
+                                  color: AppColors.of(
+                                    context,
+                                  ).onPrimary.withValues(alpha: 0.7),
                                   fontSize: 13.sp,
                                 ),
                                 maxLines: 1,
@@ -91,78 +99,131 @@ class DrawerMenuScreen extends StatelessWidget {
 
               SizedBox(height: 40.h),
               Divider(
-                color: Colors.white.withValues(alpha: 0.15),
+                color: AppColors.of(context).onPrimary.withValues(alpha: 0.15),
                 thickness: 1,
               ),
               SizedBox(height: 16.h),
 
-              // Menu items
-              _DrawerMenuItem(
-                icon: Iconsax.home_2,
-                label: 'Home',
-                isActive: true,
-                onTap: () => ZoomDrawer.of(context)!.close(),
+              // Menu items — scrollable to avoid overflow with longer labels
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      _DrawerMenuItem(
+                        icon: Iconsax.home_2,
+                        label: l10n.home,
+                        isActive: true,
+                        onTap: () => ZoomDrawer.of(context)!.close(),
+                      ),
+                      _DrawerMenuItem(
+                        icon: Iconsax.user,
+                        label: l10n.myProfile,
+                        onTap: () {
+                          ZoomDrawer.of(context)!.close();
+                          Future.delayed(const Duration(milliseconds: 300), () {
+                            if (context.mounted) context.pushNamed('profile');
+                          });
+                        },
+                      ),
+                      _DrawerMenuItem(
+                        icon: Iconsax.heart,
+                        label: l10n.wishlist,
+                        onTap: () {
+                          ZoomDrawer.of(context)!.close();
+                          Future.delayed(const Duration(milliseconds: 300), () {
+                            if (context.mounted) context.pushNamed('wishlist');
+                          });
+                        },
+                      ),
+                      _DrawerMenuItem(
+                        icon: Iconsax.message,
+                        label: l10n.messages,
+                        onTap: () {
+                          ZoomDrawer.of(context)!.close();
+                          Future.delayed(const Duration(milliseconds: 300), () {
+                            if (context.mounted)
+                              context.pushNamed('conversations');
+                          });
+                        },
+                      ),
+                      _DrawerMenuItem(
+                        icon: Iconsax.notification,
+                        label: l10n.notifications,
+                        onTap: () {
+                          ZoomDrawer.of(context)!.close();
+                          Future.delayed(const Duration(milliseconds: 300), () {
+                            if (context.mounted)
+                              context.pushNamed('notifications');
+                          });
+                        },
+                      ),
+                      if (Theme.of(context).brightness == Brightness.dark)
+                        BlocBuilder<DisplayPreferencesCubit, bool>(
+                          builder: (context, oledBlack) {
+                            return Padding(
+                              padding: EdgeInsets.only(bottom: 8.h),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Iconsax.monitor,
+                                    color: AppColors.of(
+                                      context,
+                                    ).onPrimary.withValues(alpha: 0.65),
+                                    size: 22.sp,
+                                  ),
+                                  SizedBox(width: 16.w),
+                                  Expanded(
+                                    child: Text(
+                                      'OLED true black',
+                                      style: TextStyle(
+                                        color: AppColors.of(context)
+                                            .onPrimary
+                                            .withValues(alpha: 0.65),
+                                        fontSize: 15.sp,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                  Switch(
+                                    value: oledBlack,
+                                    onChanged: (v) {
+                                      context
+                                          .read<DisplayPreferencesCubit>()
+                                          .setOledBlack(v);
+                                    },
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      _DrawerMenuItem(
+                        icon: Iconsax.setting_2,
+                        label: l10n.settings,
+                        onTap: () {
+                          ZoomDrawer.of(context)!.close();
+                          Future.delayed(const Duration(milliseconds: 300), () {
+                            if (context.mounted) context.pushNamed('settings');
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              _DrawerMenuItem(
-                icon: Iconsax.user,
-                label: 'My Profile',
-                onTap: () {
-                  ZoomDrawer.of(context)!.close();
-                  Future.delayed(const Duration(milliseconds: 300), () {
-                    if (context.mounted) context.pushNamed('profile');
-                  });
-                },
-              ),
-              _DrawerMenuItem(
-                icon: Iconsax.heart,
-                label: 'Wishlist',
-                onTap: () {
-                  ZoomDrawer.of(context)!.close();
-                  Future.delayed(const Duration(milliseconds: 300), () {
-                    if (context.mounted) context.pushNamed('wishlist');
-                  });
-                },
-              ),
-              _DrawerMenuItem(
-                icon: Iconsax.message,
-                label: 'Messages',
-                onTap: () {
-                  ZoomDrawer.of(context)!.close();
-                  Future.delayed(const Duration(milliseconds: 300), () {
-                    if (context.mounted) context.pushNamed('conversations');
-                  });
-                },
-              ),
-              _DrawerMenuItem(
-                icon: Iconsax.notification,
-                label: 'Notifications',
-                onTap: () {
-                  ZoomDrawer.of(context)!.close();
-                  Future.delayed(const Duration(milliseconds: 300), () {
-                    if (context.mounted) context.pushNamed('notifications');
-                  });
-                },
-              ),
-              _DrawerMenuItem(
-                icon: Iconsax.setting_2,
-                label: 'Settings',
-                onTap: () => ZoomDrawer.of(context)!.close(),
-              ),
-
-              const Spacer(),
 
               // Logout
               Divider(
-                color: Colors.white.withValues(alpha: 0.15),
+                color: AppColors.of(context).onPrimary.withValues(alpha: 0.15),
                 thickness: 1,
               ),
               SizedBox(height: 8.h),
               _DrawerMenuItem(
                 icon: Iconsax.logout,
-                label: 'Sign Out',
+                label: l10n.signOut,
                 isDestructive: true,
                 onTap: () {
-                  // Handle sign out
+                  context.read<AuthBloc>().add(const AuthLogoutRequested());
                 },
               ),
               SizedBox(height: 16.h),
@@ -192,10 +253,10 @@ class _DrawerMenuItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = isDestructive
-        ? Colors.red[300]!
+        ? AppColors.of(context).error
         : isActive
-        ? Colors.white
-        : Colors.white.withValues(alpha: 0.65);
+        ? AppColors.of(context).onPrimary
+        : AppColors.of(context).onPrimary.withValues(alpha: 0.65);
 
     return GestureDetector(
       onTap: onTap,
@@ -206,12 +267,16 @@ class _DrawerMenuItem extends StatelessWidget {
           children: [
             Icon(icon, color: color, size: 22.sp),
             SizedBox(width: 16.w),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontSize: 15.sp,
-                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 15.sp,
+                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             if (isActive) ...[
@@ -219,8 +284,8 @@ class _DrawerMenuItem extends StatelessWidget {
               Container(
                 width: 6.w,
                 height: 6.w,
-                decoration: const BoxDecoration(
-                  color: AppPalette.success,
+                decoration: BoxDecoration(
+                  color: AppColors.of(context).success,
                   shape: BoxShape.circle,
                 ),
               ),

@@ -1,3 +1,6 @@
+import 'package:book_user_app/core/theme/app_palette.dart';
+import 'package:book_user_app/core/widgets/app_snackbar.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:book_user_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:book_user_app/features/auth/presentation/bloc/auth_state.dart';
 import 'package:book_user_app/features/chat/data/repositories/chat_repository.dart';
@@ -5,9 +8,14 @@ import 'package:book_user_app/features/listings/domain/entities/listing.dart';
 import 'package:book_user_app/features/listings/presentation/bloc/listings_bloc.dart';
 import 'package:book_user_app/features/listings/presentation/bloc/listings_event.dart';
 import 'package:book_user_app/features/listings/presentation/bloc/listings_state.dart';
+import 'package:book_user_app/features/listings/presentation/pages/promote_listing_page.dart';
+import 'package:book_user_app/features/listings/presentation/pages/edit_listing_page.dart';
+import 'package:book_user_app/features/listings/domain/repositories/listing_repository.dart';
+import 'package:book_user_app/core/services/recently_viewed_service.dart';
 import 'package:book_user_app/injection_container/injection_container.dart';
 import 'package:book_user_app/core/widgets/shimmer_skeletons.dart';
 import 'package:book_user_app/features/offers/presentation/widgets/make_offer_sheet.dart';
+import 'package:book_user_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -24,12 +32,9 @@ import 'package:book_user_app/features/reviews/presentation/bloc/reviews_bloc.da
 import 'package:book_user_app/features/reviews/presentation/bloc/reviews_event.dart';
 import 'package:book_user_app/features/reviews/presentation/bloc/reviews_state.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:book_user_app/features/listings/presentation/widgets/staggered_listing_card.dart';
 
-// ─── Color Palette (from HTML mockup) ───
-const _kPrimaryGreen = Color(0xFF16A34A);
-const _kPriceGreen = Color(0xFF15803D);
-
-const _kDarkText = Color(0xFF1F2937);
+// ─── Color Palette: use AppColors.of(context).success ───
 
 class ListingDetailPage extends StatefulWidget {
   final String heroTag;
@@ -62,6 +67,8 @@ class _ListingDetailPageState extends State<ListingDetailPage>
   late ReviewsBloc _reviewsBloc;
   List<Review> _reviews = [];
   bool _reviewsLoaded = false;
+  List<Listing> _similarListings = [];
+  bool _similarLoading = false;
 
   @override
   void initState() {
@@ -93,6 +100,8 @@ class _ListingDetailPageState extends State<ListingDetailPage>
   @override
   void dispose() {
     _controller.dispose();
+    _listingsBloc.close();
+    _reviewsBloc.close();
     super.dispose();
   }
 
@@ -126,18 +135,15 @@ class _ListingDetailPageState extends State<ListingDetailPage>
 
   // ─── Start Conversation (existing logic) ───
   Future<void> _startConversation(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
     if (_listing == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Listing data not loaded yet')),
-      );
+      AppSnackBar.showInfo(context, l10n.listingDataNotLoaded);
       return;
     }
 
     final seller = _listing!.seller;
     if (seller == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Seller information not available')),
-      );
+      AppSnackBar.showInfo(context, l10n.sellerInfoNotAvailable);
       return;
     }
 
@@ -159,11 +165,9 @@ class _ListingDetailPageState extends State<ListingDetailPage>
 
       result.fold(
         (failure) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to start conversation: ${failure.message}'),
-              backgroundColor: Colors.red,
-            ),
+          AppSnackBar.showError(
+            context,
+            'Failed to start conversation: ${failure.message}',
           );
         },
         (conversation) async {
@@ -194,95 +198,110 @@ class _ListingDetailPageState extends State<ListingDetailPage>
     } catch (e) {
       if (!context.mounted) return;
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-      );
+      AppSnackBar.showError(context, 'Error: $e');
     }
+  }
+
+  // ─── Fetch Similar Listings ───
+  Future<void> _fetchSimilarListings(String listingId) async {
+    if (_similarLoading) return;
+    setState(() => _similarLoading = true);
+    final result = await sl<ListingRepository>().getSimilarListings(listingId);
+    if (!mounted) return;
+    result.fold(
+      (_) => setState(() => _similarLoading = false),
+      (listings) => setState(() {
+        _similarListings = listings;
+        _similarLoading = false;
+      }),
+    );
   }
 
   // ─── Build ───
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return BlocProvider.value(
       value: _listingsBloc,
-      child: BlocConsumer<ListingsBloc, ListingsState>(
-        listener: (context, state) {
-          if (state is ListingDetailLoaded) {
-            setState(() => _listing = state.listing);
-          } else if (state is WishlistToggled &&
-              _listing != null &&
-              state.listingId == _listing!.id) {
-            setState(() {
-              _listing = _listing!.copyWith(isInWishlist: state.isInWishlist);
-            });
-          } else if (state is ListingsError && _listing != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
-              ),
-            );
-          } else if (state is ListingDeleted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Listing deleted successfully')),
-            );
-            context.pop();
-          } else if (state is ListingMarkedAsSold) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Listing marked as sold')),
-            );
-            _listingsBloc.add(
-              ListingDetailRequested(listingId: state.listingId),
-            );
-          }
-        },
-        buildWhen: (previous, current) {
-          if (current is WishlistToggled) return false;
-          if (current is ListingsError && _listing != null) return false;
-          return true;
-        },
-        builder: (context, state) {
-          if (state is ListingDetailLoading) {
-            return const ListingDetailShimmer();
-          }
+      child: HeroMode(
+        enabled: false,
+        child: BlocConsumer<ListingsBloc, ListingsState>(
+          listener: (context, state) {
+            if (!mounted) return;
+            if (state is ListingDetailLoaded) {
+              setState(() => _listing = state.listing);
+              sl<RecentlyViewedService>().recordListing(state.listing);
+              _fetchSimilarListings(state.listing.id);
+            } else if (state is WishlistToggled &&
+                _listing != null &&
+                state.listingId == _listing!.id) {
+              setState(() {
+                _listing = _listing!.copyWith(isInWishlist: state.isInWishlist);
+              });
+            } else if (state is ListingsError && _listing != null) {
+              AppSnackBar.showError(context, state.message);
+            } else if (state is ListingDeleted) {
+              AppSnackBar.showSuccess(context, l10n.listingDeletedSuccess);
+              Navigator.pop(context);
+            } else if (state is ListingMarkedAsSold) {
+              AppSnackBar.showSuccess(context, l10n.listingMarkedAsSoldMsg);
+              _listingsBloc.add(
+                ListingDetailRequested(listingId: state.listingId),
+              );
+            }
+          },
+          buildWhen: (previous, current) {
+            if (current is WishlistToggled) return false;
+            if (current is ListingsError && _listing != null) return false;
+            return true;
+          },
+          builder: (context, state) {
+            if (state is ListingDetailLoading) {
+              return const ListingDetailShimmer();
+            }
 
-          if (state is ListingsError && _listing == null) {
-            return Scaffold(
-              backgroundColor: Colors.white,
-              appBar: AppBar(
-                leading: IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () => Navigator.pop(context),
+            if (state is ListingsError && _listing == null) {
+              return Scaffold(
+                backgroundColor: AppColors.of(context).background,
+                appBar: AppBar(
+                  leading: IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: () => Navigator.pop(context),
+                  ),
                 ),
-              ),
-              body: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.error_outline, size: 48.sp, color: Colors.grey),
-                    SizedBox(height: 16.h),
-                    Text(state.message),
-                    SizedBox(height: 16.h),
-                    ElevatedButton(
-                      onPressed: () {
-                        if (widget.listingId != null) {
-                          _listingsBloc.add(
-                            ListingDetailRequested(
-                              listingId: widget.listingId!,
-                            ),
-                          );
-                        }
-                      },
-                      child: const Text('Retry'),
-                    ),
-                  ],
+                body: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 48.sp,
+                        color: AppColors.of(context).iconMuted,
+                      ),
+                      SizedBox(height: 16.h),
+                      Text(state.message),
+                      SizedBox(height: 16.h),
+                      ElevatedButton(
+                        onPressed: () {
+                          if (widget.listingId != null) {
+                            _listingsBloc.add(
+                              ListingDetailRequested(
+                                listingId: widget.listingId!,
+                              ),
+                            );
+                          }
+                        },
+                        child: Text(l10n.retry),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            );
-          }
+              );
+            }
 
-          return _buildContent();
-        },
+            return _buildContent();
+          },
+        ),
       ),
     );
   }
@@ -294,7 +313,7 @@ class _ListingDetailPageState extends State<ListingDetailPage>
   Widget _buildContent() {
     final listing = _listing;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.of(context).background,
       body: Column(
         children: [
           // ─── Sticky Header ───
@@ -333,11 +352,17 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                       // Divider
                       Padding(
                         padding: EdgeInsets.symmetric(horizontal: 20.w),
-                        child: Divider(color: Colors.grey[200], height: 1),
+                        child: Divider(
+                          color: AppColors.of(context).border,
+                          height: 1,
+                        ),
                       ),
 
                       // Action Menu
                       _buildActionMenu(),
+
+                      // Similar Listings
+                      _buildSimilarListings(),
 
                       SizedBox(height: 24.h),
                     ],
@@ -356,12 +381,13 @@ class _ListingDetailPageState extends State<ListingDetailPage>
 
   // ─── Sticky Header ───
   Widget _buildStickyHeader() {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.of(context).card,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: AppColors.of(context).textPrimary.withOpacity(0.05),
             blurRadius: 2,
             offset: const Offset(0, 1),
           ),
@@ -376,19 +402,22 @@ class _ListingDetailPageState extends State<ListingDetailPage>
               // Back Button
               IconButton(
                 onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.arrow_back, color: Color(0xFF1F2937)),
+                icon: Icon(
+                  Icons.arrow_back,
+                  color: AppColors.of(context).textPrimary,
+                ),
                 splashRadius: 20.r,
               ),
 
               // Title
               Expanded(
                 child: Text(
-                  'Ad Details',
+                  l10n.adDetails,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 18.sp,
                     fontWeight: FontWeight.bold,
-                    color: _kDarkText,
+                    color: AppColors.of(context).textPrimary,
                   ),
                 ),
               ),
@@ -400,10 +429,14 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                   final text =
                       '${_listing!.title}\n'
                       '${_listing!.formattedPrice}\n'
-                      'Check it out on CampusHub Pro!';
+                      '${l10n.shareCheckItOut}';
                   Share.share(text);
                 },
-                icon: Icon(Iconsax.share, color: Colors.grey[500], size: 22.sp),
+                icon: Icon(
+                  Iconsax.share,
+                  color: AppColors.of(context).textSecondary,
+                  size: 22.sp,
+                ),
                 splashRadius: 20.r,
               ),
 
@@ -436,8 +469,8 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                                 ? Iconsax.heart5
                                 : Iconsax.heart,
                             color: _listing?.isInWishlist == true
-                                ? Colors.red
-                                : Colors.grey[500],
+                                ? AppColors.of(context).error
+                                : AppColors.of(context).textSecondary,
                             size: 22.sp,
                           ),
                           splashRadius: 20.r,
@@ -462,7 +495,7 @@ class _ListingDetailPageState extends State<ListingDetailPage>
       height: 190.h,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16.r),
-        color: Colors.grey[200],
+        color: AppColors.of(context).border,
       ),
       clipBehavior: Clip.antiAlias,
       child: Stack(
@@ -473,23 +506,20 @@ class _ListingDetailPageState extends State<ListingDetailPage>
             onPageChanged: (index) =>
                 setState(() => _currentImageIndex = index),
             itemBuilder: (context, index) {
-              final imageWidget = Image.network(
-                _images[index],
+              final imageWidget = CachedNetworkImage(
+                imageUrl: _images[index],
                 fit: BoxFit.cover,
                 width: double.infinity,
                 height: double.infinity,
-                errorBuilder: (_, __, ___) => Container(
-                  color: Colors.grey[200],
+                errorWidget: (_, __, ___) => Container(
+                  color: AppColors.of(context).border,
                   child: Icon(
                     Iconsax.image,
                     size: 48.sp,
-                    color: Colors.grey[400],
+                    color: AppColors.of(context).textLight,
                   ),
                 ),
               );
-              if (index == 0) {
-                return Hero(tag: widget.heroTag, child: imageWidget);
-              }
               return imageWidget;
             },
           ),
@@ -519,16 +549,16 @@ class _ListingDetailPageState extends State<ListingDetailPage>
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
+        color: AppColors.of(context).surface.withOpacity(0.9),
         borderRadius: BorderRadius.circular(8.r),
-        border: Border.all(color: Colors.grey[100]!, width: 0.5),
+        border: Border.all(color: AppColors.of(context).subtleFill, width: 0.5),
       ),
       child: Text(
         text,
         style: TextStyle(
           fontSize: 11.sp,
           fontWeight: FontWeight.w600,
-          color: _kDarkText,
+          color: AppColors.of(context).textPrimary,
         ),
       ),
     );
@@ -550,7 +580,9 @@ class _ListingDetailPageState extends State<ListingDetailPage>
             width: isActive ? 24.w : 6.w,
             height: 6.h,
             decoration: BoxDecoration(
-              color: isActive ? _kPrimaryGreen : Colors.grey[300],
+              color: isActive
+                  ? AppColors.of(context).success
+                  : AppColors.of(context).border,
               borderRadius: BorderRadius.circular(3.r),
             ),
           );
@@ -561,6 +593,7 @@ class _ListingDetailPageState extends State<ListingDetailPage>
 
   // ─── Main Info Section ───
   Widget _buildMainInfoSection(Listing? listing) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20.w),
       child: Column(
@@ -580,7 +613,7 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                 style: TextStyle(
                   fontSize: 22.sp,
                   fontWeight: FontWeight.bold,
-                  color: _kPriceGreen,
+                  color: AppColors.of(context).success,
                 ),
               ),
               SizedBox(width: 8.w),
@@ -589,7 +622,7 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                 style: TextStyle(
                   fontSize: 13.sp,
                   fontWeight: FontWeight.w500,
-                  color: Colors.grey[500],
+                  color: AppColors.of(context).textSecondary,
                 ),
               ),
             ],
@@ -599,12 +632,12 @@ class _ListingDetailPageState extends State<ListingDetailPage>
 
           // Title
           Text(
-            listing?.title ?? 'Loading...',
+            listing?.title ?? l10n.loading,
             style: TextStyle(
               fontSize: 18.sp,
               fontWeight: FontWeight.bold,
               height: 1.3,
-              color: _kDarkText,
+              color: AppColors.of(context).textPrimary,
             ),
           ),
 
@@ -620,18 +653,18 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                     Icon(
                       Iconsax.location,
                       size: 14.sp,
-                      color: Colors.grey[400],
+                      color: AppColors.of(context).textLight,
                     ),
                     SizedBox(width: 4.w),
                     Flexible(
                       child: Text(
                         listing?.location?.name ??
                             listing?.location?.address ??
-                            'Location not set',
+                            l10n.locationNotSet,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 13.sp,
-                          color: Colors.grey[500],
+                          color: AppColors.of(context).textSecondary,
                         ),
                       ),
                     ),
@@ -642,12 +675,12 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                           // Could open map view
                         },
                         child: Text(
-                          'see map',
+                          l10n.seeMap,
                           style: TextStyle(
                             fontSize: 13.sp,
-                            color: _kPrimaryGreen,
+                            color: AppColors.of(context).success,
                             decoration: TextDecoration.underline,
-                            decorationColor: _kPrimaryGreen,
+                            decorationColor: AppColors.of(context).success,
                           ),
                         ),
                       ),
@@ -658,7 +691,10 @@ class _ListingDetailPageState extends State<ListingDetailPage>
               // Date
               Text(
                 listing != null ? _formatDate(listing.createdAt) : '',
-                style: TextStyle(fontSize: 13.sp, color: Colors.grey[500]),
+                style: TextStyle(
+                  fontSize: 13.sp,
+                  color: AppColors.of(context).textSecondary,
+                ),
               ),
             ],
           ),
@@ -669,6 +705,7 @@ class _ListingDetailPageState extends State<ListingDetailPage>
 
   // ─── Seller Profile Card (matches screenshot) ───
   Widget _buildSellerCard(Listing listing) {
+    final l10n = AppLocalizations.of(context)!;
     SellerInfo seller = listing.seller!;
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w),
@@ -676,9 +713,9 @@ class _ListingDetailPageState extends State<ListingDetailPage>
         margin: EdgeInsets.only(top: 24.h),
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
         decoration: BoxDecoration(
-          color: const Color(0xFFF9FAFB),
+          color: AppColors.of(context).subtleFill,
           borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(color: Colors.grey[200]!),
+          border: Border.all(color: AppColors.of(context).border),
         ),
         child: Row(
           children: [
@@ -686,16 +723,16 @@ class _ListingDetailPageState extends State<ListingDetailPage>
             CircleAvatar(
               radius: 25.r,
               backgroundImage: seller.avatar != null
-                  ? NetworkImage(seller.avatar!)
+                  ? CachedNetworkImageProvider(seller.avatar!)
                   : null,
-              backgroundColor: Colors.grey[300],
+              backgroundColor: AppColors.of(context).border,
               child: seller.avatar == null
                   ? Text(
                       seller.name.isNotEmpty ? seller.name[0] : '?',
                       style: TextStyle(
                         fontSize: 18.sp,
                         fontWeight: FontWeight.bold,
-                        color: Colors.grey[600],
+                        color: AppColors.of(context).textSecondary,
                       ),
                     )
                   : null,
@@ -713,7 +750,7 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                     style: TextStyle(
                       fontSize: 15.sp,
                       fontWeight: FontWeight.bold,
-                      color: _kDarkText,
+                      color: AppColors.of(context).textPrimary,
                     ),
                   ),
                   if (seller.username != null) ...[
@@ -722,7 +759,7 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                       seller.username!,
                       style: TextStyle(
                         fontSize: 12.sp,
-                        color: Colors.grey[500],
+                        color: AppColors.of(context).textSecondary,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -743,14 +780,14 @@ class _ListingDetailPageState extends State<ListingDetailPage>
               child: Container(
                 padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.of(context).card,
                   borderRadius: BorderRadius.circular(20.r),
-                  border: Border.all(color: Colors.grey[300]!),
+                  border: Border.all(color: AppColors.of(context).border),
                 ),
                 child: Text(
-                  'View profile',
+                  l10n.viewProfile,
                   style: TextStyle(
-                    color: _kDarkText,
+                    color: AppColors.of(context).textPrimary,
                     fontSize: 12.sp,
                     fontWeight: FontWeight.w600,
                   ),
@@ -765,6 +802,7 @@ class _ListingDetailPageState extends State<ListingDetailPage>
 
   // ─── Description Section (collapsible with details grid — matches screenshot) ───
   Widget _buildDescriptionSection(Listing? listing) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20.w),
       child: Column(
@@ -782,8 +820,8 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                 Container(
                   width: 40.w,
                   height: 40.w,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFEF4444),
+                  decoration: BoxDecoration(
+                    color: AppColors.of(context).error,
                     shape: BoxShape.circle,
                   ),
                   child: Center(
@@ -791,8 +829,8 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                       AppIcons.descriptionIcon,
                       width: 20.sp,
                       height: 20.sp,
-                      colorFilter: const ColorFilter.mode(
-                        Colors.white,
+                      colorFilter: ColorFilter.mode(
+                        AppColors.of(context).onPrimary,
                         BlendMode.srcIn,
                       ),
                     ),
@@ -801,11 +839,11 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                 SizedBox(width: 10.w),
                 Expanded(
                   child: Text(
-                    'Description',
+                    l10n.description,
                     style: TextStyle(
                       fontSize: 16.sp,
                       fontWeight: FontWeight.bold,
-                      color: _kDarkText,
+                      color: AppColors.of(context).textPrimary,
                     ),
                   ),
                 ),
@@ -814,7 +852,7 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                   duration: const Duration(milliseconds: 200),
                   child: Icon(
                     Icons.keyboard_arrow_down_rounded,
-                    color: Colors.grey[500],
+                    color: AppColors.of(context).textSecondary,
                     size: 24.sp,
                   ),
                 ),
@@ -833,9 +871,9 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                 Container(
                   padding: EdgeInsets.all(16.w),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF8EBDC),
+                    color: AppColors.of(context).warning.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(12.r),
-                    border: Border.all(color: Colors.grey[200]!),
+                    border: Border.all(color: AppColors.of(context).border),
                   ),
                   child: Column(
                     children: [
@@ -847,7 +885,10 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                             ? 'Free'
                             : '\$ ${listing?.price?.toStringAsFixed(2) ?? '0.00'} (${_capitalizeFirst(listing?.priceType ?? 'Fixed')})',
                       ),
-                      Divider(color: Colors.grey[200], height: 24.h),
+                      Divider(
+                        color: AppColors.of(context).border,
+                        height: 24.h,
+                      ),
                       _buildDetailRow(
                         'Date',
                         listing != null
@@ -856,13 +897,44 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                         'Condition',
                         _capitalizeFirst(listing?.condition ?? 'N/A'),
                       ),
-                      Divider(color: Colors.grey[200], height: 24.h),
+                      Divider(
+                        color: AppColors.of(context).border,
+                        height: 24.h,
+                      ),
                       _buildDetailRow(
                         'Type',
                         _capitalizeFirst(listing?.priceType ?? 'N/A'),
                         'Warranty',
-                        'No',
+                        l10n.no,
                       ),
+                      if (listing?.educationLevel != null) ...[
+                        Divider(
+                          color: AppColors.of(context).border,
+                          height: 24.h,
+                        ),
+                        _buildDetailRow(
+                          'Level',
+                          _capitalizeFirst(listing!.educationLevel!),
+                          'Subject/Dept',
+                          (listing.subject != null && listing.subject!.isNotEmpty)
+                              ? _capitalizeFirst(listing.subject!)
+                              : 'N/A',
+                        ),
+                        Divider(
+                          color: AppColors.of(context).border,
+                          height: 24.h,
+                        ),
+                        _buildDetailRow(
+                          'Class/Sem',
+                          (listing.classOrSemester != null && listing.classOrSemester!.isNotEmpty)
+                              ? _capitalizeFirst(listing.classOrSemester!)
+                              : 'N/A',
+                          'Book Type',
+                          (listing.bookType != null && listing.bookType!.isNotEmpty)
+                              ? _capitalizeFirst(listing.bookType!)
+                              : 'N/A',
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -871,11 +943,11 @@ class _ListingDetailPageState extends State<ListingDetailPage>
 
                 // Description text
                 Text(
-                  listing?.description ?? 'No description available.',
+                  listing?.description ?? l10n.noDescriptionAvailable,
                   style: TextStyle(
                     fontSize: 14.sp,
                     height: 1.6,
-                    color: Colors.grey[700],
+                    color: AppColors.of(context).textPrimary,
                   ),
                 ),
 
@@ -883,17 +955,17 @@ class _ListingDetailPageState extends State<ListingDetailPage>
 
                 // Safety Tips (inside description)
                 Text(
-                  'Safety tips for deal',
+                  l10n.safetyTipsForDeal,
                   style: TextStyle(
                     fontSize: 15.sp,
                     fontWeight: FontWeight.bold,
-                    color: _kDarkText,
+                    color: AppColors.of(context).textPrimary,
                   ),
                 ),
                 SizedBox(height: 10.h),
-                _buildSafetyTipItem(1, 'Use a safe location to meet seller'),
-                _buildSafetyTipItem(2, 'Avoid cash transactions'),
-                _buildSafetyTipItem(3, 'Beware of unrealistic offers'),
+                _buildSafetyTipItem(1, l10n.safetyTipMeetSeller),
+                _buildSafetyTipItem(2, l10n.safetyTipAvoidCash),
+                _buildSafetyTipItem(3, l10n.safetyTipUnrealisticOffers),
               ],
             ),
             secondChild: const SizedBox.shrink(),
@@ -924,7 +996,7 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                 label1,
                 style: TextStyle(
                   fontSize: 12.sp,
-                  color: Colors.black54,
+                  color: AppColors.of(context).textSecondary,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -934,7 +1006,7 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                 style: TextStyle(
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w500,
-                  color: Colors.grey[500],
+                  color: AppColors.of(context).textSecondary,
                 ),
               ),
             ],
@@ -948,7 +1020,7 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                 label2,
                 style: TextStyle(
                   fontSize: 12.sp,
-                  color: Colors.black54,
+                  color: AppColors.of(context).textSecondary,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -958,7 +1030,7 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                 style: TextStyle(
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w500,
-                  color: Colors.grey[500],
+                  color: AppColors.of(context).textSecondary,
                 ),
               ),
             ],
@@ -978,7 +1050,7 @@ class _ListingDetailPageState extends State<ListingDetailPage>
             '$number.',
             style: TextStyle(
               fontSize: 14.sp,
-              color: Colors.grey[600],
+              color: AppColors.of(context).textSecondary,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -988,7 +1060,7 @@ class _ListingDetailPageState extends State<ListingDetailPage>
               text,
               style: TextStyle(
                 fontSize: 14.sp,
-                color: Colors.grey[600],
+                color: AppColors.of(context).textSecondary,
                 height: 1.4,
               ),
             ),
@@ -1006,12 +1078,19 @@ class _ListingDetailPageState extends State<ListingDetailPage>
         padding: EdgeInsets.only(top: 20.h, bottom: 16.h),
         child: Row(
           children: [
-            Icon(Iconsax.tag, size: 16.sp, color: _kDarkText),
+            Icon(
+              Iconsax.tag,
+              size: 16.sp,
+              color: AppColors.of(context).textPrimary,
+            ),
             SizedBox(width: 8.w),
             Expanded(
               child: Text(
                 tags.map((t) => '#$t').join(' '),
-                style: TextStyle(fontSize: 14.sp, color: Colors.grey[600]),
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  color: AppColors.of(context).textSecondary,
+                ),
               ),
             ),
           ],
@@ -1022,6 +1101,7 @@ class _ListingDetailPageState extends State<ListingDetailPage>
 
   // ─── Action Menu (Report, Rating, Write Review) ───
   Widget _buildActionMenu() {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20.w),
       child: Column(
@@ -1031,8 +1111,8 @@ class _ListingDetailPageState extends State<ListingDetailPage>
           // Report
           _buildActionMenuItem(
             svgAsset: AppIcons.reportIcon,
-            iconBgColor: const Color(0xFFDC3545),
-            label: 'Report',
+            iconBgColor: AppColors.of(context).error,
+            label: l10n.report,
             onTap: () {
               if (_listing != null) {
                 ReportDialog.show(
@@ -1051,8 +1131,8 @@ class _ListingDetailPageState extends State<ListingDetailPage>
           // Write a Review
           _buildActionMenuItem(
             svgAsset: AppIcons.writeReviewIcon,
-            iconBgColor: const Color(0xFF0D6EFD),
-            label: 'Write a Review',
+            iconBgColor: AppColors.of(context).accent,
+            label: l10n.writeAReview,
             showBorder: false,
             onTap: () {
               if (_listing?.seller != null) {
@@ -1074,8 +1154,84 @@ class _ListingDetailPageState extends State<ListingDetailPage>
     );
   }
 
+  // ─── Similar Listings Section ───
+  Widget _buildSimilarListings() {
+    final l10n = AppLocalizations.of(context)!;
+
+    if (_similarLoading) {
+      return Padding(
+        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Divider(color: AppColors.of(context).border, height: 1),
+            SizedBox(height: 16.h),
+            Text(
+              l10n.similarListings,
+              style: TextStyle(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.w700,
+                color: AppColors.of(context).textPrimary,
+              ),
+            ),
+            SizedBox(height: 16.h),
+            const Center(child: CircularProgressIndicator()),
+          ],
+        ),
+      );
+    }
+
+    if (_similarListings.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Divider(color: AppColors.of(context).border, height: 1),
+          SizedBox(height: 16.h),
+          Text(
+            l10n.similarListings,
+            style: TextStyle(
+              fontSize: 18.sp,
+              fontWeight: FontWeight.w700,
+              color: AppColors.of(context).textPrimary,
+            ),
+          ),
+          SizedBox(height: 12.h),
+          ...List.generate((_similarListings.length / 2).ceil(), (rowIndex) {
+            final first = rowIndex * 2;
+            final second = first + 1;
+            return Padding(
+              padding: EdgeInsets.only(bottom: 12.h),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: StaggeredListingCard(
+                      listing: _similarListings[first],
+                    ),
+                  ),
+                  SizedBox(width: 12.w),
+                  Expanded(
+                    child: second < _similarListings.length
+                        ? StaggeredListingCard(
+                            listing: _similarListings[second],
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
   // ─── Expandable Rating & Review Section ───
   Widget _buildRatingSection() {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         // Header (tap to expand)
@@ -1094,15 +1250,17 @@ class _ListingDetailPageState extends State<ListingDetailPage>
           child: Container(
             padding: EdgeInsets.symmetric(vertical: 14.h),
             decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: Colors.grey[100]!)),
+              border: Border(
+                bottom: BorderSide(color: AppColors.of(context).subtleFill),
+              ),
             ),
             child: Row(
               children: [
                 Container(
                   width: 40.w,
                   height: 40.w,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF198754),
+                  decoration: BoxDecoration(
+                    color: AppColors.of(context).success,
                     shape: BoxShape.circle,
                   ),
                   child: Center(
@@ -1110,8 +1268,8 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                       AppIcons.ratingIcon,
                       width: 20.sp,
                       height: 20.sp,
-                      colorFilter: const ColorFilter.mode(
-                        Colors.white,
+                      colorFilter: ColorFilter.mode(
+                        AppColors.of(context).onPrimary,
                         BlendMode.srcIn,
                       ),
                     ),
@@ -1120,11 +1278,11 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                 SizedBox(width: 14.w),
                 Expanded(
                   child: Text(
-                    'Rating & Review',
+                    l10n.ratingAndReview,
                     style: TextStyle(
                       fontSize: 16.sp,
                       fontWeight: FontWeight.bold,
-                      color: _kDarkText,
+                      color: AppColors.of(context).textPrimary,
                     ),
                   ),
                 ),
@@ -1133,7 +1291,7 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                   duration: const Duration(milliseconds: 200),
                   child: Icon(
                     Icons.keyboard_arrow_down_rounded,
-                    color: Colors.grey[400],
+                    color: AppColors.of(context).textLight,
                     size: 24.sp,
                   ),
                 ),
@@ -1159,8 +1317,10 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                 if (state is ReviewsLoading) {
                   return Padding(
                     padding: EdgeInsets.symmetric(vertical: 20.h),
-                    child: const Center(
-                      child: CircularProgressIndicator(color: _kPrimaryGreen),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.of(context).success,
+                      ),
                     ),
                   );
                 }
@@ -1169,10 +1329,10 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                   return Padding(
                     padding: EdgeInsets.symmetric(vertical: 16.h),
                     child: Text(
-                      'Could not load reviews',
+                      l10n.couldNotLoadReviews,
                       style: TextStyle(
                         fontSize: 13.sp,
-                        color: Colors.grey[500],
+                        color: AppColors.of(context).textSecondary,
                       ),
                     ),
                   );
@@ -1182,10 +1342,10 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                   return Padding(
                     padding: EdgeInsets.symmetric(vertical: 16.h),
                     child: Text(
-                      'No reviews yet',
+                      l10n.noReviewsYet,
                       style: TextStyle(
                         fontSize: 13.sp,
-                        color: Colors.grey[500],
+                        color: AppColors.of(context).textSecondary,
                       ),
                     ),
                   );
@@ -1213,7 +1373,9 @@ class _ListingDetailPageState extends State<ListingDetailPage>
     return Container(
       padding: EdgeInsets.symmetric(vertical: 12.h),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.grey[100]!)),
+        border: Border(
+          bottom: BorderSide(color: AppColors.of(context).subtleFill),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1224,9 +1386,9 @@ class _ListingDetailPageState extends State<ListingDetailPage>
               CircleAvatar(
                 radius: 20.r,
                 backgroundImage: review.reviewerAvatar != null
-                    ? NetworkImage(review.reviewerAvatar!)
+                    ? CachedNetworkImageProvider(review.reviewerAvatar!)
                     : null,
-                backgroundColor: Colors.grey[300],
+                backgroundColor: AppColors.of(context).border,
                 child: review.reviewerAvatar == null
                     ? Text(
                         review.reviewerName.isNotEmpty
@@ -1235,7 +1397,7 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                         style: TextStyle(
                           fontSize: 14.sp,
                           fontWeight: FontWeight.bold,
-                          color: Colors.grey[600],
+                          color: AppColors.of(context).textSecondary,
                         ),
                       )
                     : null,
@@ -1250,7 +1412,7 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                       style: TextStyle(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.bold,
-                        color: _kDarkText,
+                        color: AppColors.of(context).textPrimary,
                       ),
                     ),
                     SizedBox(height: 2.h),
@@ -1260,27 +1422,27 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                           _formatDate(review.createdAt),
                           style: TextStyle(
                             fontSize: 11.sp,
-                            color: Colors.grey[500],
+                            color: AppColors.of(context).textSecondary,
                           ),
                         ),
                         Text(
                           ' | ',
                           style: TextStyle(
                             fontSize: 11.sp,
-                            color: Colors.grey[400],
+                            color: AppColors.of(context).textLight,
                           ),
                         ),
                         Icon(
                           Icons.star_rounded,
                           size: 14.sp,
-                          color: const Color(0xFFF59E0B),
+                          color: AppColors.of(context).warning,
                         ),
                         SizedBox(width: 2.w),
                         Text(
                           '${review.rating.toInt()} Reviews',
                           style: TextStyle(
                             fontSize: 11.sp,
-                            color: Colors.grey[500],
+                            color: AppColors.of(context).textSecondary,
                           ),
                         ),
                       ],
@@ -1296,14 +1458,14 @@ class _ListingDetailPageState extends State<ListingDetailPage>
               width: double.infinity,
               padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
               decoration: BoxDecoration(
-                color: Colors.grey[100],
+                color: AppColors.of(context).subtleFill,
                 borderRadius: BorderRadius.circular(8.r),
               ),
               child: Text(
                 review.comment,
                 style: TextStyle(
                   fontSize: 13.sp,
-                  color: Colors.grey[700],
+                  color: AppColors.of(context).textPrimary,
                   height: 1.4,
                 ),
               ),
@@ -1328,7 +1490,9 @@ class _ListingDetailPageState extends State<ListingDetailPage>
         padding: EdgeInsets.symmetric(vertical: 14.h),
         decoration: BoxDecoration(
           border: showBorder
-              ? Border(bottom: BorderSide(color: Colors.grey[100]!))
+              ? Border(
+                  bottom: BorderSide(color: AppColors.of(context).subtleFill),
+                )
               : null,
         ),
         child: Row(
@@ -1345,8 +1509,8 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                   svgAsset,
                   width: 20.sp,
                   height: 20.sp,
-                  colorFilter: const ColorFilter.mode(
-                    Colors.white,
+                  colorFilter: ColorFilter.mode(
+                    AppColors.of(context).onPrimary,
                     BlendMode.srcIn,
                   ),
                 ),
@@ -1359,11 +1523,15 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                 style: TextStyle(
                   fontSize: 16.sp,
                   fontWeight: FontWeight.bold,
-                  color: _kDarkText,
+                  color: AppColors.of(context).textPrimary,
                 ),
               ),
             ),
-            Icon(Icons.chevron_right, color: Colors.grey[400], size: 20.sp),
+            Icon(
+              Icons.chevron_right,
+              color: AppColors.of(context).textLight,
+              size: 20.sp,
+            ),
           ],
         ),
       ),
@@ -1377,10 +1545,10 @@ class _ListingDetailPageState extends State<ListingDetailPage>
   Widget _buildBottomBar() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.of(context).card,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: AppColors.of(context).textPrimary.withOpacity(0.05),
             blurRadius: 6,
             offset: const Offset(0, -4),
           ),
@@ -1415,24 +1583,31 @@ class _ListingDetailPageState extends State<ListingDetailPage>
   }
 
   Widget _buildOwnerBottomBar() {
+    final l10n = AppLocalizations.of(context)!;
     if (_listing!.isFeatured) {
       return Container(
         height: 50.h,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: const Color(0xFFFEF3C7),
+          color: AppColors.of(context).warning.withOpacity(0.15),
           borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.3)),
+          border: Border.all(
+            color: AppColors.of(context).warning.withOpacity(0.3),
+          ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Iconsax.star1, size: 18.sp, color: const Color(0xFFF59E0B)),
+            Icon(
+              Iconsax.star1,
+              size: 18.sp,
+              color: AppColors.of(context).warning,
+            ),
             SizedBox(width: 8.w),
             Text(
-              'Featured',
+              l10n.featured,
               style: TextStyle(
-                color: const Color(0xFFB45309),
+                color: AppColors.of(context).warning,
                 fontWeight: FontWeight.bold,
                 fontSize: 15.sp,
               ),
@@ -1446,25 +1621,46 @@ class _ListingDetailPageState extends State<ListingDetailPage>
       height: 50.h,
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: () {
-          context.push('/listing/${_listing!.id}/promote', extra: _listing!);
+        onPressed: () async {
+          final promoted = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BlocProvider(
+                create: (_) => sl<ListingsBloc>(),
+                child: PromoteListingPage(listing: _listing!),
+              ),
+            ),
+          );
+          if (promoted == true && mounted) {
+            AppSnackBar.showSuccess(
+              context,
+              AppLocalizations.of(context)!.listingPromotedSuccess,
+            );
+            setState(() {
+              _listing = _listing!.copyWith(isFeatured: true);
+            });
+          }
         },
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFF59E0B),
-          foregroundColor: Colors.white,
+          backgroundColor: AppColors.of(context).warning,
+          foregroundColor: AppColors.of(context).onPrimary,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12.r),
           ),
           elevation: 2,
-          shadowColor: const Color(0xFFF59E0B).withOpacity(0.3),
+          shadowColor: AppColors.of(context).warning.withOpacity(0.3),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Iconsax.flash_1, color: Colors.white, size: 20.sp),
+            Icon(
+              Iconsax.flash_1,
+              color: AppColors.of(context).onPrimary,
+              size: 20.sp,
+            ),
             SizedBox(width: 8.w),
             Text(
-              'Promote Listing',
+              l10n.promoteListing,
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15.sp),
             ),
           ],
@@ -1474,6 +1670,7 @@ class _ListingDetailPageState extends State<ListingDetailPage>
   }
 
   Widget _buildBuyerBottomBar() {
+    final l10n = AppLocalizations.of(context)!;
     final seller = _listing?.seller;
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -1491,8 +1688,8 @@ class _ListingDetailPageState extends State<ListingDetailPage>
               final text =
                   '*${_listing!.title}*\n'
                   'Price: $price\n'
-                  'Condition: ${_listing!.condition ?? 'N/A'}\n'
-                  'Found on CampusHub Pro 📚';
+                  'Condition: ${_listing!.condition}\n'
+                  '${l10n.foundOnCampusHub}';
               Share.share(text, subject: _listing!.title);
             },
             style: OutlinedButton.styleFrom(
@@ -1509,7 +1706,7 @@ class _ListingDetailPageState extends State<ListingDetailPage>
               height: 18.sp,
             ),
             label: Text(
-              'Share on WhatsApp',
+              l10n.shareOnWhatsApp,
               style: TextStyle(
                 fontSize: 13.sp,
                 fontWeight: FontWeight.w600,
@@ -1528,9 +1725,11 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                 margin: EdgeInsets.only(right: 10.w),
                 child: CircleAvatar(
                   radius: 20.r,
-                  backgroundColor: _kPrimaryGreen.withOpacity(0.1),
+                  backgroundColor: AppColors.of(
+                    context,
+                  ).success.withOpacity(0.1),
                   backgroundImage: seller.avatar != null
-                      ? NetworkImage(seller.avatar!)
+                      ? CachedNetworkImageProvider(seller.avatar!)
                       : null,
                   child: seller.avatar == null
                       ? Text(
@@ -1538,7 +1737,7 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                           style: TextStyle(
                             fontSize: 14.sp,
                             fontWeight: FontWeight.bold,
-                            color: _kPrimaryGreen,
+                            color: AppColors.of(context).success,
                           ),
                         )
                       : null,
@@ -1564,7 +1763,10 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                     }
                   },
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: _kPrimaryGreen, width: 1.5),
+                    side: BorderSide(
+                      color: AppColors.of(context).success,
+                      width: 1.5,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(25.r),
                     ),
@@ -1575,13 +1777,13 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                       Icon(
                         Iconsax.shopping_cart,
                         size: 16.sp,
-                        color: _kPrimaryGreen,
+                        color: AppColors.of(context).success,
                       ),
                       SizedBox(width: 6.w),
                       Text(
-                        'Buy Now',
+                        l10n.buyNow,
                         style: TextStyle(
-                          color: _kPrimaryGreen,
+                          color: AppColors.of(context).success,
                           fontWeight: FontWeight.bold,
                           fontSize: 14.sp,
                         ),
@@ -1601,8 +1803,8 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                 child: ElevatedButton(
                   onPressed: () => _startConversation(context),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _kPrimaryGreen,
-                    foregroundColor: Colors.white,
+                    backgroundColor: AppColors.of(context).success,
+                    foregroundColor: AppColors.of(context).onPrimary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(25.r),
                     ),
@@ -1611,11 +1813,15 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Iconsax.message, color: Colors.white, size: 16.sp),
+                      Icon(
+                        Iconsax.message,
+                        color: AppColors.of(context).onPrimary,
+                        size: 16.sp,
+                      ),
                       SizedBox(width: 6.w),
                       Flexible(
                         child: Text(
-                          'Send Message',
+                          l10n.sendMessage,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
@@ -1639,24 +1845,35 @@ class _ListingDetailPageState extends State<ListingDetailPage>
   // ═══════════════════════════════════════════════════════
 
   void _handleOwnerAction(String action) {
+    final l10n = AppLocalizations.of(context)!;
     if (_listing == null) return;
 
     switch (action) {
       case 'edit':
-        context.push('/listing/${_listing!.id}/edit', extra: _listing);
+        Navigator.push<bool>(
+          context,
+          PageRouteBuilder<bool>(
+            transitionDuration: Duration.zero,
+            reverseTransitionDuration: Duration.zero,
+            pageBuilder: (_, __, ___) => EditListingPage(listing: _listing!),
+            transitionsBuilder: (_, __, ___, child) => child,
+          ),
+        ).then((edited) {
+          if (edited == true && mounted) {
+            _listingsBloc.add(ListingDetailRequested(listingId: _listing!.id));
+          }
+        });
         break;
       case 'sold':
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Mark as Sold'),
-            content: const Text(
-              'Are you sure you want to mark this listing as sold?',
-            ),
+            title: Text(l10n.markAsSold),
+            content: Text(l10n.confirmMarkAsSold),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
+                child: Text(l10n.cancel),
               ),
               ElevatedButton(
                 onPressed: () {
@@ -1665,7 +1882,7 @@ class _ListingDetailPageState extends State<ListingDetailPage>
                     ListingMarkAsSoldRequested(listingId: _listing!.id),
                   );
                 },
-                child: const Text('Confirm'),
+                child: Text(l10n.confirm),
               ),
             ],
           ),
@@ -1675,26 +1892,26 @@ class _ListingDetailPageState extends State<ListingDetailPage>
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Delete Listing'),
-            content: const Text(
-              'Are you sure you want to delete this listing? This action cannot be undone.',
-            ),
+            title: Text(l10n.deleteListing),
+            content: Text(l10n.confirmDeleteListing),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
+                child: Text(l10n.cancel),
               ),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.of(context).error,
+                ),
                 onPressed: () {
                   Navigator.pop(context);
                   _listingsBloc.add(
                     ListingDeleteRequested(listingId: _listing!.id),
                   );
                 },
-                child: const Text(
-                  'Delete',
-                  style: TextStyle(color: Colors.white),
+                child: Text(
+                  l10n.delete,
+                  style: TextStyle(color: AppColors.of(context).onPrimary),
                 ),
               ),
             ],
@@ -1705,8 +1922,13 @@ class _ListingDetailPageState extends State<ListingDetailPage>
   }
 
   Widget _buildOwnerMenuButton() {
+    final l10n = AppLocalizations.of(context)!;
     return PopupMenuButton<String>(
-      icon: Icon(Icons.more_vert, color: Colors.grey[600], size: 22.sp),
+      icon: Icon(
+        Icons.more_vert,
+        color: AppColors.of(context).textSecondary,
+        size: 22.sp,
+      ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
       onSelected: _handleOwnerAction,
       itemBuilder: (BuildContext context) => [
@@ -1716,7 +1938,7 @@ class _ListingDetailPageState extends State<ListingDetailPage>
             children: [
               Icon(Iconsax.edit, size: 20.sp),
               SizedBox(width: 8.w),
-              const Text('Edit Listing'),
+              Text(l10n.editListing),
             ],
           ),
         ),
@@ -1726,7 +1948,7 @@ class _ListingDetailPageState extends State<ListingDetailPage>
             children: [
               Icon(Iconsax.tick_circle, size: 20.sp),
               SizedBox(width: 8.w),
-              const Text('Mark as Sold'),
+              Text(l10n.markAsSold),
             ],
           ),
         ),
@@ -1734,9 +1956,16 @@ class _ListingDetailPageState extends State<ListingDetailPage>
           value: 'delete',
           child: Row(
             children: [
-              Icon(Iconsax.trash, size: 20.sp, color: Colors.red),
+              Icon(
+                Iconsax.trash,
+                size: 20.sp,
+                color: AppColors.of(context).error,
+              ),
               SizedBox(width: 8.w),
-              const Text('Delete Listing', style: TextStyle(color: Colors.red)),
+              Text(
+                l10n.deleteListing,
+                style: TextStyle(color: AppColors.of(context).error),
+              ),
             ],
           ),
         ),

@@ -1,3 +1,4 @@
+// ignore_for_file: unnecessary_underscores
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shimmer/shimmer.dart';
@@ -118,10 +119,10 @@ class EmptyState extends StatelessWidget {
                       shape: BoxShape.circle,
                       gradient: RadialGradient(
                         colors: [
-                          AppColors.primary.withOpacity(
-                            context.isDark ? 0.06 : 0.05,
+                          AppColors.primary.withValues(
+                            alpha: context.isDark ? 0.06 : 0.05,
                           ),
-                          AppColors.primary.withOpacity(0),
+                          AppColors.primary.withValues(alpha: 0),
                         ],
                       ),
                     ),
@@ -133,13 +134,13 @@ class EmptyState extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: context.isDark
-                          ? AppColors.primary.withOpacity(0.1)
+                          ? AppColors.primary.withValues(alpha: 0.1)
                           : AppColors.primaryLight,
                     ),
                     child: Icon(
                       icon,
                       size: 36.sp,
-                      color: AppColors.primary.withOpacity(0.7),
+                      color: AppColors.primary.withValues(alpha: 0.7),
                     ),
                   ),
                 ],
@@ -238,7 +239,7 @@ class StatCard extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [color, color.withOpacity(0.4)],
+                    colors: [color, color.withValues(alpha: 0.4)],
                   ),
                 ),
               ),
@@ -254,8 +255,8 @@ class StatCard extends StatelessWidget {
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      color.withOpacity(context.isDark ? 0.08 : 0.06),
-                      color.withOpacity(0),
+                      color.withValues(alpha: context.isDark ? 0.08 : 0.06),
+                      color.withValues(alpha: 0),
                     ],
                   ),
                 ),

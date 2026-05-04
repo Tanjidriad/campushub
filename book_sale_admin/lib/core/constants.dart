@@ -4,7 +4,7 @@ class ApiConstants {
   // Base URL from --dart-define, fallback to production
   static const String baseUrl = String.fromEnvironment(
     'BASE_URL',
-    defaultValue: 'http://10.0.2.2:3000',
+    defaultValue: 'https://campushub-1-kf0n.onrender.com',
   );
   static const String apiBaseUrl = '$baseUrl/api';
 
@@ -13,6 +13,7 @@ class ApiConstants {
 
   // Auth
   static const String login = '/auth/login';
+  static const String logout = '/auth/logout';
   static const String refreshToken = '/auth/refresh-token';
 
   // Admin endpoints

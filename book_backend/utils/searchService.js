@@ -23,6 +23,8 @@ class SearchService {
         if (filters.isFeatured !== undefined) matchStage.$match.isFeatured = filters.isFeatured;
         if (filters.$or) matchStage.$match.$or = filters.$or;
         if (filters.educationLevel) matchStage.$match.educationLevel = filters.educationLevel;
+        if (filters.stream) matchStage.$match.stream = filters.stream;
+        if (filters.department) matchStage.$match.department = filters.department;
         if (filters.classOrSemester) matchStage.$match.classOrSemester = filters.classOrSemester;
         if (filters.subject) matchStage.$match.subject = filters.subject;
         if (filters.bookType) matchStage.$match.bookType = filters.bookType;

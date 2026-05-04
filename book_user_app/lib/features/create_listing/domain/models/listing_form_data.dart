@@ -13,6 +13,8 @@ class ListingFormData {
   List<String> tags;
   // Education metadata
   String? educationLevel; // school, college, university, other
+  String? stream;
+  String? department;
   String? classOrSemester;
   String? subject;
   String? bookType; // nctb, guide, reference, university_textbook, other
@@ -35,6 +37,8 @@ class ListingFormData {
     this.meetupPreferences,
     this.tags = const [],
     this.educationLevel,
+    this.stream,
+    this.department,
     this.classOrSemester,
     this.subject,
     this.bookType,
@@ -57,6 +61,8 @@ class ListingFormData {
     String? meetupPreferences,
     List<String>? tags,
     String? educationLevel,
+    String? stream,
+    String? department,
     String? classOrSemester,
     String? subject,
     String? bookType,
@@ -78,6 +84,8 @@ class ListingFormData {
       meetupPreferences: meetupPreferences ?? this.meetupPreferences,
       tags: tags ?? this.tags,
       educationLevel: educationLevel ?? this.educationLevel,
+      stream: stream ?? this.stream,
+      department: department ?? this.department,
       classOrSemester: classOrSemester ?? this.classOrSemester,
       subject: subject ?? this.subject,
       bookType: bookType ?? this.bookType,

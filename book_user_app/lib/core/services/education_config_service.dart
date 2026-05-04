@@ -16,25 +16,82 @@ class EducationSubLevel {
   }
 }
 
-/// Represents an education level (e.g., "School", "College", "University")
-class EducationLevel {
+/// Represents a department (e.g., "CSE" under "Science & Engineering")
+class EducationDepartment {
   final String key;
   final String label;
   final List<EducationSubLevel> subLevels;
 
-  const EducationLevel({
+  const EducationDepartment({
     required this.key,
     required this.label,
     required this.subLevels,
   });
 
+  factory EducationDepartment.fromJson(Map<String, dynamic> json) {
+    final subLevelsJson = json['subLevels'] as List<dynamic>? ?? [];
+    return EducationDepartment(
+      key: json['key'] as String? ?? '',
+      label: json['label'] as String? ?? '',
+      subLevels: subLevelsJson
+          .map((s) => EducationSubLevel.fromJson(s as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}
+
+/// Represents a stream (e.g., "Science & Engineering" under "University")
+class EducationStream {
+  final String key;
+  final String label;
+  final List<EducationDepartment> departments;
+
+  const EducationStream({
+    required this.key,
+    required this.label,
+    required this.departments,
+  });
+
+  factory EducationStream.fromJson(Map<String, dynamic> json) {
+    final deptsJson = json['departments'] as List<dynamic>? ?? [];
+    return EducationStream(
+      key: json['key'] as String? ?? '',
+      label: json['label'] as String? ?? '',
+      departments: deptsJson
+          .map((d) => EducationDepartment.fromJson(d as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}
+
+/// Represents an education level (e.g., "School", "College", "University")
+class EducationLevel {
+  final String key;
+  final String label;
+  final List<EducationSubLevel> subLevels;
+  final List<EducationStream> streams;
+
+  const EducationLevel({
+    required this.key,
+    required this.label,
+    required this.subLevels,
+    required this.streams,
+  });
+
+  /// Whether this level has nested streams (e.g., University)
+  bool get hasStreams => streams.isNotEmpty;
+
   factory EducationLevel.fromJson(Map<String, dynamic> json) {
     final subLevelsJson = json['subLevels'] as List<dynamic>? ?? [];
+    final streamsJson = json['streams'] as List<dynamic>? ?? [];
     return EducationLevel(
       key: json['key'] as String? ?? '',
       label: json['label'] as String? ?? '',
       subLevels: subLevelsJson
           .map((s) => EducationSubLevel.fromJson(s as Map<String, dynamic>))
+          .toList(),
+      streams: streamsJson
+          .map((s) => EducationStream.fromJson(s as Map<String, dynamic>))
           .toList(),
     );
   }
@@ -81,6 +138,7 @@ class EducationConfig {
       EducationLevel(
         key: 'school',
         label: 'School',
+        streams: [],
         subLevels: [
           EducationSubLevel(key: 'class-6', label: 'Class 6'),
           EducationSubLevel(key: 'class-7', label: 'Class 7'),
@@ -96,19 +154,27 @@ class EducationConfig {
           EducationSubLevel(key: 'hsc-1', label: 'HSC 1st Year'),
           EducationSubLevel(key: 'hsc-2', label: 'HSC 2nd Year'),
         ],
+        streams: [
+          EducationStream(key: 'science', label: 'Science', departments: []),
+          EducationStream(key: 'arts', label: 'Arts', departments: []),
+          EducationStream(key: 'commerce', label: 'Commerce', departments: []),
+        ],
       ),
       EducationLevel(
         key: 'university',
         label: 'University',
-        subLevels: [
-          EducationSubLevel(key: 'sem-1', label: 'Semester 1'),
-          EducationSubLevel(key: 'sem-2', label: 'Semester 2'),
-          EducationSubLevel(key: 'sem-3', label: 'Semester 3'),
-          EducationSubLevel(key: 'sem-4', label: 'Semester 4'),
-          EducationSubLevel(key: 'sem-5', label: 'Semester 5'),
-          EducationSubLevel(key: 'sem-6', label: 'Semester 6'),
-          EducationSubLevel(key: 'sem-7', label: 'Semester 7'),
-          EducationSubLevel(key: 'sem-8', label: 'Semester 8'),
+        subLevels: [],
+        streams: [
+          EducationStream(key: 'science-engineering', label: 'Science & Engineering', departments: [
+            EducationDepartment(key: 'cse', label: 'CSE', subLevels: []),
+            EducationDepartment(key: 'eee', label: 'EEE', subLevels: []),
+          ]),
+          EducationStream(key: 'arts-humanities', label: 'Arts & Humanities', departments: [
+            EducationDepartment(key: 'english', label: 'English', subLevels: []),
+          ]),
+          EducationStream(key: 'business', label: 'Business & Commerce', departments: [
+            EducationDepartment(key: 'bba', label: 'BBA', subLevels: []),
+          ]),
         ],
       ),
     ],
@@ -117,6 +183,8 @@ class EducationConfig {
       BookType(key: 'guide', label: 'Guide'),
       BookType(key: 'reference', label: 'Reference'),
       BookType(key: 'university_textbook', label: 'Uni Book'),
+      BookType(key: 'notes', label: 'Notes'),
+      BookType(key: 'question_bank', label: 'Question Bank'),
       BookType(key: 'other', label: 'Other'),
     ],
   );

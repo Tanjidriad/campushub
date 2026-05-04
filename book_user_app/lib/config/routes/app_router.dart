@@ -7,6 +7,9 @@ import 'package:book_user_app/features/auth/presentation/pages/splash_page.dart'
 import 'package:book_user_app/features/auth/presentation/pages/verify_email_page.dart';
 import 'package:book_user_app/features/listings/presentation/pages/home_page.dart';
 import 'package:book_user_app/features/create_listing/presentation/pages/index.dart';
+import 'package:book_user_app/features/categories/presentation/bloc/categories_bloc.dart';
+import 'package:book_user_app/features/auth/presentation/pages/change_password_page.dart';
+import 'package:book_user_app/features/chat/presentation/pages/blocked_users_page.dart';
 import 'package:book_user_app/features/profile/presentation/pages/profile_page.dart';
 import 'package:book_user_app/features/profile/presentation/pages/edit_profile_page.dart';
 import 'package:book_user_app/features/auth/domain/entities/user.dart';
@@ -14,7 +17,7 @@ import 'package:book_user_app/features/chat/presentation/pages/chat_page.dart';
 import 'package:book_user_app/features/chat/presentation/pages/messages_page.dart';
 import 'package:book_user_app/features/listings/presentation/pages/listing_detail_page.dart';
 import 'package:book_user_app/features/profile/presentation/pages/user_profile_page.dart';
-import 'package:book_user_app/features/profile/presentation/pages/seller_profile_page.dart';
+import 'package:book_user_app/features/profile/presentation/pages/seller_profile_route_page.dart';
 import 'package:book_user_app/features/listings/presentation/pages/promote_listing_page.dart';
 import 'package:book_user_app/features/listings/presentation/pages/edit_listing_page.dart';
 import 'package:book_user_app/features/listings/presentation/bloc/listings_bloc.dart';
@@ -23,14 +26,18 @@ import 'package:book_user_app/features/notifications/presentation/pages/notifica
 import 'package:book_user_app/features/notifications/presentation/bloc/notifications_bloc.dart';
 import 'package:book_user_app/features/offers/presentation/pages/offer_request_page.dart';
 import 'package:book_user_app/features/offers/presentation/bloc/offer_bloc.dart';
-import 'package:book_user_app/features/notifications/presentation/bloc/notifications_event.dart';
 import 'package:book_user_app/features/reviews/presentation/pages/write_review_page.dart';
 import 'package:book_user_app/features/reviews/presentation/bloc/reviews_bloc.dart';
+import 'package:book_user_app/features/listings/presentation/pages/see_all_listings_page.dart';
+import 'package:book_user_app/features/listings/presentation/pages/category_hub_page.dart';
+import 'package:book_user_app/features/settings/presentation/pages/settings_page.dart';
 import 'package:book_user_app/features/wishlist/presentation/pages/wishlist_page.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:book_user_app/injection_container/injection_container.dart';
+import 'package:book_user_app/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:book_user_app/features/auth/presentation/bloc/auth_state.dart';
 import 'package:go_router/go_router.dart';
 
 class AppRouter {
@@ -45,10 +52,45 @@ class AppRouter {
   static const String listingDetail = 'listing_detail';
   static const String offerDetail = '/offer';
 
+  /// Routes that must stay reachable while signed out (deep links, onboarding).
+  /// Keep in sync with [router] public auth routes.
+  static bool isPublicRouteWhenUnauthenticated(String path) {
+    if (path == '/' ||
+        path == '/onboarding' ||
+        path == '/login' ||
+        path == '/register' ||
+        path == '/forgot-password') {
+      return true;
+    }
+    if (path.startsWith('/reset-password/')) return true;
+    return false;
+  }
+
   static final router = GoRouter(
     initialLocation: '/',
     debugLogDiagnostics: kDebugMode,
     redirect: (context, state) {
+      final authState = context.read<AuthBloc>().state;
+      final location = state.uri.path;
+      const publicRoutes = {
+        '/',
+        '/onboarding',
+        '/login',
+        '/register',
+        '/forgot-password',
+        '/verify-email',
+      };
+      final isResetPasswordRoute = location.startsWith('/reset-password/');
+
+      // Global guard: authenticated-but-unverified users are blocked
+      // from all feature routes until email verification is complete.
+      if (authState is AuthAuthenticated &&
+          !authState.user.isVerified &&
+          !publicRoutes.contains(location) &&
+          !isResetPasswordRoute) {
+        return '/verify-email';
+      }
+
       // Handle deep links with custom URL scheme (campushub://)
       final uri = state.uri;
       debugPrint('🔗 GoRouter redirect - uri: $uri, path: ${uri.path}');
@@ -62,7 +104,6 @@ class AppRouter {
         // For campushub://reset-password/token, host is "reset-password" and path has the token
         if (uri.host == 'reset-password') {
           final token = uri.path.replaceFirst('/', '');
-          debugPrint('🔗 Reset password token: $token');
           return '/reset-password/$token';
         }
 
@@ -119,6 +160,41 @@ class AppRouter {
         builder: (context, state) => const WishlistPage(),
       ),
       GoRoute(
+        path: '/settings',
+        name: 'settings',
+        builder: (context, state) => const SettingsPage(),
+      ),
+      GoRoute(
+        path: '/change-password',
+        name: 'change-password',
+        builder: (context, state) => const ChangePasswordPage(),
+      ),
+      GoRoute(
+        path: '/blocked-users',
+        name: 'blocked-users',
+        builder: (context, state) => const BlockedUsersPage(),
+      ),
+      GoRoute(
+        path: '/see-all/:type',
+        name: 'see-all',
+        builder: (context, state) {
+          final typeStr = state.pathParameters['type'] ?? 'latest';
+          final type = SeeAllType.values.firstWhere(
+            (e) => e.name == typeStr,
+            orElse: () => SeeAllType.latest,
+          );
+          return SeeAllListingsPage(type: type);
+        },
+      ),
+      GoRoute(
+        path: '/categories',
+        name: 'categories',
+        builder: (context, state) => BlocProvider.value(
+          value: sl<CategoriesBloc>(),
+          child: const CategoryHubPage(),
+        ),
+      ),
+      GoRoute(
         path: '/home',
         name: 'home',
         builder: (context, state) => const HomePage(),
@@ -126,7 +202,10 @@ class AppRouter {
       GoRoute(
         path: '/profile',
         name: 'profile',
-        builder: (context, state) => const ProfilePage(),
+        builder: (context, state) {
+          final initialTab = state.extra as int? ?? 0;
+          return ProfilePage(initialTabIndex: initialTab);
+        },
       ),
       GoRoute(
         path: '/profile/edit',
@@ -180,14 +259,12 @@ class AppRouter {
         path: '/seller/:id',
         name: 'seller_profile',
         builder: (context, state) {
-          final listing = state.extra as Listing?;
-          if (listing == null) {
-            return Scaffold(
-              appBar: AppBar(title: const Text('Error')),
-              body: const Center(child: Text('Seller data not available.')),
-            );
-          }
-          return SellerProfilePage(listing: listing);
+          final id = state.pathParameters['id'] ?? '';
+          final extra = state.extra as Listing?;
+          return SellerProfileRoutePage(
+            sellerId: id,
+            extraListing: extra,
+          );
         },
       ),
       // Create Listing Routes
@@ -200,7 +277,10 @@ class AppRouter {
       GoRoute(
         path: '/create-listing/details',
         name: 'create_listing_details',
-        builder: (context, state) => const CreateListingDetailsPage(),
+        builder: (context, state) => BlocProvider.value(
+          value: sl<CategoriesBloc>(),
+          child: const CreateListingDetailsPage(),
+        ),
       ),
       GoRoute(
         path: '/create-listing/price',
@@ -239,10 +319,8 @@ class AppRouter {
       GoRoute(
         path: '/notifications',
         name: 'notifications',
-        builder: (context, state) => BlocProvider(
-          create: (context) => sl<NotificationsBloc>()
-            ..add(const LoadNotifications())
-            ..add(LoadUnreadCount()),
+        builder: (context, state) => BlocProvider.value(
+          value: sl<NotificationsBloc>(),
           child: const NotificationsScreen(),
         ),
       ),

@@ -1,3 +1,4 @@
+import 'package:book_user_app/core/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -14,7 +15,7 @@ class DateSeparator extends StatelessWidget {
         child: Text(
           date,
           style: TextStyle(
-            color: Colors.grey[400],
+            color: AppColors.of(context).textLight,
             fontSize: 12.sp,
             fontWeight: FontWeight.w500,
           ),

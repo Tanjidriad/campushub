@@ -66,7 +66,7 @@ The app uses `--dart-define` for environment variables:
 
 | Variable   | Default                                | Description      |
 |------------|----------------------------------------|------------------|
-| `BASE_URL` | `https://coolify.codingwithriad.me`    | Backend API URL  |
+| `BASE_URL` | `https://api.yourdomain.com`    | Backend API URL  |
 
 ### Build for Production
 

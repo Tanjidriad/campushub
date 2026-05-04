@@ -103,8 +103,10 @@ class _LoginScreenState extends State<LoginScreen>
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        AppColors.primary.withOpacity(isDark ? 0.12 : 0.1),
-                        AppColors.primary.withOpacity(0),
+                        AppColors.primary.withValues(
+                          alpha: isDark ? 0.12 : 0.1,
+                        ),
+                        AppColors.primary.withValues(alpha: 0),
                       ],
                     ),
                   ),
@@ -120,8 +122,10 @@ class _LoginScreenState extends State<LoginScreen>
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        AppColors.accent.withOpacity(isDark ? 0.08 : 0.06),
-                        AppColors.accent.withOpacity(0),
+                        AppColors.accent.withValues(
+                          alpha: isDark ? 0.08 : 0.06,
+                        ),
+                        AppColors.accent.withValues(alpha: 0),
                       ],
                     ),
                   ),
@@ -154,12 +158,16 @@ class _LoginScreenState extends State<LoginScreen>
                                 borderRadius: BorderRadius.circular(22),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: AppColors.primary.withOpacity(0.35),
+                                    color: AppColors.primary.withValues(
+                                      alpha: 0.35,
+                                    ),
                                     blurRadius: 28,
                                     offset: const Offset(0, 10),
                                   ),
                                   BoxShadow(
-                                    color: AppColors.primary.withOpacity(0.15),
+                                    color: AppColors.primary.withValues(
+                                      alpha: 0.15,
+                                    ),
                                     blurRadius: 8,
                                     offset: const Offset(0, 2),
                                   ),
@@ -186,8 +194,8 @@ class _LoginScreenState extends State<LoginScreen>
                                 vertical: 4.h,
                               ),
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withOpacity(
-                                  isDark ? 0.15 : 0.1,
+                                color: AppColors.primary.withValues(
+                                  alpha: isDark ? 0.15 : 0.1,
                                 ),
                                 borderRadius: AppRadius.full,
                               ),
@@ -214,29 +222,31 @@ class _LoginScreenState extends State<LoginScreen>
                               padding: EdgeInsets.all(24.w),
                               decoration: BoxDecoration(
                                 color: isDark
-                                    ? AppColors.cardDark.withOpacity(0.7)
-                                    : Colors.white.withOpacity(0.85),
+                                    ? AppColors.cardDark.withValues(alpha: 0.7)
+                                    : AppColors.cardLight.withValues(
+                                        alpha: 0.85,
+                                      ),
                                 borderRadius: AppRadius.xl,
                                 border: Border.all(
                                   color: isDark
-                                      ? AppColors.cardBorderDark.withOpacity(
-                                          0.5,
+                                      ? AppColors.cardBorderDark.withValues(
+                                          alpha: 0.5,
                                         )
-                                      : AppColors.cardBorderLight.withOpacity(
-                                          0.6,
+                                      : AppColors.cardBorderLight.withValues(
+                                          alpha: 0.6,
                                         ),
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(
-                                      isDark ? 0.2 : 0.06,
+                                    color: Colors.black.withValues(
+                                      alpha: isDark ? 0.2 : 0.06,
                                     ),
                                     blurRadius: 24,
                                     offset: const Offset(0, 8),
                                   ),
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(
-                                      isDark ? 0.1 : 0.02,
+                                    color: Colors.black.withValues(
+                                      alpha: isDark ? 0.1 : 0.02,
                                     ),
                                     blurRadius: 6,
                                     offset: const Offset(0, 2),
@@ -320,14 +330,14 @@ class _LoginScreenState extends State<LoginScreen>
                                             padding: EdgeInsets.all(12.w),
                                             decoration: BoxDecoration(
                                               color: isDark
-                                                  ? AppColors.error.withOpacity(
-                                                      0.1,
+                                                  ? AppColors.error.withValues(
+                                                      alpha: 0.1,
                                                     )
                                                   : AppColors.errorLight,
                                               borderRadius: AppRadius.sm,
                                               border: Border.all(
                                                 color: AppColors.error
-                                                    .withOpacity(0.2),
+                                                    .withValues(alpha: 0.2),
                                               ),
                                             ),
                                             child: Row(
@@ -422,7 +432,7 @@ class _LoginScreenState extends State<LoginScreen>
                             Text(
                               'CampusHub Admin Panel v1.0',
                               style: AppTextStyles.caption.copyWith(
-                                color: context.textMuted.withOpacity(0.6),
+                                color: context.textMuted.withValues(alpha: 0.6),
                               ),
                             ),
                           ],

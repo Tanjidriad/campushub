@@ -25,6 +25,8 @@ class CreateListingInProgress extends CreateListingState {
   final String? locationName;
   final String? meetupPreferences;
   final String? educationLevel;
+  final String? stream;
+  final String? department;
   final String? classOrSemester;
   final String? subject;
   final String? bookType;
@@ -44,6 +46,8 @@ class CreateListingInProgress extends CreateListingState {
     this.locationName,
     this.meetupPreferences,
     this.educationLevel,
+    this.stream,
+    this.department,
     this.classOrSemester,
     this.subject,
     this.bookType,
@@ -64,6 +68,8 @@ class CreateListingInProgress extends CreateListingState {
     String? locationName,
     String? meetupPreferences,
     String? educationLevel,
+    String? stream,
+    String? department,
     String? classOrSemester,
     String? subject,
     String? bookType,
@@ -83,6 +89,8 @@ class CreateListingInProgress extends CreateListingState {
       locationName: locationName ?? this.locationName,
       meetupPreferences: meetupPreferences ?? this.meetupPreferences,
       educationLevel: educationLevel ?? this.educationLevel,
+      stream: stream ?? this.stream,
+      department: department ?? this.department,
       classOrSemester: classOrSemester ?? this.classOrSemester,
       subject: subject ?? this.subject,
       bookType: bookType ?? this.bookType,
@@ -105,6 +113,8 @@ class CreateListingInProgress extends CreateListingState {
     locationName,
     meetupPreferences,
     educationLevel,
+    stream,
+    department,
     classOrSemester,
     subject,
     bookType,

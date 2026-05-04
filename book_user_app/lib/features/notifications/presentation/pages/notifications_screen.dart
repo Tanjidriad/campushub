@@ -1,5 +1,6 @@
 import 'package:book_user_app/core/theme/app_palette.dart';
 import 'package:book_user_app/core/widgets/app_loader.dart';
+import 'package:book_user_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -74,13 +75,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
       String key;
       if (dateOnly == today) {
-        key = 'Today';
+        key = 'today';
       } else if (dateOnly == yesterday) {
-        key = 'Yesterday';
+        key = 'yesterday';
       } else if (dateOnly.isAfter(weekAgo)) {
-        key = 'This Week';
+        key = 'thisWeek';
       } else {
-        key = 'Older';
+        key = 'older';
       }
 
       if (!grouped.containsKey(key)) {
@@ -93,30 +94,35 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      backgroundColor: AppPalette.background,
+      backgroundColor: AppColors.of(context).background,
       appBar: AppBar(
         scrolledUnderElevation: 0,
-        backgroundColor: AppPalette.background,
+        backgroundColor: AppColors.of(context).background,
         elevation: 0,
         centerTitle: false,
         leading: IconButton(
           icon: Container(
             padding: EdgeInsets.all(8.w),
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration: BoxDecoration(
+              color: AppColors.of(context).card,
               shape: BoxShape.circle,
             ),
-            child: Icon(Iconsax.arrow_left, size: 20.sp, color: Colors.black),
+            child: Icon(
+              Iconsax.arrow_left,
+              size: 20.sp,
+              color: AppColors.of(context).textPrimary,
+            ),
           ),
           onPressed: () => context.pop(),
         ),
         title: Text(
-          'Notifications',
+          l10n.notifications,
           style: TextStyle(
             fontSize: 20.sp,
             fontWeight: FontWeight.bold,
-            color: AppPalette.textPrimary,
+            color: AppColors.of(context).textPrimary,
           ),
         ),
         actions: [
@@ -125,11 +131,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               context.read<NotificationsBloc>().add(MarkAllAsRead());
             },
             child: Text(
-              'Mark all as read',
+              l10n.markAllAsRead,
               style: TextStyle(
                 fontSize: 12.sp,
                 fontWeight: FontWeight.w600,
-                color: AppPalette.primary,
+                color: AppColors.of(context).primary,
               ),
             ),
           ),
@@ -152,12 +158,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   Icon(
                     Iconsax.warning_2,
                     size: 48.sp,
-                    color: AppPalette.error,
+                    color: AppColors.of(context).error,
                   ), // Fixed: Use Iconsax.warning_2 or standard
                   SizedBox(height: 16.h),
                   Text(
-                    state.errorMessage ?? 'Failed to load notifications',
-                    style: TextStyle(color: AppPalette.textSecondary),
+                    state.errorMessage ?? l10n.failedToLoadNotifications,
+                    style: TextStyle(
+                      color: AppColors.of(context).textSecondary,
+                    ),
                   ),
                   SizedBox(height: 16.h),
                   ElevatedButton(
@@ -166,7 +174,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         const LoadNotifications(refresh: true),
                       );
                     },
-                    child: const Text('Retry'),
+                    child: Text(l10n.retry),
                   ),
                 ],
               ),
@@ -181,11 +189,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   Container(
                     padding: EdgeInsets.all(24.w),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: AppColors.of(context).card,
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: AppColors.of(
+                            context,
+                          ).textPrimary.withOpacity(0.05),
                           blurRadius: 20,
                           offset: const Offset(0, 10),
                         ),
@@ -194,24 +204,24 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     child: Icon(
                       Iconsax.notification_bing, // Standard icon
                       size: 48.sp,
-                      color: AppPalette.textLight,
+                      color: AppColors.of(context).textLight,
                     ),
                   ),
                   SizedBox(height: 24.h),
                   Text(
-                    'All caught up!',
+                    l10n.allCaughtUp,
                     style: TextStyle(
                       fontSize: 18.sp,
                       fontWeight: FontWeight.bold,
-                      color: AppPalette.textPrimary,
+                      color: AppColors.of(context).textPrimary,
                     ),
                   ),
                   SizedBox(height: 8.h),
                   Text(
-                    'No new notifications for you right now.',
+                    l10n.noNewNotifications,
                     style: TextStyle(
                       fontSize: 14.sp,
-                      color: AppPalette.textSecondary,
+                      color: AppColors.of(context).textSecondary,
                     ),
                   ),
                 ],
@@ -253,12 +263,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         horizontal: 4.w,
                       ),
                       child: Text(
-                        groupKey.toUpperCase(),
+                        _localizeGroupKey(l10n, groupKey).toUpperCase(),
                         style: TextStyle(
                           fontSize: 12.sp,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 1.2,
-                          color: AppPalette.textSecondary,
+                          color: AppColors.of(context).textSecondary,
                         ),
                       ),
                     ),
@@ -291,6 +301,21 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 
+  String _localizeGroupKey(AppLocalizations l10n, String key) {
+    switch (key) {
+      case 'today':
+        return l10n.today;
+      case 'yesterday':
+        return l10n.yesterday;
+      case 'thisWeek':
+        return l10n.thisWeek;
+      case 'older':
+        return l10n.older;
+      default:
+        return key;
+    }
+  }
+
   void _handleNotificationTap(BuildContext context, dynamic notification) {
     if (notification is! NotificationEntity) return;
 
@@ -310,14 +335,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         }
         break;
       case 'new_message':
-        context.goNamed('chat');
-        break;
       case 'new_offer':
       case 'offer_accepted':
       case 'offer_declined':
       case 'offer_countered':
-        if (data.containsKey('offerId')) {
-          context.push('/offer/${data['offerId']}');
+        if (data.containsKey('conversationId')) {
+          final uri = Uri(
+            path: '/chat/detail/${data['conversationId']}',
+            queryParameters: {
+              if (data.containsKey('senderName')) 'name': data['senderName'],
+              if (data.containsKey('senderId')) 'userId': data['senderId'],
+            },
+          );
+          context.push(uri.toString());
+        } else {
+          // Fallback if older notification without conversationId
+          context.goNamed('chat');
         }
         break;
     }

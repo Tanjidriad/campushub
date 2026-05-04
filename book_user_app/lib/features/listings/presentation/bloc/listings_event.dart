@@ -231,6 +231,18 @@ class ListingUpdateRequested extends ListingsEvent {
   final String? priceType;
   final double? price;
   final String? condition;
+  final String? currency;
+  final String? locationName;
+  final String? locationAddress;
+  final String? meetupPreferences;
+  final List<String>? tags;
+  final String? educationLevel;
+  final String? classOrSemester;
+  final String? subject;
+  final String? bookType;
+  final String? division;
+  final String? district;
+  final String? upazila;
 
   const ListingUpdateRequested({
     required this.listingId,
@@ -240,6 +252,18 @@ class ListingUpdateRequested extends ListingsEvent {
     this.priceType,
     this.price,
     this.condition,
+    this.currency,
+    this.locationName,
+    this.locationAddress,
+    this.meetupPreferences,
+    this.tags,
+    this.educationLevel,
+    this.classOrSemester,
+    this.subject,
+    this.bookType,
+    this.division,
+    this.district,
+    this.upazila,
   });
 
   @override
@@ -251,6 +275,18 @@ class ListingUpdateRequested extends ListingsEvent {
     priceType,
     price,
     condition,
+    currency,
+    locationName,
+    locationAddress,
+    meetupPreferences,
+    tags,
+    educationLevel,
+    classOrSemester,
+    subject,
+    bookType,
+    division,
+    district,
+    upazila,
   ];
 }
 
@@ -268,4 +304,18 @@ class ListingMarkAsSoldRequested extends ListingsEvent {
 
   @override
   List<Object?> get props => [listingId, buyerId, soldPrice];
+}
+
+/// Delete listing image
+class ListingImageDeleteRequested extends ListingsEvent {
+  final String listingId;
+  final String imageId;
+
+  const ListingImageDeleteRequested({
+    required this.listingId,
+    required this.imageId,
+  });
+
+  @override
+  List<Object?> get props => [listingId, imageId];
 }

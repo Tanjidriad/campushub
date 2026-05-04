@@ -19,6 +19,8 @@ abstract class CreateListingRemoteDataSource {
     String? meetupPreferences,
     required List<String> imagePaths,
     String? educationLevel,
+    String? stream,
+    String? department,
     String? classOrSemester,
     String? subject,
     String? bookType,
@@ -67,6 +69,8 @@ class CreateListingRemoteDataSourceImpl
     String? meetupPreferences,
     required List<String> imagePaths,
     String? educationLevel,
+    String? stream,
+    String? department,
     String? classOrSemester,
     String? subject,
     String? bookType,
@@ -113,6 +117,12 @@ class CreateListingRemoteDataSourceImpl
       }
       if (educationLevel != null) {
         formData.fields.add(MapEntry('educationLevel', educationLevel));
+      }
+      if (stream != null) {
+        formData.fields.add(MapEntry('stream', stream));
+      }
+      if (department != null) {
+        formData.fields.add(MapEntry('department', department));
       }
       if (classOrSemester != null) {
         formData.fields.add(MapEntry('classOrSemester', classOrSemester));

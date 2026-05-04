@@ -2,6 +2,7 @@ import 'package:book_user_app/features/listings/presentation/pages/listing_detai
 import 'package:book_user_app/features/listings/domain/entities/listing.dart';
 import 'package:book_user_app/core/theme/app_palette.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:book_user_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:iconsax/iconsax.dart';
@@ -50,15 +51,19 @@ class ListingCard extends StatelessWidget {
   String get _timeAgo => listing?.timeAgo ?? timeAgo ?? '';
   String get _description => listing?.description ?? '';
 
-  List<Color> get _avatarGradient =>
-      sellerAvatarGradient ?? [AppPalette.primary, AppPalette.accent];
+  List<Color> _avatarGradient(BuildContext context) =>
+      sellerAvatarGradient ??
+      [AppColors.of(context).primary, AppColors.of(context).accent];
 
   bool get _isInWishlist => listing?.isInWishlist ?? false;
 
   String get _listingId => listing?.id ?? '';
+  String get _heroTag =>
+      'listing_card_${_listingId.isEmpty ? hashCode : _listingId}_$hashCode';
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -71,9 +76,7 @@ class ListingCard extends StatelessWidget {
             context,
             MaterialPageRoute(
               builder: (context) => ListingDetailPage(
-                heroTag: _imageUrl.isEmpty
-                    ? 'placeholder_$_listingId'
-                    : _imageUrl,
+                heroTag: _heroTag,
                 imageUrl: _imageUrl,
                 listingId: _listingId,
               ),
@@ -85,18 +88,14 @@ class ListingCard extends StatelessWidget {
         margin: EdgeInsets.only(bottom: 16.h),
         padding: EdgeInsets.all(12.w),
         decoration: BoxDecoration(
-          color: isDark ? AppPalette.primary.withOpacity(0.05) : Colors.white,
+          color: AppColors.of(context).card,
           borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(
-            color: isDark
-                ? AppPalette.primary.withOpacity(0.1)
-                : Color(0xFFF7F7FB),
-          ),
-          boxShadow: isDark
+          border: Border.all(color: AppColors.of(context).border),
+          boxShadow: AppColors.of(context).isDark
               ? []
               : [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.03),
+                    color: AppColors.of(context).textPrimary.withOpacity(0.03),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -106,38 +105,35 @@ class ListingCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ── Image Section ──
-            Hero(
-              tag: _imageUrl.isEmpty ? 'placeholder_$_listingId' : _imageUrl,
-              child: Container(
-                width: 96.w,
-                height: 96.w,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12.r),
-                  color: AppPalette.gray100,
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: _imageUrl.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: _imageUrl,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Center(
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppPalette.gray300,
-                          ),
+            Container(
+              width: 96.w,
+              height: 96.w,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12.r),
+                color: AppColors.of(context).subtleFill,
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: _imageUrl.isNotEmpty
+                  ? CachedNetworkImage(
+                      imageUrl: _imageUrl,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.of(context).border,
                         ),
-                        errorWidget: (context, url, error) => Icon(
-                          Icons.image_not_supported_outlined,
-                          color: AppPalette.gray300,
-                          size: 32.sp,
-                        ),
-                      )
-                    : Icon(
-                        Icons.image_outlined,
-                        color: AppPalette.gray300,
+                      ),
+                      errorWidget: (context, url, error) => Icon(
+                        Icons.image_not_supported_outlined,
+                        color: AppColors.of(context).border,
                         size: 32.sp,
                       ),
-              ),
+                    )
+                  : Icon(
+                      Icons.image_outlined,
+                      color: AppColors.of(context).border,
+                      size: 32.sp,
+                    ),
             ),
 
             SizedBox(width: 16.w),
@@ -172,14 +168,22 @@ class ListingCard extends StatelessWidget {
                               ),
                             ),
                             SizedBox(width: 8.w),
-                            GestureDetector(
-                              onTap: onWishlistTap,
-                              child: Icon(
-                                _isInWishlist ? Iconsax.heart5 : Iconsax.heart,
-                                size: 20.sp,
-                                color: _isInWishlist
-                                    ? AppPalette.error
-                                    : AppPalette.gray400,
+                            Semantics(
+                              label: _isInWishlist
+                                  ? l10n.removeFromSaved
+                                  : l10n.saveToWishlist,
+                              button: true,
+                              child: GestureDetector(
+                                onTap: onWishlistTap,
+                                child: Icon(
+                                  _isInWishlist
+                                      ? Iconsax.heart5
+                                      : Iconsax.heart,
+                                  size: 20.sp,
+                                  color: _isInWishlist
+                                      ? AppColors.of(context).error
+                                      : AppColors.of(context).textLight,
+                                ),
                               ),
                             ),
                           ],
@@ -190,7 +194,7 @@ class ListingCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: Colors.grey[500],
+                            color: AppColors.of(context).textSecondary,
                             fontSize: 12.sp,
                           ),
                         ),
@@ -226,7 +230,7 @@ class ListingCard extends StatelessWidget {
                                   style: TextStyle(
                                     fontSize: 11.sp,
                                     fontWeight: FontWeight.w600,
-                                    color: Colors.grey[500],
+                                    color: AppColors.of(context).textSecondary,
                                   ),
                                 ),
                               ),
@@ -241,8 +245,8 @@ class ListingCard extends StatelessWidget {
                           ),
                           decoration: BoxDecoration(
                             color: isDark
-                                ? AppPalette.primary.withOpacity(0.1)
-                                : AppPalette.gray100,
+                                ? AppColors.of(context).primary.withOpacity(0.1)
+                                : AppColors.of(context).subtleFill,
                             borderRadius: BorderRadius.circular(100.r),
                           ),
                           child: Text(
@@ -251,8 +255,8 @@ class ListingCard extends StatelessWidget {
                               fontSize: 9.sp,
                               fontWeight: FontWeight.bold,
                               color: isDark
-                                  ? AppPalette.gray300
-                                  : AppPalette.gray500,
+                                  ? AppColors.of(context).border
+                                  : AppColors.of(context).textSecondary,
                               letterSpacing: 0.5,
                             ),
                           ),
@@ -287,18 +291,24 @@ class ListingCard extends StatelessWidget {
   }
 
   Widget _buildGradientAvatar() {
-    return Container(
-      width: 20.w,
-      height: 20.w,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          colors: _avatarGradient,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    return Builder(
+      builder: (context) => Container(
+        width: 20.w,
+        height: 20.w,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            colors: _avatarGradient(context),
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Icon(
+          Icons.person,
+          color: AppColors.of(context).onPrimary,
+          size: 10.sp,
         ),
       ),
-      child: Icon(Icons.person, color: Colors.white, size: 10.sp),
     );
   }
 }

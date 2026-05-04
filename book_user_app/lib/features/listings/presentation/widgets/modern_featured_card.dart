@@ -1,9 +1,12 @@
 import 'package:book_user_app/core/theme/app_palette.dart';
+import 'package:book_user_app/core/widgets/app_cached_image.dart';
+import 'package:book_user_app/core/widgets/press_scale.dart';
 import 'package:book_user_app/features/listings/domain/entities/listing.dart';
 import 'package:book_user_app/features/listings/presentation/bloc/listings_bloc.dart';
 import 'package:book_user_app/features/listings/presentation/bloc/listings_event.dart';
 import 'package:book_user_app/features/listings/presentation/pages/listing_detail_page.dart';
 
+import 'package:book_user_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -17,9 +20,13 @@ class ModernFeaturedCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final imageUrl = listing.primaryImageUrl ?? '';
+    final colors = AppColors.of(context);
+    final showTrending = listing.views > 30;
 
-    return GestureDetector(
+    return PressScale(
+      hapticOnTap: false,
       onTap: () {
         Navigator.push(
           context,
@@ -33,16 +40,23 @@ class ModernFeaturedCard extends StatelessWidget {
         );
       },
       child: Container(
-        width: 200.w, // Fixed width matching HTML (160px)
+        width: 200.w,
         decoration: BoxDecoration(
-          color: Color(0xFFF7F7FB), // Featured card background
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: Colors.grey[200]!, width: 1),
+          color: colors.subtleFill,
+          borderRadius: BorderRadius.circular(16.r),
+          border: colors.isDark
+              ? Border.all(color: colors.border, width: 1)
+              : null,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 10,
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 12,
               offset: const Offset(0, 4),
+            ),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
@@ -56,26 +70,51 @@ class ModernFeaturedCard extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Padding(
-                    padding: EdgeInsets.all(4.w),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(10.r),
+                  if (showTrending)
+                    Positioned(
+                      top: 12.h,
+                      left: 12.w,
                       child: Container(
-                        color: AppPalette.gray100,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 8.w,
+                          vertical: 3.h,
+                        ),
+                        decoration: BoxDecoration(
+                          color: colors.warning.withOpacity(0.95),
+                          borderRadius: BorderRadius.circular(6.r),
+                        ),
+                        child: Text(
+                          'Trending',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 9.sp,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  Padding(
+                    padding: EdgeInsets.all(6.w),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12.r),
+                      child: Container(
+                        color: AppColors.of(context).card, // White inner pop
                         alignment: Alignment.center,
                         child: imageUrl.isNotEmpty
-                            ? Image.network(
-                                imageUrl,
+                            ? AppCachedImage(
+                                imageUrl: imageUrl,
                                 width: double.infinity,
                                 height: double.infinity,
                                 fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    Icon(
-                                      Iconsax.image,
-                                      color: AppPalette.gray400,
-                                    ),
+                                errorWidget: Icon(
+                                  Iconsax.image,
+                                  color: AppColors.of(context).textLight,
+                                ),
                               )
-                            : Icon(Iconsax.image, color: AppPalette.gray400),
+                            : Icon(
+                                Iconsax.image,
+                                color: AppColors.of(context).textLight,
+                              ),
                       ),
                     ),
                   ),
@@ -94,11 +133,15 @@ class ModernFeaturedCard extends StatelessWidget {
                       child: Container(
                         padding: EdgeInsets.all(6.w),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.9),
+                          color: AppColors.of(
+                            context,
+                          ).surface.withValues(alpha: 0.9),
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
+                              color: AppColors.of(
+                                context,
+                              ).textPrimary.withOpacity(0.05),
                               blurRadius: 4,
                               offset: const Offset(0, 2),
                             ),
@@ -108,8 +151,8 @@ class ModernFeaturedCard extends StatelessWidget {
                           listing.isInWishlist ? Iconsax.heart5 : Iconsax.heart,
                           size: 16.sp,
                           color: listing.isInWishlist
-                              ? Color(0xFF1B7A2B)
-                              : Colors.grey[400],
+                              ? AppColors.of(context).success
+                              : AppColors.of(context).textLight,
                         ),
                       ),
                     ),
@@ -134,19 +177,17 @@ class ModernFeaturedCard extends StatelessWidget {
                         TextSpan(
                           text: listing.formattedPrice,
                           style: TextStyle(
-                            fontSize: 14.sp,
+                            fontSize: 16.sp,
                             fontWeight: FontWeight.w800,
-                            color: const Color(
-                              0xFF1B7A2B,
-                            ), // Deep green matching screenshot
+                            color: colors.success,
                           ),
                         ),
                         TextSpan(
-                          text: ' (Fixed)',
+                          text: l10n.fixedPriceType,
                           style: TextStyle(
-                            fontSize: 11.sp,
+                            fontSize: 10.sp,
                             fontWeight: FontWeight.w400,
-                            color: Colors.grey[600],
+                            color: colors.textSecondary,
                           ),
                         ),
                       ],
@@ -161,26 +202,80 @@ class ModernFeaturedCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 13.sp,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
+                      fontWeight: FontWeight.w600,
+                      color: colors.textPrimary,
                     ),
                   ),
                   SizedBox(height: 2.h),
 
                   // Location
                   Text(
-                    listing.location?.name ?? 'Not specified',
+                    listing.location?.name ?? l10n.notSpecified,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 11.sp, color: Colors.grey[500]),
+                    style: TextStyle(
+                      fontSize: 11.sp,
+                      color: AppColors.of(context).textSecondary,
+                    ),
                   ),
                   SizedBox(height: 2.h),
+
+                  // Context Chips (subject, classOrSemester)
+                  if (listing.subject != null || listing.classOrSemester != null)
+                    Padding(
+                      padding: EdgeInsets.only(bottom: 2.h),
+                      child: Wrap(
+                        spacing: 4.w,
+                        runSpacing: 4.h,
+                        children: [
+                          if (listing.subject != null && listing.subject!.isNotEmpty)
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                              decoration: BoxDecoration(
+                                color: AppColors.of(context).primary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(4.r),
+                              ),
+                              child: Text(
+                                listing.subject!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 9.sp,
+                                  color: AppColors.of(context).primary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          if (listing.classOrSemester != null && listing.classOrSemester!.isNotEmpty)
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                              decoration: BoxDecoration(
+                                color: AppColors.of(context).primary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(4.r),
+                              ),
+                              child: Text(
+                                listing.classOrSemester!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 9.sp,
+                                  color: AppColors.of(context).primary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
 
                   // Date (formatted like "May 15, 2025")
                   Text(
                     _formatDate(listing.createdAt),
                     maxLines: 1,
-                    style: TextStyle(fontSize: 11.sp, color: Colors.grey[500]),
+                    style: TextStyle(
+                      fontSize: 10.sp,
+                      color: colors.textLight,
+                    ),
                   ),
                 ],
               ),

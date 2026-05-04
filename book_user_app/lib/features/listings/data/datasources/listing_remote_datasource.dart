@@ -49,9 +49,22 @@ abstract class ListingRemoteDataSource {
     String? category,
     String? priceType,
     double? price,
+    String? currency,
     String? condition,
+    String? locationName,
+    String? locationAddress,
+    String? meetupPreferences,
+    List<String>? tags,
+    String? educationLevel,
+    String? classOrSemester,
+    String? subject,
+    String? bookType,
+    String? division,
+    String? district,
+    String? upazila,
   });
   Future<void> deleteListing(String id);
+  Future<ListingModel> deleteListingImage(String listingId, String imageId);
   Future<bool> addToWishlist(String listingId);
   Future<bool> removeFromWishlist(String listingId);
   Future<List<ListingModel>> getWishlist();
@@ -61,6 +74,11 @@ abstract class ListingRemoteDataSource {
     String? buyerId,
     double? soldPrice,
   });
+  Future<List<ListingModel>> getSimilarListings(
+    String listingId, {
+    int limit = 6,
+  });
+  Future<List<ListingModel>> getRecommendedListings({int limit = 10});
 }
 
 /// Implementation of ListingRemoteDataSource
@@ -333,7 +351,19 @@ class ListingRemoteDataSourceImpl implements ListingRemoteDataSource {
     String? category,
     String? priceType,
     double? price,
+    String? currency,
     String? condition,
+    String? locationName,
+    String? locationAddress,
+    String? meetupPreferences,
+    List<String>? tags,
+    String? educationLevel,
+    String? classOrSemester,
+    String? subject,
+    String? bookType,
+    String? division,
+    String? district,
+    String? upazila,
   }) async {
     try {
       final data = <String, dynamic>{};
@@ -342,7 +372,25 @@ class ListingRemoteDataSourceImpl implements ListingRemoteDataSource {
       if (category != null) data['category'] = category;
       if (priceType != null) data['priceType'] = priceType;
       if (price != null) data['price'] = price;
+      if (currency != null) data['currency'] = currency;
       if (condition != null) data['condition'] = condition;
+      
+      if (locationName != null || locationAddress != null) {
+        data['location'] = {
+          if (locationName != null) 'name': locationName,
+          if (locationAddress != null) 'address': locationAddress,
+        };
+      }
+      
+      if (meetupPreferences != null) data['meetupPreferences'] = meetupPreferences;
+      if (tags != null) data['tags'] = tags;
+      if (educationLevel != null) data['educationLevel'] = educationLevel;
+      if (classOrSemester != null) data['classOrSemester'] = classOrSemester;
+      if (subject != null) data['subject'] = subject;
+      if (bookType != null) data['bookType'] = bookType;
+      if (division != null) data['division'] = division;
+      if (district != null) data['district'] = district;
+      if (upazila != null) data['upazila'] = upazila;
 
       final response = await apiClient.put(
         '${ApiConstants.listing}/$id',
@@ -373,6 +421,26 @@ class ListingRemoteDataSourceImpl implements ListingRemoteDataSource {
           statusCode: response.statusCode,
         );
       }
+    } on DioException catch (e) {
+      throw handleDioException(e);
+    }
+  }
+
+  @override
+  Future<ListingModel> deleteListingImage(String listingId, String imageId) async {
+    try {
+      final response = await apiClient.delete(
+        '${ApiConstants.listing}/$listingId/images/$imageId',
+      );
+
+      if (response.statusCode == 200) {
+        return ListingModel.fromJson(response.data['data']);
+      }
+
+      throw ApiException(
+        message: response.data?['message'] ?? 'Failed to delete image',
+        statusCode: response.statusCode,
+      );
     } on DioException catch (e) {
       throw handleDioException(e);
     }
@@ -482,6 +550,58 @@ class ListingRemoteDataSourceImpl implements ListingRemoteDataSource {
           statusCode: response.statusCode,
         );
       }
+    } on DioException catch (e) {
+      throw handleDioException(e);
+    }
+  }
+
+  @override
+  Future<List<ListingModel>> getSimilarListings(
+    String listingId, {
+    int limit = 6,
+  }) async {
+    try {
+      final response = await apiClient.get(
+        '${ApiConstants.listing}/$listingId/similar',
+        queryParameters: {'limit': limit},
+      );
+
+      if (response.statusCode == 200) {
+        final listingsJson = response.data['data'] as List<dynamic>;
+        return listingsJson
+            .map((json) => ListingModel.fromJson(json as Map<String, dynamic>))
+            .toList();
+      }
+
+      throw ApiException(
+        message:
+            response.data?['message'] ?? 'Failed to fetch similar listings',
+        statusCode: response.statusCode,
+      );
+    } on DioException catch (e) {
+      throw handleDioException(e);
+    }
+  }
+
+  @override
+  Future<List<ListingModel>> getRecommendedListings({int limit = 10}) async {
+    try {
+      final response = await apiClient.get(
+        '${ApiConstants.listing}/recommended',
+        queryParameters: {'limit': limit},
+      );
+
+      if (response.statusCode == 200) {
+        final listingsJson = response.data['data'] as List<dynamic>;
+        return listingsJson
+            .map((json) => ListingModel.fromJson(json as Map<String, dynamic>))
+            .toList();
+      }
+
+      throw ApiException(
+        message: response.data?['message'] ?? 'Failed to fetch recommended listings',
+        statusCode: response.statusCode,
+      );
     } on DioException catch (e) {
       throw handleDioException(e);
     }

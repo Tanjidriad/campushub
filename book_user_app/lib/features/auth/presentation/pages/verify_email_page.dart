@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:book_user_app/l10n/app_localizations.dart';
 import 'package:iconsax/iconsax.dart';
 
 class VerifyEmailPage extends StatefulWidget {
@@ -21,7 +22,9 @@ class VerifyEmailPage extends StatefulWidget {
 class _VerifyEmailPageState extends State<VerifyEmailPage>
     with WidgetsBindingObserver {
   Timer? _verificationCheckTimer;
+  Timer? _cooldownTimer;
   bool _isChecking = false;
+  int _cooldownSeconds = 0;
 
   @override
   void initState() {
@@ -35,6 +38,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _stopPolling();
+    _cooldownTimer?.cancel();
     super.dispose();
   }
 
@@ -81,49 +85,72 @@ class _VerifyEmailPageState extends State<VerifyEmailPage>
     context.read<AuthBloc>().add(const AuthResendVerificationRequested());
   }
 
+  void _startCooldown() {
+    setState(() => _cooldownSeconds = 60);
+    _cooldownTimer?.cancel();
+    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        _cooldownSeconds--;
+        if (_cooldownSeconds <= 0) {
+          timer.cancel();
+        }
+      });
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated) {
           if (state.user.isVerified) {
             _stopPolling();
             // Show dynamic success and redirect
-            AppSnackBar.showSuccess(context, 'Email verified successfully!');
+            AppSnackBar.showSuccess(context, l10n.emailVerifiedSuccess);
             context.go('/home');
           }
         } else if (state is AuthResendVerificationSuccess) {
-          AppSnackBar.showSuccess(context, 'Verification email sent!');
+          AppSnackBar.showSuccess(context, l10n.verificationEmailSent);
+          _startCooldown();
         } else if (state is AuthError) {
           // Don't show error for polling checks unless specifically requested
           // But for resend, we might want to show error
         }
       },
       child: Scaffold(
-        backgroundColor: AppPalette.background,
+        backgroundColor: AppColors.of(context).background,
         body: SafeArea(
           child: Padding(
             padding: EdgeInsets.symmetric(horizontal: 24.w),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Iconsax.verify, size: 80.sp, color: AppPalette.primary),
+                Icon(
+                  Iconsax.verify,
+                  size: 80.sp,
+                  color: AppColors.of(context).primary,
+                ),
                 SizedBox(height: 24.h),
                 Text(
-                  "Verify your email",
+                  l10n.verifyYourEmail,
                   style: TextStyle(
                     fontSize: 24.sp,
                     fontWeight: FontWeight.bold,
-                    color: AppPalette.textPrimary,
+                    color: AppColors.of(context).textPrimary,
                   ),
                 ),
                 SizedBox(height: 16.h),
                 Text(
-                  "We've sent a verification link to your email address. Please click the link to verify your account.",
+                  l10n.verifyEmailDescription,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16.sp,
-                    color: AppPalette.textSecondary,
+                    color: AppColors.of(context).textSecondary,
                     height: 1.5,
                   ),
                 ),
@@ -132,13 +159,20 @@ class _VerifyEmailPageState extends State<VerifyEmailPage>
                 // Resend Button
                 BlocBuilder<AuthBloc, AuthState>(
                   builder: (context, state) {
-                    // Logic to throttle resend could be added here
+                    final isOnCooldown = _cooldownSeconds > 0;
                     return TextButton.icon(
-                      onPressed: _handleResendEmail,
+                      onPressed: isOnCooldown ? null : _handleResendEmail,
                       icon: const Icon(Iconsax.refresh),
-                      label: const Text("Resend Email"),
+                      label: Text(
+                        isOnCooldown
+                            ? "Resend in ${_cooldownSeconds}s"
+                            : l10n.resendEmail,
+                      ),
                       style: TextButton.styleFrom(
-                        foregroundColor: AppPalette.primary,
+                        foregroundColor: AppColors.of(context).primary,
+                        disabledForegroundColor: AppColors.of(
+                          context,
+                        ).textSecondary,
                         padding: EdgeInsets.symmetric(
                           horizontal: 24.w,
                           vertical: 12.h,
@@ -154,7 +188,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage>
                 OutlinedButton(
                   onPressed: _checkVerificationStatus,
                   style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: AppPalette.primary),
+                    side: BorderSide(color: AppColors.of(context).primary),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12.r),
                     ),
@@ -164,11 +198,11 @@ class _VerifyEmailPageState extends State<VerifyEmailPage>
                     ),
                   ),
                   child: Text(
-                    "I've verified my email",
+                    l10n.verifiedMyEmail,
                     style: TextStyle(
                       fontSize: 16.sp,
                       fontWeight: FontWeight.w600,
-                      color: AppPalette.primary,
+                      color: AppColors.of(context).primary,
                     ),
                   ),
                 ),
@@ -176,12 +210,12 @@ class _VerifyEmailPageState extends State<VerifyEmailPage>
                 SizedBox(height: 24.h),
                 TextButton(
                   onPressed: () {
-                    context.go('/login');
+                    context.read<AuthBloc>().add(const AuthLogoutRequested());
                   },
                   child: Text(
-                    "Back to Login",
+                    l10n.backToLogin,
                     style: TextStyle(
-                      color: AppPalette.textSecondary,
+                      color: AppColors.of(context).textSecondary,
                       fontSize: 14.sp,
                     ),
                   ),

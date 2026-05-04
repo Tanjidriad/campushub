@@ -81,9 +81,9 @@ class CategoryRemoteDataSourceImpl implements CategoryRemoteDataSource {
   }) async {
     final Map<String, dynamic> map = {
       'name': name,
-      if (description != null) 'description': description,
-      if (icon != null) 'icon': icon,
-      if (displayOrder != null) 'displayOrder': displayOrder,
+      'description': ?description,
+      'icon': ?icon,
+      'displayOrder': ?displayOrder,
       'hasEducationConfig': hasEducationConfig.toString(),
     };
 
@@ -118,10 +118,10 @@ class CategoryRemoteDataSourceImpl implements CategoryRemoteDataSource {
     bool hasEducationConfig = false,
   }) async {
     final Map<String, dynamic> map = {
-      if (name != null) 'name': name,
-      if (description != null) 'description': description,
-      if (icon != null) 'icon': icon,
-      if (displayOrder != null) 'displayOrder': displayOrder,
+      'name': ?name,
+      'description': ?description,
+      'icon': ?icon,
+      'displayOrder': ?displayOrder,
       'hasEducationConfig': hasEducationConfig.toString(),
     };
 

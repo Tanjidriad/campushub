@@ -58,9 +58,9 @@ class UserDetailSheet extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      context.cardBorder.withOpacity(0.3),
+                      context.cardBorder.withValues(alpha: 0.3),
                       context.cardBorder,
-                      context.cardBorder.withOpacity(0.3),
+                      context.cardBorder.withValues(alpha: 0.3),
                     ],
                   ),
                   borderRadius: AppRadius.full,
@@ -153,8 +153,14 @@ class UserDetailSheet extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: context.isDark
-              ? [AppColors.primaryDark.withOpacity(0.15), AppColors.surfaceDark]
-              : [AppColors.primary.withOpacity(0.04), AppColors.surfaceLight],
+              ? [
+                  AppColors.primaryDark.withValues(alpha: 0.15),
+                  AppColors.surfaceDark,
+                ]
+              : [
+                  AppColors.primary.withValues(alpha: 0.04),
+                  AppColors.surfaceLight,
+                ],
         ),
       ),
       child: Row(
@@ -279,7 +285,7 @@ class UserDetailSheet extends StatelessWidget {
               ],
             ),
           ),
-          if (trailing != null) trailing,
+          ?trailing,
         ],
       ),
     );
@@ -304,7 +310,7 @@ class UserDetailSheet extends StatelessWidget {
           decoration: BoxDecoration(
             color: color.withAlpha(context.isDark ? 22 : 15),
             borderRadius: AppRadius.md,
-            border: Border.all(color: color.withOpacity(0.15)),
+            border: Border.all(color: color.withValues(alpha: 0.15)),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,

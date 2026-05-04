@@ -1,8 +1,14 @@
+const { logger } = require('../utils/logger');
+
 // Global error handler middleware
 
 const errorHandler = (err, req, res, next) => {
-    // Log error for debugging
-    console.error('Error:', err);
+    logger.error({
+        err,
+        path: req.originalUrl,
+        method: req.method,
+        correlationId: req.correlationId,
+    }, 'Unhandled request error');
 
     // Default error
     let statusCode = err.statusCode || 500;

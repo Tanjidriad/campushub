@@ -3,8 +3,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:book_user_app/core/constants/api_constants.dart';
+import 'package:book_user_app/core/services/listing_status_notifier.dart';
 import 'package:book_user_app/features/chat/data/models/chat_message.dart';
 import 'package:book_user_app/features/chat/data/repositories/chat_repository.dart';
+import 'package:book_user_app/features/offers/data/datasources/offer_remote_datasource.dart';
 
 part 'chat_event.dart';
 part 'chat_state.dart';
@@ -12,17 +14,27 @@ part 'chat_state.dart';
 class ChatBloc extends Bloc<ChatEvent, ChatState> {
   final ChatRepository _repository;
   final FlutterSecureStorage _storage;
+  final OfferRemoteDataSource? _offerDataSource;
   String? _currentUserId;
 
   bool _listenersSetUp = false;
+
+  // Store stable handler references so we can reliably add/remove socket listeners.
+  late void Function(Map<String, dynamic>) _newMessageListener;
+  late void Function(Map<String, dynamic>) _typingUpdateListener;
+  late void Function(Map<String, dynamic>) _offerUpdatedListener;
+  late void Function(String) _userOnlineListener;
+  late void Function(String) _userOfflineListener;
+  late void Function() _reconnectListener;
 
   /// Set of processed message IDs to prevent duplicates
   final Set<String> _processedMessageIds = {};
 
   String? get currentUserId => _currentUserId;
 
-  ChatBloc({ChatRepository? repository, FlutterSecureStorage? storage})
+  ChatBloc({ChatRepository? repository, FlutterSecureStorage? storage, OfferRemoteDataSource? offerDataSource})
     : _repository = repository ?? ChatRepository(),
+      _offerDataSource = offerDataSource,
       _storage =
           storage ??
           const FlutterSecureStorage(
@@ -32,6 +44,13 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
             ),
           ),
       super(const ChatState()) {
+    _newMessageListener = _handleNewMessage;
+    _typingUpdateListener = _handleTypingUpdate;
+    _offerUpdatedListener = _handleOfferUpdated;
+    _userOnlineListener = _handleUserOnline;
+    _userOfflineListener = _handleUserOffline;
+    _reconnectListener = _handleReconnect;
+
     on<LoadMessages>(_onLoadMessages);
     on<LoadMoreMessages>(_onLoadMoreMessages);
     on<SendTextMessage>(_onSendTextMessage);
@@ -44,6 +63,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<UserOnlineStatusChanged>(_onUserOnlineStatusChanged);
     on<MarkAsRead>(_onMarkAsRead);
     on<LeaveConversation>(_onLeaveConversation);
+    on<BlockUser>(_onBlockUser);
+    on<UnblockUser>(_onUnblockUser);
+    on<CheckBlockStatus>(_onCheckBlockStatus);
+    on<SendOfferMessage>(_onSendOfferMessage);
+    on<RespondToOfferInChat>(_onRespondToOfferInChat);
+    on<OfferUpdatedReceived>(_onOfferUpdatedReceived);
   }
 
   // ── Listener registration ────────────────────────────────────
@@ -53,25 +78,27 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     _listenersSetUp = true;
 
     // ChatBloc only cares about message:new events for the open conversation.
-    _repository.addMessageListener(_handleNewMessage);
-    _repository.addTypingListener(_handleTypingUpdate);
-    _repository.addUserOnlineListener(_handleUserOnline);
-    _repository.addUserOfflineListener(_handleUserOffline);
+    _repository.addMessageListener(_newMessageListener);
+    _repository.addTypingListener(_typingUpdateListener);
+    _repository.addOfferUpdatedListener(_offerUpdatedListener);
+    _repository.addUserOnlineListener(_userOnlineListener);
+    _repository.addUserOfflineListener(_userOfflineListener);
 
     // When the socket reconnects (e.g. network drop), re-join the room so
     // message:new events start arriving again.
-    _repository.addReconnectListener(_handleReconnect);
+    _repository.addReconnectListener(_reconnectListener);
   }
 
   void _removeListeners() {
     if (!_listenersSetUp) return;
     _listenersSetUp = false;
 
-    _repository.removeMessageListener(_handleNewMessage);
-    _repository.removeTypingListener(_handleTypingUpdate);
-    _repository.removeUserOnlineListener(_handleUserOnline);
-    _repository.removeUserOfflineListener(_handleUserOffline);
-    _repository.removeReconnectListener(_handleReconnect);
+    _repository.removeMessageListener(_newMessageListener);
+    _repository.removeTypingListener(_typingUpdateListener);
+    _repository.removeOfferUpdatedListener(_offerUpdatedListener);
+    _repository.removeUserOnlineListener(_userOnlineListener);
+    _repository.removeUserOfflineListener(_userOfflineListener);
+    _repository.removeReconnectListener(_reconnectListener);
   }
 
   void _handleNewMessage(Map<String, dynamic> data) {
@@ -84,6 +111,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           (data['users'] as List?)?.whereType<String>().toList() ?? [];
       add(TypingUpdate(users));
     }
+  }
+
+  void _handleOfferUpdated(Map<String, dynamic> data) {
+    if (!isClosed) add(OfferUpdatedReceived(data));
   }
 
   void _handleUserOnline(String userId) {
@@ -124,26 +155,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     // Set up listeners BEFORE connecting so no events are missed
     _setupListeners();
 
-    // Connect socket
-    await _repository.connectSocket();
-
-    // Retry joining the room: wait up to 5 s for socket to confirm connected
-    bool joined = false;
-    for (int attempt = 0; attempt < 10; attempt++) {
-      if (_repository.isSocketConnected) {
-        _repository.joinConversation(event.conversationId);
-        joined = true;
-        break;
-      }
-      await Future.delayed(Duration(milliseconds: 200 * (attempt + 1)));
-    }
-
-    if (!joined) {
-      debugPrint(
-        '⚠️ Could not join socket room for ${event.conversationId} — '
-        'running in HTTP-only mode',
-      );
-    }
+    // Start socket connection in the background so it doesn't block HTTP fetch
+    _connectAndJoinSocket(event.conversationId);
 
     // Load initial batch via HTTP
     final result = await _repository.getMessages(
@@ -159,16 +172,56 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         for (final msg in messages) {
           _processedMessageIds.add(msg.id);
         }
+
+        // Determine otherUserId from messages if not already known
+        String? detectedOtherUserId;
+        if (_currentUserId != null && _currentUserId!.isNotEmpty) {
+          for (final msg in messages) {
+            if (msg.sender.id != _currentUserId) {
+              detectedOtherUserId = msg.sender.id;
+              break;
+            }
+          }
+        }
+
         emit(
           state.copyWith(
             status: ChatStatus.loaded,
             messages: messages,
             currentPage: event.page,
             hasMore: messages.length >= 50,
+            otherUserId: detectedOtherUserId,
           ),
         );
+
+        // Check block status after loading
+        if (detectedOtherUserId != null) {
+          add(CheckBlockStatus(detectedOtherUserId));
+        }
       },
     );
+  }
+
+  Future<void> _connectAndJoinSocket(String conversationId) async {
+    await _repository.connectSocket();
+
+    final joinDeadline = DateTime.now().add(const Duration(seconds: 15));
+    bool joined = false;
+    while (DateTime.now().isBefore(joinDeadline)) {
+      if (_repository.isSocketConnected) {
+        _repository.joinConversation(conversationId);
+        joined = true;
+        break;
+      }
+      await Future.delayed(const Duration(milliseconds: 200));
+    }
+
+    if (!joined) {
+      debugPrint(
+        '⚠️ Could not join socket room for $conversationId — '
+        'running in HTTP-only mode',
+      );
+    }
   }
 
   Future<void> _onLoadMoreMessages(
@@ -222,23 +275,82 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       ),
     );
 
-    _repository.sendMessage(
+    final result = await _repository.sendMessage(
       conversationId: state.conversationId,
       text: event.text,
     );
+
     _repository.stopTyping(state.conversationId);
 
-    emit(state.copyWith(status: ChatStatus.loaded, sendingMessageId: null));
+    result.fold(
+      (failure) {
+        emit(
+          state.copyWith(
+            status: ChatStatus.error,
+            error: failure.message,
+            messages: state.messages.where((m) => m.id != tempId).toList(),
+            sendingMessageId: null,
+          ),
+        );
+      },
+      (serverMessage) {
+        if (serverMessage != null) {
+          final withoutTemp =
+              state.messages.where((m) => m.id != tempId).toList();
+          emit(
+            state.copyWith(
+              status: ChatStatus.loaded,
+              messages: [serverMessage, ...withoutTemp],
+              sendingMessageId: null,
+            ),
+          );
+        } else {
+          emit(
+            state.copyWith(
+              status: ChatStatus.loaded,
+              sendingMessageId: null,
+            ),
+          );
+        }
+      },
+    );
   }
 
   Future<void> _onSendLocationMessage(
     SendLocationMessage event,
     Emitter<ChatState> emit,
   ) async {
-    _repository.sendLocationMessage(
+    final tempId = 'temp_loc_${DateTime.now().millisecondsSinceEpoch}';
+
+    final localMessage = ChatMessage.local(
+      tempId: tempId,
+      conversationId: state.conversationId,
+      sender: MessageSender(id: _currentUserId ?? '', name: 'You'),
+      location: LocationData(
+        latitude: event.latitude,
+        longitude: event.longitude,
+      ),
+    );
+
+    emit(state.copyWith(messages: [localMessage, ...state.messages]));
+
+    final result = await _repository.sendLocationMessage(
       conversationId: state.conversationId,
       latitude: event.latitude,
       longitude: event.longitude,
+    );
+
+    result.fold(
+      (failure) {
+        emit(
+          state.copyWith(
+            status: ChatStatus.error,
+            error: failure.message,
+            messages: state.messages.where((m) => m.id != tempId).toList(),
+          ),
+        );
+      },
+      (_) {},
     );
   }
 
@@ -281,9 +393,33 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           ),
         );
 
-        _repository.sendMessage(
+        final sendResult = await _repository.sendMessage(
           conversationId: state.conversationId,
           imageUrl: imageUrl,
+        );
+
+        sendResult.fold(
+          (failure) {
+            emit(
+              state.copyWith(
+                status: ChatStatus.error,
+                error: failure.message,
+                messages: state.messages.where((m) => m.id != tempId).toList(),
+              ),
+            );
+          },
+          (serverMessage) {
+            if (serverMessage != null) {
+              final withoutTemp =
+                  state.messages.where((m) => m.id != tempId).toList();
+              emit(
+                state.copyWith(
+                  status: ChatStatus.loaded,
+                  messages: [serverMessage, ...withoutTemp],
+                ),
+              );
+            }
+          },
         );
       },
     );
@@ -317,12 +453,25 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       // Remove the matching optimistic temp message (if any)
       final updatedMessages = state.messages.where((m) {
         if (!m.id.startsWith('temp_')) return true;
-        final isMatch =
-            m.text == message.text &&
-            m.sender.id == message.sender.id &&
-            m.messageType == message.messageType &&
-            message.createdAt.difference(m.createdAt).inSeconds.abs() < 30;
-        return !isMatch;
+        if (m.sender.id != message.sender.id) return true;
+        if (m.messageType != message.messageType) return true;
+        if (message.createdAt.difference(m.createdAt).inSeconds.abs() >= 30)
+          return true;
+        // For offer messages, match by offerId (text may differ due to server sanitization)
+        if (m.messageType == MessageType.offer) {
+          final match = m.offer?.offerId == message.offer?.offerId;
+          if (match) {
+            debugPrint('🟢 Dedup: removing temp offer ${m.id} (offerId=${m.offer?.offerId}), '
+                'replacing with server message ${message.id}');
+          }
+          return !match;
+        }
+        // For location messages, match by coordinates instead of text
+        if (m.messageType == MessageType.location) {
+          return m.location?.latitude != message.location?.latitude ||
+              m.location?.longitude != message.location?.longitude;
+        }
+        return m.text != message.text;
       }).toList();
 
       emit(state.copyWith(messages: [message, ...updatedMessages]));
@@ -364,6 +513,38 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     _repository.stopTyping(state.conversationId);
   }
 
+  Future<void> _onBlockUser(BlockUser event, Emitter<ChatState> emit) async {
+    final result = await _repository.blockUser(event.userId);
+    result.fold(
+      (failure) => emit(state.copyWith(status: ChatStatus.error, error: failure.message)),
+      (_) => emit(state.copyWith(isUserBlocked: true)),
+    );
+  }
+
+  Future<void> _onUnblockUser(UnblockUser event, Emitter<ChatState> emit) async {
+    final result = await _repository.unblockUser(event.userId);
+    result.fold(
+      (failure) => emit(state.copyWith(status: ChatStatus.error, error: failure.message)),
+      (_) => emit(state.copyWith(isUserBlocked: false)),
+    );
+  }
+
+  Future<void> _onCheckBlockStatus(
+    CheckBlockStatus event,
+    Emitter<ChatState> emit,
+  ) async {
+    final result = await _repository.getBlockedUsers();
+    result.fold(
+      (_) {}, // Silently ignore errors
+      (blockedUsers) {
+        final isBlocked = blockedUsers.any((u) => u.id == event.otherUserId);
+        if (isBlocked) {
+          emit(state.copyWith(isUserBlocked: true));
+        }
+      },
+    );
+  }
+
   @override
   Future<void> close() {
     _removeListeners();
@@ -372,5 +553,176 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       _repository.leaveConversation(state.conversationId);
     }
     return super.close();
+  }
+
+  // ── Offer-in-chat handlers ──────────────────────────────────
+
+  Future<void> _onSendOfferMessage(
+    SendOfferMessage event,
+    Emitter<ChatState> emit,
+  ) async {
+    try {
+      // Guard: don't send offer messages with empty/zero data
+      if (event.offerId.isEmpty || event.amount <= 0) {
+        debugPrint('⚠️ SendOfferMessage: invalid data (offerId="${event.offerId}", amount=${event.amount}) — skipping');
+        return;
+      }
+      final offerData = OfferData(
+        offerId: event.offerId,
+        amount: event.amount,
+        status: 'pending',
+        roundNumber: 1,
+        listingTitle: event.listingTitle,
+        listingImage: event.listingImage,
+        listingPrice: event.listingPrice,
+        listingId: event.listingId,
+      );
+
+      final tempId = 'temp_offer_${DateTime.now().millisecondsSinceEpoch}';
+      final localMessage = ChatMessage.local(
+        tempId: tempId,
+        conversationId: state.conversationId,
+        sender: MessageSender(id: _currentUserId ?? '', name: 'You'),
+        text: '💰 Offer: \$${event.amount.toStringAsFixed(2)}',
+        offer: offerData,
+      );
+
+      emit(state.copyWith(messages: [localMessage, ...state.messages]));
+
+      final sendResult = await _repository.sendMessage(
+        conversationId: state.conversationId,
+        text: '💰 Offer: \$${event.amount.toStringAsFixed(2)}',
+        messageType: 'offer',
+        metadata: offerData.toJson(),
+      );
+
+      sendResult.fold(
+        (failure) {
+          emit(
+            state.copyWith(
+              status: ChatStatus.error,
+              error: failure.message,
+              messages: state.messages.where((m) => m.id != tempId).toList(),
+            ),
+          );
+        },
+        (_) {},
+      );
+    } catch (e) {
+      emit(state.copyWith(
+        status: ChatStatus.error,
+        error: 'Failed to send offer: ${e.toString()}',
+      ));
+    }
+  }
+
+  Future<void> _onRespondToOfferInChat(
+    RespondToOfferInChat event,
+    Emitter<ChatState> emit,
+  ) async {
+    if (_offerDataSource == null) return;
+
+    try {
+      debugPrint('🔵 RespondToOfferInChat: action=${event.action}, offerId=${event.offerId}');
+      final updatedOffer = await _offerDataSource.respondToOffer(
+        offerId: event.offerId,
+        action: event.action,
+        counterAmount: event.counterAmount,
+      );
+
+      debugPrint('🔵 API response: status=${updatedOffer.status}, '
+          'counterAmount=${updatedOffer.counterAmount}, roundNumber=${updatedOffer.roundNumber}');
+
+      // Update the offer bubble in the message list
+      int matchCount = 0;
+      final updatedMessages = state.messages.map((msg) {
+        if (msg.messageType == MessageType.offer &&
+            msg.offer?.offerId == event.offerId) {
+          matchCount++;
+          debugPrint('🔵 Matched offer bubble: id=${msg.id}, '
+              'old status=${msg.offer?.status} → new status=${updatedOffer.status}');
+          return msg.copyWithOffer(
+            msg.offer!.copyWith(
+              status: updatedOffer.status,
+              counterAmount: updatedOffer.counterAmount,
+              roundNumber: updatedOffer.roundNumber,
+            ),
+          );
+        }
+        return msg;
+      }).toList();
+
+      debugPrint('🔵 Updated $matchCount offer bubble(s), emitting new state');
+      emit(state.copyWith(messages: updatedMessages));
+
+      // Notify the listings feature when an offer is accepted (listing becomes sold)
+      if (event.action == 'accept' && updatedOffer.listingId.isNotEmpty) {
+        debugPrint('🔵 Offer accepted → notifying listing ${updatedOffer.listingId} as sold');
+        ListingStatusNotifier.instance.notifyListingSold(updatedOffer.listingId);
+      }
+    } catch (e) {
+      debugPrint('❌ RespondToOfferInChat error: $e');
+      emit(state.copyWith(
+        status: ChatStatus.error,
+        error: 'Failed to respond to offer: ${e.toString()}',
+      ));
+    }
+  }
+
+  Future<void> _onOfferUpdatedReceived(
+    OfferUpdatedReceived event,
+    Emitter<ChatState> emit,
+  ) async {
+    final offerId = event.data['offerId']?.toString();
+    if (offerId == null) return;
+
+    final updatedOfferStatus = event.data['status']?.toString();
+
+    debugPrint('🟡 OfferUpdatedReceived: offerId=$offerId, '
+        'status=${event.data['status']}, counterAmount=${event.data['counterAmount']}, '
+        'roundNumber=${event.data['roundNumber']}');
+
+    // Log all offer IDs in current messages for matching
+    for (final msg in state.messages) {
+      if (msg.messageType == MessageType.offer) {
+        debugPrint('🟡 Message offer id: "${msg.offer?.offerId}", match=${msg.offer?.offerId == offerId}');
+      }
+    }
+
+    String? listingIdToNotify;
+    if (updatedOfferStatus == 'accepted') {
+      for (final msg in state.messages) {
+        if (msg.messageType == MessageType.offer && msg.offer?.offerId == offerId) {
+          listingIdToNotify = msg.offer?.listingId;
+          break;
+        }
+      }
+    }
+
+    final updatedMessages = state.messages.map((msg) {
+      if (msg.messageType == MessageType.offer && msg.offer?.offerId == offerId) {
+        return msg.copyWithOffer(
+          msg.offer!.copyWith(
+            status: event.data['status']?.toString() ?? msg.offer!.status,
+            counterAmount: event.data['counterAmount'] != null
+                ? double.tryParse(event.data['counterAmount'].toString())
+                : msg.offer!.counterAmount,
+            roundNumber: event.data['roundNumber'] != null
+                ? int.tryParse(event.data['roundNumber'].toString())
+                : msg.offer!.roundNumber,
+          ),
+        );
+      }
+      return msg;
+    }).toList();
+
+    emit(state.copyWith(messages: updatedMessages));
+
+    if (updatedOfferStatus == 'accepted' &&
+        listingIdToNotify != null &&
+        listingIdToNotify.isNotEmpty) {
+      debugPrint('🔵 Offer accepted (socket update) → notifying listing $listingIdToNotify as sold');
+      ListingStatusNotifier.instance.notifyListingSold(listingIdToNotify);
+    }
   }
 }

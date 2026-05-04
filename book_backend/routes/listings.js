@@ -13,17 +13,17 @@ router.get('/nearby', optionalAuth, rules.pagination, validate, listingControlle
 router.get('/user/:userId', rules.mongoId, rules.pagination, validate, listingController.getListingsByUser);
 router.get('/:id/similar', optionalAuth, rules.mongoId, validate, listingController.getSimilarListings);
 
-// Protected routes
+// Protected named routes (MUST be before /:id to avoid matching as ID)
+router.get('/my-listings', protect, requireVerified, listingController.getMyListings);
+router.get('/wishlist', protect, requireVerified, listingController.getWishlist);
+router.get('/recommended', protect, requireVerified, listingController.getRecommendedListings);
+
+// Single listing by ID - public (must come AFTER all named GET routes)
+router.get('/:id', optionalAuth, rules.mongoId, validate, listingController.getListing);
+
+// All remaining routes require auth
 router.use(protect);
 router.use(requireVerified);
-
-// User's listings (MUST be before /:id route to avoid matching as ID)
-router.get('/my-listings', listingController.getMyListings);
-router.get('/wishlist', listingController.getWishlist);
-
-// Single listing by ID (MUST be last among GET routes)
-router.get('/:id', rules.mongoId, validate, listingController.getListing);
-
 // Create listing
 router.post(
     '/',

@@ -66,6 +66,10 @@ class AuthUpdateProfileRequested extends AuthEvent {
   final String? phone;
   final String? bio;
   final String? location;
+  final String? educationLevel;
+  final String? stream;
+  final String? department;
+  final String? classOrSemester;
 
   const AuthUpdateProfileRequested({
     this.name,
@@ -73,10 +77,24 @@ class AuthUpdateProfileRequested extends AuthEvent {
     this.phone,
     this.bio,
     this.location,
+    this.educationLevel,
+    this.stream,
+    this.department,
+    this.classOrSemester,
   });
 
   @override
-  List<Object?> get props => [name, username, phone, bio, location];
+  List<Object?> get props => [
+        name,
+        username,
+        phone,
+        bio,
+        location,
+        educationLevel,
+        stream,
+        department,
+        classOrSemester,
+      ];
 }
 
 class AuthUpdateAvatarRequested extends AuthEvent {
@@ -108,4 +126,17 @@ class AuthResetPasswordRequested extends AuthEvent {
 
   @override
   List<Object> get props => [token, newPassword];
+}
+
+class AuthChangePasswordRequested extends AuthEvent {
+  final String currentPassword;
+  final String newPassword;
+
+  const AuthChangePasswordRequested({
+    required this.currentPassword,
+    required this.newPassword,
+  });
+
+  @override
+  List<Object> get props => [currentPassword, newPassword];
 }

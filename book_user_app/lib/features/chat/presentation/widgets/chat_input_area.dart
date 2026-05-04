@@ -1,6 +1,8 @@
+import 'package:book_user_app/core/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:book_user_app/l10n/app_localizations.dart';
 
 class ChatInputArea extends StatefulWidget {
   final TextEditingController controller;
@@ -37,14 +39,15 @@ class _ChatInputAreaState extends State<ChatInputArea> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: const Border(top: BorderSide(color: Color(0xFFEEEEEE))),
+        color: AppColors.of(context).card,
+        border: Border(top: BorderSide(color: AppColors.of(context).border)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: AppColors.of(context).textPrimary.withOpacity(0.02),
             offset: const Offset(0, -2),
             blurRadius: 5,
           ),
@@ -57,7 +60,7 @@ class _ChatInputAreaState extends State<ChatInputArea> {
             // 1. Plus / Attachment Button
             _buildIconButton(
               icon: Icons.add,
-              color: const Color(0xFF007AFF), // iOS Blue / Messenger Blue
+              color: AppColors.of(context).accent, // iOS Blue / Messenger Blue
               onTap: () {},
             ),
 
@@ -73,7 +76,7 @@ class _ChatInputAreaState extends State<ChatInputArea> {
               onTap: () {
                 // Trigger offer logic
               },
-              tooltip: 'Make an Offer',
+              tooltip: l10n.makeAnOffer,
             ),
 
             SizedBox(width: 12.w),
@@ -82,7 +85,9 @@ class _ChatInputAreaState extends State<ChatInputArea> {
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2F4F5), // Messenger/Telegram grey
+                  color: AppColors.of(
+                    context,
+                  ).inputFill, // Messenger/Telegram grey
                   borderRadius: BorderRadius.circular(24.r),
                 ),
                 child: Row(
@@ -98,12 +103,12 @@ class _ChatInputAreaState extends State<ChatInputArea> {
                           keyboardType: TextInputType.multiline,
                           style: TextStyle(
                             fontSize: 15.sp,
-                            color: Colors.black87,
+                            color: AppColors.of(context).textPrimary,
                           ),
                           decoration: InputDecoration(
-                            hintText: 'Message...',
+                            hintText: l10n.typeMessage,
                             hintStyle: TextStyle(
-                              color: Colors.grey[500],
+                              color: AppColors.of(context).textSecondary,
                               fontSize: 15.sp,
                             ),
                             border: InputBorder.none,
@@ -121,7 +126,7 @@ class _ChatInputAreaState extends State<ChatInputArea> {
                       padding: EdgeInsets.only(right: 8.w, bottom: 6.h),
                       child: Icon(
                         Icons.emoji_emotions_outlined,
-                        color: Colors.grey[500],
+                        color: AppColors.of(context).textSecondary,
                         size: 24.sp,
                       ),
                     ),
@@ -146,14 +151,18 @@ class _ChatInputAreaState extends State<ChatInputArea> {
                 width: 40.w,
                 height: 40.w,
                 decoration: BoxDecoration(
-                  color: _isTyping ? const Color(0xFF007AFF) : Colors.grey[100],
+                  color: _isTyping
+                      ? AppColors.of(context).accent
+                      : AppColors.of(context).subtleFill,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   _isTyping
                       ? Iconsax.send_15
                       : Icons.mic, // Switch to mic if not typing (mock)
-                  color: _isTyping ? Colors.white : const Color(0xFF007AFF),
+                  color: _isTyping
+                      ? AppColors.of(context).onPrimary
+                      : AppColors.of(context).accent,
                   size: 20.sp,
                 ),
               ),

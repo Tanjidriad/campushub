@@ -1,3 +1,6 @@
+import 'package:book_user_app/core/theme/app_palette.dart';
+import 'package:book_user_app/core/widgets/app_snackbar.dart';
+import 'package:book_user_app/l10n/app_localizations.dart';
 // ignore_for_file: deprecated_member_use
 
 import 'package:book_user_app/config/routes/app_router.dart';
@@ -6,6 +9,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import '../../../categories/domain/entities/category.dart';
+import '../../../categories/presentation/bloc/categories_bloc.dart';
+import '../../../categories/presentation/bloc/categories_event.dart';
+import '../../../categories/presentation/bloc/categories_state.dart';
 import '../bloc/create_listing_bloc.dart';
 
 class CreateListingDetailsPage extends StatefulWidget {
@@ -17,7 +24,7 @@ class CreateListingDetailsPage extends StatefulWidget {
 }
 
 class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
-  String? _selectedCategory;
+  Category? _selectedCategory;
   String _selectedCondition = 'good';
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _titleController = TextEditingController();
@@ -25,19 +32,12 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
 
   // Education fields (dynamic from API)
   String? _selectedEducationLevel;
+  String? _selectedStream;
+  String? _selectedDepartment;
   String? _selectedClassOrSemester;
   String? _selectedBookType;
   final _configService = EducationConfigService();
   EducationConfig? _eduConfig;
-
-  final List<Map<String, String>> _categories = [
-    {'value': 'textbooks', 'label': 'Textbooks'},
-    {'value': 'electronics', 'label': 'Electronics'},
-    {'value': 'furniture', 'label': 'Dorm Furniture'},
-    {'value': 'clothing', 'label': 'Clothing & Merch'},
-    {'value': 'school_supplies', 'label': 'School Supplies'},
-    {'value': 'other', 'label': 'Other'},
-  ];
 
   final List<Map<String, dynamic>> _conditions = [
     {'value': 'new', 'label': 'New', 'icon': Icons.verified},
@@ -59,13 +59,49 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
         .where((l) => l.key == _selectedEducationLevel)
         .toList();
     if (level.isEmpty) return [];
-    return level.first.subLevels.map((s) => s.label).toList();
+
+    final rootSubLevels = level.first.subLevels;
+    if (rootSubLevels.isNotEmpty) {
+      return rootSubLevels.map((s) => s.label).toList();
+    }
+
+    if (_selectedDepartment != null) {
+      try {
+        final stream = _streamOptions.firstWhere((s) => s.key == _selectedStream);
+        final dept = stream.departments.firstWhere((d) => d.key == _selectedDepartment);
+        return dept.subLevels.map((s) => s.label).toList();
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
+  }
+
+  List<EducationStream> get _streamOptions {
+    if (_selectedEducationLevel == null) return [];
+    final config = _eduConfig ?? EducationConfig.fallback;
+    final level = config.levels
+        .where((l) => l.key == _selectedEducationLevel)
+        .toList();
+    if (level.isEmpty) return [];
+    return level.first.streams;
+  }
+
+  List<EducationDepartment> get _departmentOptions {
+    if (_selectedStream == null) return [];
+    try {
+      final stream = _streamOptions.firstWhere((s) => s.key == _selectedStream);
+      return stream.departments;
+    } catch (e) {
+      return [];
+    }
   }
 
   @override
   void initState() {
     super.initState();
     _loadConfig();
+    context.read<CategoriesBloc>().add(const CategoriesLoadRequested());
   }
 
   Future<void> _loadConfig() async {
@@ -81,21 +117,31 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
     super.dispose();
   }
 
+  String _conditionLabel(AppLocalizations l10n, String value) {
+    switch (value) {
+      case 'new':
+        return l10n.conditionNew;
+      case 'like-new':
+        return l10n.conditionLikeNew;
+      case 'good':
+        return l10n.conditionGood;
+      case 'fair':
+        return l10n.conditionFair;
+      default:
+        return value;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final borderColor = isDark
-        ? const Color(0xFF344155)
-        : const Color(0xFFD1DBE6);
-    final surfaceColor = isDark
-        ? const Color(0xFF1A242F)
-        : const Color(0xFFFFFFFF);
+    final borderColor = AppColors.of(context).border;
+    final surfaceColor = AppColors.of(context).surface;
 
-    final bool showBookFields =
-        _selectedCategory == 'textbooks' ||
-        _selectedCategory == 'school_supplies';
+    final bool showBookFields = _selectedCategory?.hasEducationConfig ?? false;
 
     return Scaffold(
       backgroundColor: theme.colorScheme.background,
@@ -111,9 +157,7 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                     onTap: () => context.pop(),
                     child: CircleAvatar(
                       radius: 20.r,
-                      backgroundColor: isDark
-                          ? Colors.white.withOpacity(0.1)
-                          : Colors.black.withOpacity(0.05),
+                      backgroundColor: AppColors.of(context).overlay,
                       child: Icon(
                         Icons.arrow_back,
                         color: theme.textTheme.bodyLarge?.color,
@@ -123,7 +167,7 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                   ),
                   Expanded(
                     child: Text(
-                      'Add Details',
+                      l10n.addDetails,
                       textAlign: TextAlign.center,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
@@ -182,9 +226,9 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                   ),
                   SizedBox(height: 8.h),
                   Text(
-                    "Step 2 of 3",
+                    l10n.stepTwoOfThree,
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color: Colors.grey,
+                      color: AppColors.of(context).textSecondary,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -201,7 +245,7 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                   children: [
                     SizedBox(height: 8.h),
                     Text(
-                      'Item Information',
+                      l10n.itemInformation,
                       style: theme.textTheme.headlineLarge?.copyWith(
                         fontSize: 28.sp,
                         fontWeight: FontWeight.bold,
@@ -210,9 +254,9 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                     ),
                     SizedBox(height: 4.h),
                     Text(
-                      'Fill in the details to help buyers find your item.',
+                      l10n.itemInfoSubtitle,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey,
+                        color: AppColors.of(context).textSecondary,
                         fontSize: 14.sp,
                       ),
                     ),
@@ -220,57 +264,79 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
 
                     // Category Field
                     Text(
-                      'Category',
+                      l10n.category,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     SizedBox(height: 8.h),
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 16.w),
-                      decoration: BoxDecoration(
-                        color: surfaceColor,
-                        borderRadius: BorderRadius.circular(12.r),
-                        border: Border.all(color: borderColor),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: _selectedCategory,
-                          hint: Text(
-                            "Select a category",
-                            style: TextStyle(
-                              color: theme.disabledColor,
-                              fontWeight: FontWeight.normal,
+                    BlocBuilder<CategoriesBloc, CategoriesState>(
+                      builder: (context, state) {
+                        if (state is CategoriesLoading) {
+                          return Center(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(vertical: 8.h),
+                              child: const CircularProgressIndicator(),
+                            ),
+                          );
+                        }
+
+                        List<Category> options = [];
+                        if (state is CategoriesLoaded) {
+                          options = state.categories
+                              .where((c) => c.isActive)
+                              .toList();
+                        }
+
+                        return Container(
+                          padding: EdgeInsets.symmetric(horizontal: 16.w),
+                          decoration: BoxDecoration(
+                            color: surfaceColor,
+                            borderRadius: BorderRadius.circular(12.r),
+                            border: Border.all(color: borderColor),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<Category>(
+                              value: _selectedCategory,
+                              hint: Text(
+                                l10n.selectCategory,
+                                style: TextStyle(
+                                  color: theme.disabledColor,
+                                  fontWeight: FontWeight.normal,
+                                ),
+                              ),
+                              isExpanded: true,
+                              icon: Icon(
+                                Icons.expand_more,
+                                color: AppColors.of(context).textSecondary,
+                              ),
+                              items: options.map((category) {
+                                return DropdownMenuItem<Category>(
+                                  value: category,
+                                  child: Text(category.name),
+                                );
+                              }).toList(),
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedCategory = value;
+                                  _selectedEducationLevel = null;
+                                  _selectedStream = null;
+                                  _selectedDepartment = null;
+                                  _selectedClassOrSemester = null;
+                                  _selectedBookType = null;
+                                });
+                              },
                             ),
                           ),
-                          isExpanded: true,
-                          icon: Icon(
-                            Icons.expand_more,
-                            color: Colors.grey[500],
-                          ),
-                          items: _categories.map((category) {
-                            return DropdownMenuItem<String>(
-                              value: category['value'],
-                              child: Text(category['label']!),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedCategory = value;
-                              _selectedEducationLevel = null;
-                              _selectedClassOrSemester = null;
-                              _selectedBookType = null;
-                            });
-                          },
-                        ),
-                      ),
+                        );
+                      },
                     ),
 
                     SizedBox(height: 24.h),
 
                     // Condition Field
                     Text(
-                      'Condition',
+                      l10n.condition,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -317,12 +383,15 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                                   condition['icon'] as IconData,
                                   color: isSelected
                                       ? theme.colorScheme.primary
-                                      : Colors.grey,
+                                      : AppColors.of(context).iconMuted,
                                   size: 24.sp,
                                 ),
                                 SizedBox(height: 4.h),
                                 Text(
-                                  condition['label'] as String,
+                                  _conditionLabel(
+                                    l10n,
+                                    condition['value'] as String,
+                                  ),
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     fontSize: 12.sp,
@@ -343,7 +412,7 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
 
                     // Title Field
                     Text(
-                      'Title',
+                      l10n.title,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -353,8 +422,10 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                       controller: _titleController,
                       maxLength: 50,
                       decoration: InputDecoration(
-                        hintText: "What are you selling?",
-                        hintStyle: TextStyle(color: Colors.grey[400]),
+                        hintText: l10n.whatAreYouSellingHint,
+                        hintStyle: TextStyle(
+                          color: AppColors.of(context).textLight,
+                        ),
                         filled: true,
                         fillColor: surfaceColor,
                         border: OutlineInputBorder(
@@ -380,7 +451,7 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Description',
+                          l10n.description,
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -388,7 +459,7 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                         Text(
                           '0/500',
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: Colors.grey,
+                            color: AppColors.of(context).textSecondary,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -399,9 +470,10 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                       controller: _descriptionController,
                       maxLines: 4,
                       decoration: InputDecoration(
-                        hintText:
-                            "Describe what you are selling (e.g., Author, Edition, specific flaws)...",
-                        hintStyle: TextStyle(color: Colors.grey[400]),
+                        hintText: l10n.descriptionHint,
+                        hintStyle: TextStyle(
+                          color: AppColors.of(context).textLight,
+                        ),
                         filled: true,
                         fillColor: surfaceColor,
                         border: OutlineInputBorder(
@@ -448,7 +520,7 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                                 ),
                                 SizedBox(width: 8.w),
                                 Text(
-                                  'Book Details',
+                                  l10n.bookDetails,
                                   style: theme.textTheme.titleSmall?.copyWith(
                                     fontWeight: FontWeight.bold,
                                     color: theme.colorScheme.primary,
@@ -458,16 +530,16 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                             ),
                             SizedBox(height: 4.h),
                             Text(
-                              'Help students find the right book for their level.',
+                              l10n.bookDetailsSubtitle,
                               style: theme.textTheme.bodySmall?.copyWith(
-                                color: Colors.grey,
+                                color: AppColors.of(context).textSecondary,
                               ),
                             ),
                             SizedBox(height: 16.h),
 
                             // Education Level
                             Text(
-                              'Education Level',
+                              l10n.educationLevel,
                               style: theme.textTheme.labelLarge?.copyWith(
                                 fontWeight: FontWeight.w600,
                               ),
@@ -483,6 +555,8 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                                   onTap: () {
                                     setState(() {
                                       _selectedEducationLevel = level.key;
+                                      _selectedStream = null;
+                                      _selectedDepartment = null;
                                       _selectedClassOrSemester = null;
                                     });
                                   },
@@ -508,7 +582,7 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                                         fontSize: 13.sp,
                                         fontWeight: FontWeight.w500,
                                         color: isSelected
-                                            ? Colors.white
+                                            ? AppColors.of(context).onPrimary
                                             : theme.textTheme.bodyMedium?.color,
                                       ),
                                     ),
@@ -523,8 +597,8 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                               SizedBox(height: 16.h),
                               Text(
                                 _selectedEducationLevel == 'university'
-                                    ? 'Semester'
-                                    : 'Class',
+                                    ? l10n.semester
+                                    : l10n.classLabel,
                                 style: theme.textTheme.labelLarge?.copyWith(
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -566,7 +640,130 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                                           fontSize: 12.sp,
                                           fontWeight: FontWeight.w500,
                                           color: isSelected
-                                              ? Colors.white
+                                              ? AppColors.of(context).onPrimary
+                                              : theme
+                                                    .textTheme
+                                                    .bodyMedium
+                                                    ?.color,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ],
+
+                            // Streams
+                            if (_selectedEducationLevel != null &&
+                                _streamOptions.isNotEmpty) ...[
+                              SizedBox(height: 16.h),
+                              Text(
+                                'Stream / Department',
+                                style: theme.textTheme.labelLarge?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              SizedBox(height: 8.h),
+                              Wrap(
+                                spacing: 8.w,
+                                runSpacing: 8.h,
+                                children: _streamOptions.map((opt) {
+                                  final isSelected =
+                                      _selectedStream == opt.key;
+                                  return GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        _selectedStream = opt.key;
+                                        _selectedDepartment = null;
+                                        _selectedClassOrSemester = null;
+                                      });
+                                    },
+                                    child: Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 14.w,
+                                        vertical: 7.h,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? theme.colorScheme.primary
+                                            : surfaceColor,
+                                        borderRadius: BorderRadius.circular(
+                                          999,
+                                        ),
+                                        border: Border.all(
+                                          color: isSelected
+                                              ? theme.colorScheme.primary
+                                              : borderColor,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        opt.label,
+                                        style: TextStyle(
+                                          fontSize: 12.sp,
+                                          fontWeight: FontWeight.w500,
+                                          color: isSelected
+                                              ? AppColors.of(context).onPrimary
+                                              : theme
+                                                    .textTheme
+                                                    .bodyMedium
+                                                    ?.color,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ],
+
+                            // Departments
+                            if (_selectedStream != null &&
+                                _departmentOptions.isNotEmpty) ...[
+                              SizedBox(height: 16.h),
+                              Text(
+                                'Department',
+                                style: theme.textTheme.labelLarge?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              SizedBox(height: 8.h),
+                              Wrap(
+                                spacing: 8.w,
+                                runSpacing: 8.h,
+                                children: _departmentOptions.map((opt) {
+                                  final isSelected =
+                                      _selectedDepartment == opt.key;
+                                  return GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        _selectedDepartment = opt.key;
+                                        _selectedClassOrSemester = null;
+                                      });
+                                    },
+                                    child: Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 14.w,
+                                        vertical: 7.h,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? theme.colorScheme.primary
+                                            : surfaceColor,
+                                        borderRadius: BorderRadius.circular(
+                                          999,
+                                        ),
+                                        border: Border.all(
+                                          color: isSelected
+                                              ? theme.colorScheme.primary
+                                              : borderColor,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        opt.label,
+                                        style: TextStyle(
+                                          fontSize: 12.sp,
+                                          fontWeight: FontWeight.w500,
+                                          color: isSelected
+                                              ? AppColors.of(context).onPrimary
                                               : theme
                                                     .textTheme
                                                     .bodyMedium
@@ -582,7 +779,7 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                             // Subject
                             SizedBox(height: 16.h),
                             Text(
-                              'Subject (optional)',
+                              l10n.subjectOptional,
                               style: theme.textTheme.labelLarge?.copyWith(
                                 fontWeight: FontWeight.w600,
                               ),
@@ -592,9 +789,10 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                               controller: _subjectController,
                               textCapitalization: TextCapitalization.words,
                               decoration: InputDecoration(
-                                hintText:
-                                    "e.g. Mathematics, Physics, Bengali...",
-                                hintStyle: TextStyle(color: Colors.grey[400]),
+                                hintText: l10n.subjectHint,
+                                hintStyle: TextStyle(
+                                  color: AppColors.of(context).textLight,
+                                ),
                                 filled: true,
                                 fillColor: surfaceColor,
                                 contentPadding: EdgeInsets.symmetric(
@@ -621,7 +819,7 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                             // Book Type
                             SizedBox(height: 16.h),
                             Text(
-                              'Book Type',
+                              l10n.bookType,
                               style: theme.textTheme.labelLarge?.copyWith(
                                 fontWeight: FontWeight.w600,
                               ),
@@ -660,7 +858,7 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                                         fontSize: 12.sp,
                                         fontWeight: FontWeight.w500,
                                         color: isSelected
-                                            ? Colors.white
+                                            ? AppColors.of(context).onPrimary
                                             : theme.textTheme.bodyMedium?.color,
                                       ),
                                     ),
@@ -685,16 +883,10 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
         padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
           color: theme.scaffoldBackgroundColor.withOpacity(0.9),
-          border: Border(
-            top: BorderSide(
-              color: isDark
-                  ? Colors.white.withOpacity(0.1)
-                  : borderColor.withOpacity(0.5),
-            ),
-          ),
+          border: Border(top: BorderSide(color: AppColors.of(context).border)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: AppColors.of(context).textPrimary.withOpacity(0.05),
               blurRadius: 10,
               offset: const Offset(0, -5),
             ),
@@ -707,32 +899,32 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
             child: ElevatedButton(
               onPressed: () {
                 if (_selectedCategory == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please select a category')),
-                  );
+                  AppSnackBar.showWarning(context, l10n.categoryRequired);
                   return;
                 }
                 if (_titleController.text.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please enter a title')),
-                  );
+                  AppSnackBar.showWarning(context, l10n.titleRequired);
                   return;
                 }
                 if (_descriptionController.text.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please enter a description')),
-                  );
+                  AppSnackBar.showWarning(context, l10n.descriptionRequired);
                   return;
                 }
 
                 context.read<CreateListingBloc>().add(
                   DetailsUpdated(
                     title: _titleController.text,
-                    category: _selectedCategory!,
+                    category: _selectedCategory!.slug,
                     condition: _selectedCondition,
                     description: _descriptionController.text,
                     educationLevel: showBookFields
                         ? _selectedEducationLevel
+                        : null,
+                    stream: showBookFields
+                        ? _selectedStream
+                        : null,
+                    department: showBookFields
+                        ? _selectedDepartment
                         : null,
                     classOrSemester: showBookFields
                         ? _selectedClassOrSemester
@@ -749,7 +941,7 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: theme.colorScheme.primary,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.of(context).onPrimary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12.r),
                 ),
@@ -760,7 +952,7 @@ class _CreateListingDetailsPageState extends State<CreateListingDetailsPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    "Next: Price & Pickup",
+                    l10n.nextPricePickup,
                     style: TextStyle(
                       fontSize: 16.sp,
                       fontWeight: FontWeight.bold,

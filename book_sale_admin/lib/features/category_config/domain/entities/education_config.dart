@@ -14,8 +14,46 @@ class EducationLevel extends Equatable {
   final String? key;
   final String? label;
   final List<SubLevel> subLevels;
+  final List<EducationStream> streams;
 
-  const EducationLevel({this.key, this.label, this.subLevels = const []});
+  const EducationLevel({
+    this.key,
+    this.label,
+    this.subLevels = const [],
+    this.streams = const [],
+  });
+
+  bool get hasStreams => streams.isNotEmpty;
+
+  @override
+  List<Object?> get props => [key, label, subLevels, streams];
+}
+
+class EducationStream extends Equatable {
+  final String? key;
+  final String? label;
+  final List<EducationDepartment> departments;
+
+  const EducationStream({
+    this.key,
+    this.label,
+    this.departments = const [],
+  });
+
+  @override
+  List<Object?> get props => [key, label, departments];
+}
+
+class EducationDepartment extends Equatable {
+  final String? key;
+  final String? label;
+  final List<SubLevel> subLevels;
+
+  const EducationDepartment({
+    this.key,
+    this.label,
+    this.subLevels = const [],
+  });
 
   @override
   List<Object?> get props => [key, label, subLevels];

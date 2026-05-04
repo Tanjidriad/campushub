@@ -51,6 +51,27 @@ const userSchema = new mongoose.Schema(
             trim: true,
             default: null,
         },
+        
+        // Education Profile
+        educationLevel: {
+            type: String,
+            default: null,
+            index: true,
+        },
+        stream: {
+            type: String,
+            default: null,
+        },
+        department: {
+            type: String,
+            default: null,
+            index: true,
+        },
+        classOrSemester: {
+            type: String,
+            default: null,
+            index: true,
+        },
 
         // Authentication
         role: {

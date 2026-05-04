@@ -61,13 +61,12 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState> {
     if (_listeningSetUp) return;
     _listeningSetUp = true;
 
-    // Ensure socket is connected so notifications can arrive.
-    // Safe to call if already connected — it's a no-op.
-    await _repository.connectSocket();
-
-    // Subscribe to the notification channel (NOT the per-conversation
-    // message:new channel which belongs to ChatBloc exclusively).
-    _repository.addNotificationListener(_handleIncomingNotification);
+    // Connect socket in background so it doesn't block bloc event queue
+    _repository.connectSocket().then((_) {
+      // Subscribe to the notification channel (NOT the per-conversation
+      // message:new channel which belongs to ChatBloc exclusively).
+      _repository.addNotificationListener(_handleIncomingNotification);
+    });
   }
 
   void _onStopListening(

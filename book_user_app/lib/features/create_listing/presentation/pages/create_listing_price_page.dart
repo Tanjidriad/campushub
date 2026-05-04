@@ -1,3 +1,6 @@
+import 'package:book_user_app/core/theme/app_palette.dart';
+import 'package:book_user_app/core/widgets/app_snackbar.dart';
+import 'package:book_user_app/l10n/app_localizations.dart';
 // ignore_for_file: deprecated_member_use
 
 import 'package:book_user_app/features/create_listing/presentation/pages/listing_confirmation_page.dart';
@@ -35,6 +38,7 @@ class _CreateListingPricePageState extends State<CreateListingPricePage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -53,8 +57,8 @@ class _CreateListingPricePageState extends State<CreateListingPricePage> {
                     child: CircleAvatar(
                       radius: 20.r,
                       backgroundColor: isDark
-                          ? Colors.grey[800]
-                          : Colors.grey[200],
+                          ? AppColors.of(context).textPrimary
+                          : AppColors.of(context).border,
                       child: Icon(
                         Icons.arrow_back,
                         color: theme.textTheme.bodyLarge?.color,
@@ -63,7 +67,7 @@ class _CreateListingPricePageState extends State<CreateListingPricePage> {
                   ),
                   Expanded(
                     child: Text(
-                      'Create Listing',
+                      l10n.createListing,
                       textAlign: TextAlign.center,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
@@ -110,7 +114,7 @@ class _CreateListingPricePageState extends State<CreateListingPricePage> {
                   children: [
                     SizedBox(height: 8.h),
                     Text(
-                      'Price & Pickup',
+                      l10n.priceAndPickup,
                       style: theme.textTheme.headlineLarge?.copyWith(
                         fontSize: 28.sp,
                         fontWeight: FontWeight.bold,
@@ -119,9 +123,9 @@ class _CreateListingPricePageState extends State<CreateListingPricePage> {
                     ),
                     SizedBox(height: 8.h),
                     Text(
-                      'Set a fair price and choose a safe meeting spot on campus.',
+                      l10n.pricePickupSubtitle,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey,
+                        color: AppColors.of(context).textSecondary,
                         fontSize: 16.sp,
                       ),
                     ),
@@ -135,11 +139,13 @@ class _CreateListingPricePageState extends State<CreateListingPricePage> {
                         color: theme.cardColor,
                         borderRadius: BorderRadius.circular(16.r),
                         border: Border.all(
-                          color: isDark ? Colors.grey[800]! : Colors.grey[100]!,
+                          color: AppColors.of(context).subtleFill,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.02),
+                            color: AppColors.of(
+                              context,
+                            ).textPrimary.withOpacity(0.02),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),
@@ -149,9 +155,9 @@ class _CreateListingPricePageState extends State<CreateListingPricePage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'PRICE',
+                            l10n.priceLabel,
                             style: theme.textTheme.labelSmall?.copyWith(
-                              color: Colors.grey,
+                              color: AppColors.of(context).textSecondary,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 1.0,
                             ),
@@ -177,7 +183,7 @@ class _CreateListingPricePageState extends State<CreateListingPricePage> {
                                   style: TextStyle(
                                     fontSize: 32.sp,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.grey[400],
+                                    color: AppColors.of(context).textLight,
                                   ),
                                 ),
                                 Expanded(
@@ -190,10 +196,12 @@ class _CreateListingPricePageState extends State<CreateListingPricePage> {
                                       fontWeight: FontWeight.w800,
                                       color: theme.textTheme.bodyLarge?.color,
                                     ),
-                                    decoration: const InputDecoration(
+                                    decoration: InputDecoration(
                                       border: InputBorder.none,
                                       hintText: '0',
-                                      hintStyle: TextStyle(color: Colors.grey),
+                                      hintStyle: TextStyle(
+                                        color: AppColors.of(context).textLight,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -208,15 +216,17 @@ class _CreateListingPricePageState extends State<CreateListingPricePage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Open to offers?',
+                                    l10n.openToOffers,
                                     style: theme.textTheme.bodyLarge?.copyWith(
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                   Text(
-                                    'Allow buyers to suggest a price',
+                                    l10n.allowBuyersSuggestPrice,
                                     style: theme.textTheme.bodySmall?.copyWith(
-                                      color: Colors.grey,
+                                      color: AppColors.of(
+                                        context,
+                                      ).textSecondary,
                                     ),
                                   ),
                                 ],
@@ -239,7 +249,7 @@ class _CreateListingPricePageState extends State<CreateListingPricePage> {
                     SizedBox(height: 24.h),
 
                     Text(
-                      'Meeting Spot',
+                      l10n.meetingSpot,
                       style: theme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -274,7 +284,7 @@ class _CreateListingPricePageState extends State<CreateListingPricePage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Safety Tip',
+                                  l10n.safetyTip,
                                   style: TextStyle(
                                     color: theme.colorScheme.primary,
                                     fontWeight: FontWeight.bold,
@@ -282,7 +292,7 @@ class _CreateListingPricePageState extends State<CreateListingPricePage> {
                                   ),
                                 ),
                                 Text(
-                                  'Meet in public areas like the Student Union or Library. Avoid dorm rooms.',
+                                  l10n.meetingSpotSafetyTip,
                                   style: theme.textTheme.bodySmall,
                                 ),
                               ],
@@ -298,27 +308,27 @@ class _CreateListingPricePageState extends State<CreateListingPricePage> {
                     TextField(
                       controller: _locationController,
                       decoration: InputDecoration(
-                        prefixIcon: const Icon(
+                        prefixIcon: Icon(
                           Icons.location_on_outlined,
-                          color: Colors.grey,
+                          color: AppColors.of(context).iconMuted,
                         ),
-                        hintText: 'Enter pickup location',
+                        hintText: l10n.enterPickupLocationHint,
                         filled: true,
                         fillColor: theme.cardColor,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12.r),
                           borderSide: BorderSide(
                             color: isDark
-                                ? Colors.grey[700]!
-                                : Colors.grey[200]!,
+                                ? AppColors.of(context).textPrimary
+                                : AppColors.of(context).border,
                           ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12.r),
                           borderSide: BorderSide(
                             color: isDark
-                                ? Colors.grey[700]!
-                                : Colors.grey[200]!,
+                                ? AppColors.of(context).textPrimary
+                                : AppColors.of(context).border,
                           ),
                         ),
                       ),
@@ -332,10 +342,10 @@ class _CreateListingPricePageState extends State<CreateListingPricePage> {
                       spacing: 8.w,
                       runSpacing: 8.h,
                       children: [
-                        _buildLocationChip('Campus Library', theme),
-                        _buildLocationChip('Student Center', theme),
-                        _buildLocationChip('Main Gate', theme),
-                        _buildLocationChip('Cafeteria', theme),
+                        _buildLocationChip(l10n.campusLibrary, theme),
+                        _buildLocationChip(l10n.studentCenter, theme),
+                        _buildLocationChip(l10n.mainGate, theme),
+                        _buildLocationChip(l10n.cafeteria, theme),
                       ],
                     ),
 
@@ -356,11 +366,7 @@ class _CreateListingPricePageState extends State<CreateListingPricePage> {
         ),
         decoration: BoxDecoration(
           color: theme.cardColor.withOpacity(0.95),
-          border: Border(
-            top: BorderSide(
-              color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
-            ),
-          ),
+          border: Border(top: BorderSide(color: AppColors.of(context).border)),
         ),
         child: Row(
           children: [
@@ -375,13 +381,13 @@ class _CreateListingPricePageState extends State<CreateListingPricePage> {
                       borderRadius: BorderRadius.circular(12.r),
                     ),
                     backgroundColor: isDark
-                        ? Colors.grey[800]
-                        : Colors.grey[100],
+                        ? AppColors.of(context).textPrimary
+                        : AppColors.of(context).subtleFill,
                     foregroundColor: theme.textTheme.bodyLarge?.color,
                     side: BorderSide.none,
                   ),
-                  child: const Text(
-                    "Back",
+                  child: Text(
+                    l10n.back,
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -402,9 +408,7 @@ class _CreateListingPricePageState extends State<CreateListingPricePage> {
                         ),
                       );
                     } else if (state is CreateListingFailure) {
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(SnackBar(content: Text(state.message)));
+                      AppSnackBar.showError(context, state.message);
                     }
                   },
                   builder: (context, state) {
@@ -415,18 +419,15 @@ class _CreateListingPricePageState extends State<CreateListingPricePage> {
                     return ElevatedButton(
                       onPressed: () {
                         if (_priceController.text.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Please enter a price'),
-                            ),
-                          );
+                          AppSnackBar.showWarning(context, l10n.priceRequired);
                           return;
                         }
 
                         final price = double.tryParse(_priceController.text);
-                        if (price == null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Invalid price')),
+                        if (price == null || price <= 0) {
+                          AppSnackBar.showWarning(
+                            context,
+                            l10n.validPriceRequired,
                           );
                           return;
                         }
@@ -452,17 +453,17 @@ class _CreateListingPricePageState extends State<CreateListingPricePage> {
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: theme.colorScheme.primary,
-                        foregroundColor: Colors.white,
+                        foregroundColor: AppColors.of(context).onPrimary,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12.r),
                         ),
                         elevation: 4,
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            "Publish Listing",
+                            l10n.publishListing,
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                           SizedBox(width: 8),
@@ -498,8 +499,8 @@ class _CreateListingPricePageState extends State<CreateListingPricePage> {
       color = theme.colorScheme.primary;
     } else {
       color = theme.brightness == Brightness.dark
-          ? Colors.grey[700]!
-          : const Color(0xFFD1DBE6);
+          ? AppColors.of(context).textPrimary
+          : AppColors.of(context).border;
     }
 
     return Container(
@@ -531,8 +532,8 @@ class _CreateListingPricePageState extends State<CreateListingPricePage> {
             color: isSelected
                 ? theme.colorScheme.primary
                 : (theme.brightness == Brightness.dark
-                      ? Colors.grey[700]!
-                      : Colors.grey[200]!),
+                      ? AppColors.of(context).textPrimary
+                      : AppColors.of(context).border),
           ),
         ),
         child: Row(
@@ -541,7 +542,9 @@ class _CreateListingPricePageState extends State<CreateListingPricePage> {
             Icon(
               Icons.location_on_outlined,
               size: 14.sp,
-              color: isSelected ? theme.colorScheme.primary : Colors.grey[500],
+              color: isSelected
+                  ? theme.colorScheme.primary
+                  : AppColors.of(context).textSecondary,
             ),
             SizedBox(width: 4.w),
             Text(
@@ -550,8 +553,8 @@ class _CreateListingPricePageState extends State<CreateListingPricePage> {
                 color: isSelected
                     ? theme.colorScheme.primary
                     : (theme.brightness == Brightness.dark
-                          ? Colors.grey[300]
-                          : Colors.grey[600]),
+                          ? AppColors.of(context).border
+                          : AppColors.of(context).textSecondary),
                 fontWeight: FontWeight.w600,
                 fontSize: 13.sp,
               ),

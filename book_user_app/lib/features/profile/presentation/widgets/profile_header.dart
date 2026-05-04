@@ -1,20 +1,18 @@
 import 'dart:ui';
 import 'package:book_user_app/core/theme/app_palette.dart';
+import 'package:book_user_app/core/widgets/app_cached_image.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class ProfileHeader extends StatelessWidget {
   final String? avatarUrl;
-  final bool isDark;
 
-  const ProfileHeader({
-    super.key,
-    required this.avatarUrl,
-    required this.isDark,
-  });
+  const ProfileHeader({super.key, required this.avatarUrl});
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -23,10 +21,10 @@ class ProfileHeader extends StatelessWidget {
           height: 150.h,
           width: double.infinity,
           decoration: BoxDecoration(
-            color: isDark ? AppPalette.gray800 : const Color(0xFFE0E0E0),
+            color: colors.border,
             image: avatarUrl != null && avatarUrl!.isNotEmpty
                 ? DecorationImage(
-                    image: NetworkImage(avatarUrl!),
+                    image: CachedNetworkImageProvider(avatarUrl!),
                     fit: BoxFit.cover,
                   )
                 : null,
@@ -35,9 +33,9 @@ class ProfileHeader extends StatelessWidget {
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
               child: Container(
-                color: isDark
-                    ? Colors.black.withOpacity(0.5)
-                    : Colors.white.withOpacity(0.2),
+                color: colors.isDark
+                    ? colors.textPrimary.withOpacity(0.5)
+                    : colors.onPrimary.withOpacity(0.2),
               ),
             ),
           ),
@@ -52,22 +50,26 @@ class ProfileHeader extends StatelessWidget {
             height: 112.w,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(5.r),
-              color: isDark ? AppPalette.gray800 : Colors.white,
-              border: Border.all(
-                color: isDark ? AppPalette.gray900 : const Color(0xFFF1F1F1),
-                width: 4,
-              ),
+              color: colors.card,
+              border: Border.all(color: colors.border, width: 4),
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(5.r),
               child: avatarUrl != null && avatarUrl!.isNotEmpty
-                  ? Image.network(
-                      avatarUrl!,
+                  ? AppCachedImage(
+                      imageUrl: avatarUrl,
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) =>
-                          Icon(Icons.person, size: 40.sp, color: Colors.grey),
+                      errorWidget: Icon(
+                        Icons.person,
+                        size: 40.sp,
+                        color: colors.textSecondary,
+                      ),
                     )
-                  : Icon(Icons.person, size: 40.sp, color: Colors.grey),
+                  : Icon(
+                      Icons.person,
+                      size: 40.sp,
+                      color: colors.textSecondary,
+                    ),
             ),
           ),
         ),

@@ -31,6 +31,10 @@ abstract class AuthRepository {
     String? phone,
     String? bio,
     String? location,
+    String? educationLevel,
+    String? stream,
+    String? department,
+    String? classOrSemester,
   });
 
   /// Change password

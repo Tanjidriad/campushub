@@ -107,7 +107,11 @@ const chatHandler = (io) => {
                 // Mark messages as delivered
                 await ChatMessage.markDelivered(conversationId, userId);
 
-                console.log(`📥 ${socket.user.name} joined conversation ${conversationId}`);
+                logChatEvent('conversation:join', {
+                    userId,
+                    conversationId,
+                    userName: socket.user.name,
+                });
             } catch (error) {
                 socket.emit('error', { message: 'Failed to join conversation' });
             }
@@ -250,7 +254,11 @@ const chatHandler = (io) => {
                             messageType: messageData.messageType,
                         },
                         conversation
-                    ).catch(err => console.error('Push notification failed:', err));
+                    ).catch(err => logError(err, {
+                        event: 'push_notification_failed',
+                        conversationId,
+                        recipientId: otherParticipantId.toString(),
+                    }));
                 }
 
                 // Confirm delivery to sender
@@ -268,7 +276,7 @@ const chatHandler = (io) => {
                 });
 
             } catch (error) {
-                console.error('Message send error:', error);
+                logError(error, { event: 'message:send', conversationId });
                 socket.emit('error', { message: 'Failed to send message' });
             }
         });

@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:book_user_app/l10n/app_localizations.dart';
 import 'package:go_router/go_router.dart';
 
 class SplashPage extends StatefulWidget {
@@ -62,33 +63,41 @@ class _SplashPageState extends State<SplashPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         _handleAuthState(state);
       },
       child: Scaffold(
-        backgroundColor: AppPalette.primary,
+        backgroundColor: AppColors.of(context).primary,
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.school, size: 100.sp, color: Colors.white),
+              Icon(
+                Icons.school,
+                size: 100.sp,
+                color: AppColors.of(context).onPrimary,
+              ),
               SizedBox(height: 20.h),
               Text(
-                "CampusHub Pro",
+                l10n.appName,
                 style: TextStyle(
                   fontSize: 32.sp,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: AppColors.of(context).onPrimary,
                 ),
               ),
               SizedBox(height: 10.h),
               Text(
-                "For students only",
-                style: TextStyle(fontSize: 16.sp, color: Colors.white70),
+                l10n.forStudentsOnly,
+                style: TextStyle(
+                  fontSize: 16.sp,
+                  color: AppColors.of(context).onPrimary.withOpacity(0.7),
+                ),
               ),
               SizedBox(height: 40.h),
-              const AppLoader(color: Colors.white, size: 30),
+              AppLoader(color: AppColors.of(context).onPrimary, size: 30),
             ],
           ),
         ),

@@ -9,6 +9,10 @@ class User extends Equatable {
   final String? phone;
   final String? bio;
   final String? location;
+  final String? educationLevel;
+  final String? stream;
+  final String? department;
+  final String? classOrSemester;
   final String role;
   final bool isVerified;
   final bool isOnline;
@@ -30,6 +34,10 @@ class User extends Equatable {
     this.phone,
     this.bio,
     this.location,
+    this.educationLevel,
+    this.stream,
+    this.department,
+    this.classOrSemester,
     this.role = 'student',
     this.isVerified = false,
     this.isOnline = false,
@@ -51,12 +59,16 @@ class User extends Equatable {
     avatar,
     phone,
     bio,
+    location,
+    educationLevel,
+    stream,
+    department,
+    classOrSemester,
     role,
     isVerified,
     isOnline,
     lastActive,
     createdAt,
-    location,
     activeListings,
     totalSold,
     totalListings,

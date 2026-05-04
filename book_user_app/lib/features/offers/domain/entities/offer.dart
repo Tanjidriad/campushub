@@ -71,9 +71,9 @@ class Offer extends Equatable {
       sellerId: json['seller'] is Map
           ? json['seller']['_id'] ?? ''
           : json['seller'] ?? '',
-      amount: (json['amount'] ?? 0).toDouble(),
+      amount: double.tryParse(json['amount']?.toString() ?? '') ?? 0.0,
       status: json['status'] ?? 'pending',
-      counterAmount: json['counterAmount']?.toDouble(),
+      counterAmount: double.tryParse(json['counterAmount']?.toString() ?? ''),
       roundNumber: json['roundNumber'] ?? 1,
       parentOfferId: json['parentOffer']?.toString(),
       message: json['message'],
@@ -156,7 +156,7 @@ class OfferListing extends Equatable {
     return OfferListing(
       id: json['_id'] ?? '',
       title: json['title'] ?? '',
-      price: (json['price'] ?? 0).toDouble(),
+      price: double.tryParse(json['price']?.toString() ?? '') ?? 0.0,
       description: json['description'],
       condition: json['condition'],
       category: json['category'],

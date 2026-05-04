@@ -15,6 +15,8 @@ class SubmitListingParams {
   final String? meetupPreferences;
   final List<String> imagePaths;
   final String? educationLevel;
+  final String? stream;
+  final String? department;
   final String? classOrSemester;
   final String? subject;
   final String? bookType;
@@ -33,6 +35,8 @@ class SubmitListingParams {
     this.meetupPreferences,
     required this.imagePaths,
     this.educationLevel,
+    this.stream,
+    this.department,
     this.classOrSemester,
     this.subject,
     this.bookType,
@@ -60,6 +64,8 @@ class SubmitListingUseCase implements UseCase<Listing, SubmitListingParams> {
       meetupPreferences: params.meetupPreferences,
       imagePaths: params.imagePaths,
       educationLevel: params.educationLevel,
+      stream: params.stream,
+      department: params.department,
       classOrSemester: params.classOrSemester,
       subject: params.subject,
       bookType: params.bookType,

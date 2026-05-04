@@ -4,17 +4,25 @@ import 'package:book_user_app/features/listings/presentation/bloc/listings_bloc.
 import 'package:book_user_app/features/listings/presentation/bloc/listings_event.dart';
 import 'package:book_user_app/features/listings/presentation/bloc/listings_state.dart';
 import 'package:book_user_app/features/listings/presentation/widgets/filter_bottom_sheet.dart';
+import 'package:book_user_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:iconsax/iconsax.dart';
 
-/// Sort options: label shown in UI, sortBy/sortOrder sent to API.
+/// Sort options: sortBy/sortOrder sent to API.
 const _kSortOptions = [
-  {'label': 'Recommended', 'sortBy': null, 'sortOrder': null},
-  {'label': 'Newest First', 'sortBy': 'createdAt', 'sortOrder': 'desc'},
-  {'label': 'Price: Low to High', 'sortBy': 'price', 'sortOrder': 'asc'},
-  {'label': 'Price: High to Low', 'sortBy': 'price', 'sortOrder': 'desc'},
+  {'sortBy': null, 'sortOrder': null},
+  {'sortBy': 'createdAt', 'sortOrder': 'desc'},
+  {'sortBy': 'price', 'sortOrder': 'asc'},
+  {'sortBy': 'price', 'sortOrder': 'desc'},
+];
+
+List<String> _sortLabels(AppLocalizations l10n) => [
+  l10n.recommended,
+  l10n.newestFirst,
+  l10n.priceLowToHigh,
+  l10n.priceHighToLow,
 ];
 
 class SortFilterBar extends StatelessWidget {
@@ -39,12 +47,14 @@ class SortFilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return BlocBuilder<ListingsBloc, ListingsState>(
       buildWhen: (prev, curr) =>
           curr is ListingsLoaded || curr is ListingsLoading,
       builder: (context, state) {
         final loaded = state is ListingsLoaded ? state : null;
-        final activeSort = _resolveActiveSort(loaded);
+        final labels = _sortLabels(l10n);
+        final activeSort = _resolveActiveSort(loaded, labels);
         final chips = _buildActiveChips(loaded, context);
         final hasFilters = chips.isNotEmpty;
 
@@ -68,16 +78,20 @@ class SortFilterBar extends StatelessWidget {
                         vertical: 8.h,
                       ),
                       decoration: BoxDecoration(
-                        color: hasFilters ? AppPalette.primary : Colors.white,
+                        color: hasFilters
+                            ? AppColors.of(context).primary
+                            : AppColors.of(context).card,
                         borderRadius: BorderRadius.circular(20.r),
                         border: Border.all(
                           color: hasFilters
-                              ? AppPalette.primary
-                              : AppPalette.gray200,
+                              ? AppColors.of(context).primary
+                              : AppColors.of(context).border,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.04),
+                            color: AppColors.of(
+                              context,
+                            ).textPrimary.withOpacity(0.04),
                             blurRadius: 6,
                             offset: const Offset(0, 2),
                           ),
@@ -90,18 +104,18 @@ class SortFilterBar extends StatelessWidget {
                             Iconsax.filter,
                             size: 16.sp,
                             color: hasFilters
-                                ? Colors.white
-                                : AppPalette.textPrimary,
+                                ? AppColors.of(context).onPrimary
+                                : AppColors.of(context).textPrimary,
                           ),
                           SizedBox(width: 6.w),
                           Text(
-                            hasFilters ? 'Filtered' : 'Filter',
+                            hasFilters ? l10n.filtered : l10n.filter,
                             style: TextStyle(
                               fontSize: 13.sp,
                               fontWeight: FontWeight.w600,
                               color: hasFilters
-                                  ? Colors.white
-                                  : AppPalette.textPrimary,
+                                  ? AppColors.of(context).onPrimary
+                                  : AppColors.of(context).textPrimary,
                             ),
                           ),
                           if (hasFilters) ...[
@@ -109,8 +123,8 @@ class SortFilterBar extends StatelessWidget {
                             Container(
                               width: 18.w,
                               height: 18.w,
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
+                              decoration: BoxDecoration(
+                                color: AppColors.of(context).card,
                                 shape: BoxShape.circle,
                               ),
                               child: Center(
@@ -119,7 +133,7 @@ class SortFilterBar extends StatelessWidget {
                                   style: TextStyle(
                                     fontSize: 10.sp,
                                     fontWeight: FontWeight.bold,
-                                    color: AppPalette.primary,
+                                    color: AppColors.of(context).primary,
                                   ),
                                 ),
                               ),
@@ -154,15 +168,16 @@ class SortFilterBar extends StatelessWidget {
   }
 
   /// Returns the label of the currently active sort option.
-  String _resolveActiveSort(ListingsLoaded? state) {
-    if (state == null) return 'Recommended';
-    for (final opt in _kSortOptions) {
+  String _resolveActiveSort(ListingsLoaded? state, List<String> labels) {
+    if (state == null) return labels[0];
+    for (int i = 0; i < _kSortOptions.length; i++) {
+      final opt = _kSortOptions[i];
       if (opt['sortBy'] == state.sortBy &&
           opt['sortOrder'] == state.sortOrder) {
-        return opt['label'] as String;
+        return labels[i];
       }
     }
-    return 'Recommended';
+    return labels[0];
   }
 
   /// Builds the active filter chips from the current state.
@@ -257,12 +272,12 @@ class _SortDropdown extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.of(context).card,
           borderRadius: BorderRadius.circular(20.r),
-          border: Border.all(color: AppPalette.gray200),
+          border: Border.all(color: AppColors.of(context).border),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: AppColors.of(context).textPrimary.withOpacity(0.04),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -271,21 +286,25 @@ class _SortDropdown extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Iconsax.sort, size: 16.sp, color: AppPalette.textPrimary),
+            Icon(
+              Iconsax.sort,
+              size: 16.sp,
+              color: AppColors.of(context).textPrimary,
+            ),
             SizedBox(width: 6.w),
             Text(
               currentLabel,
               style: TextStyle(
                 fontSize: 13.sp,
                 fontWeight: FontWeight.w600,
-                color: AppPalette.textPrimary,
+                color: AppColors.of(context).textPrimary,
               ),
             ),
             SizedBox(width: 4.w),
             Icon(
               Icons.keyboard_arrow_down_rounded,
               size: 18.sp,
-              color: AppPalette.textSecondary,
+              color: AppColors.of(context).textSecondary,
             ),
           ],
         ),
@@ -294,6 +313,8 @@ class _SortDropdown extends StatelessWidget {
   }
 
   void _showSortMenu(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final labels = _sortLabels(l10n);
     final listingsBloc = context.read<ListingsBloc>();
     final overlay = Overlay.of(context).context.findRenderObject()!;
     final box = context.findRenderObject() as RenderBox;
@@ -301,10 +322,10 @@ class _SortDropdown extends StatelessWidget {
 
     showMenu<Map<String, String?>>(
       context: context,
-      color: Colors.white,
+      color: AppColors.of(context).card,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16.r),
-        side: BorderSide(color: AppPalette.gray100),
+        side: BorderSide(color: AppColors.of(context).subtleFill),
       ),
       elevation: 8,
       position: RelativeRect.fromLTRB(
@@ -313,8 +334,9 @@ class _SortDropdown extends StatelessWidget {
         offset.dx + box.size.width,
         0,
       ),
-      items: _kSortOptions.map((opt) {
-        final label = opt['label'] as String;
+      items: List.generate(_kSortOptions.length, (i) {
+        final opt = _kSortOptions[i];
+        final label = labels[i];
         final isSelected = label == currentLabel;
         return PopupMenuItem(
           value: {'sortBy': opt['sortBy'], 'sortOrder': opt['sortOrder']},
@@ -331,17 +353,21 @@ class _SortDropdown extends StatelessWidget {
                         ? FontWeight.bold
                         : FontWeight.normal,
                     color: isSelected
-                        ? AppPalette.primary
-                        : AppPalette.textPrimary,
+                        ? AppColors.of(context).primary
+                        : AppColors.of(context).textPrimary,
                   ),
                 ),
               ),
               if (isSelected)
-                Icon(Icons.check, size: 16.sp, color: AppPalette.primary),
+                Icon(
+                  Icons.check,
+                  size: 16.sp,
+                  color: AppColors.of(context).primary,
+                ),
             ],
           ),
         );
-      }).toList(),
+      }),
     ).then((selected) {
       if (selected == null) return;
       final current = listingsBloc.state;
@@ -374,9 +400,11 @@ class _FilterChip extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
       decoration: BoxDecoration(
-        color: AppPalette.primary.withOpacity(0.08),
+        color: AppColors.of(context).primary.withOpacity(0.08),
         borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: AppPalette.primary.withOpacity(0.3)),
+        border: Border.all(
+          color: AppColors.of(context).primary.withOpacity(0.3),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -386,7 +414,7 @@ class _FilterChip extends StatelessWidget {
             style: TextStyle(
               fontSize: 12.sp,
               fontWeight: FontWeight.w600,
-              color: AppPalette.primary,
+              color: AppColors.of(context).primary,
             ),
           ),
           SizedBox(width: 6.w),
@@ -395,7 +423,7 @@ class _FilterChip extends StatelessWidget {
             child: Icon(
               Icons.close_rounded,
               size: 14.sp,
-              color: AppPalette.primary,
+              color: AppColors.of(context).primary,
             ),
           ),
         ],

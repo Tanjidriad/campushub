@@ -21,9 +21,7 @@ class ThemeState {
 /// BLoC — persists theme choice
 class ThemeBloc extends Bloc<ThemeEvent, ThemeState> {
   static const _key = 'theme_mode';
-  final _storage = const FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  );
+  final _storage = const FlutterSecureStorage(aOptions: AndroidOptions());
 
   ThemeBloc() : super(const ThemeState()) {
     on<LoadThemeEvent>(_onLoad);

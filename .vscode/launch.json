@@ -1,0 +1,48 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "book_sale_admin",
+            "cwd": "book_sale_admin",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "book_sale_admin (profile mode)",
+            "cwd": "book_sale_admin",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "book_sale_admin (release mode)",
+            "cwd": "book_sale_admin",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "book_user_app",
+            "cwd": "book_user_app",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "book_user_app (profile mode)",
+            "cwd": "book_user_app",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "book_user_app (release mode)",
+            "cwd": "book_user_app",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        }
+    ]
+}

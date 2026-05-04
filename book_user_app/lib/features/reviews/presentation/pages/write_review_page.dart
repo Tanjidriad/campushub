@@ -1,4 +1,7 @@
 import 'package:book_user_app/core/theme/app_palette.dart';
+import 'package:book_user_app/core/widgets/app_snackbar.dart';
+import 'package:book_user_app/l10n/app_localizations.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:book_user_app/features/reviews/presentation/bloc/reviews_bloc.dart';
 import 'package:book_user_app/features/reviews/presentation/bloc/reviews_event.dart';
 import 'package:book_user_app/features/reviews/presentation/bloc/reviews_state.dart';
@@ -34,13 +37,13 @@ class _WriteReviewPageState extends State<WriteReviewPage>
   final _commentController = TextEditingController();
   late AnimationController _animController;
 
-  static const _ratingLabels = [
+  List<String> _ratingLabels(AppLocalizations l10n) => [
     '',
-    'Poor',
-    'Fair',
-    'Good',
-    'Very Good',
-    'Excellent',
+    l10n.ratingPoor,
+    l10n.ratingFair,
+    l10n.ratingGood,
+    l10n.ratingVeryGood,
+    l10n.ratingExcellent,
   ];
 
   static const _ratingEmojis = ['', '😞', '😐', '🙂', '😊', '🤩'];
@@ -67,17 +70,9 @@ class _WriteReviewPageState extends State<WriteReviewPage>
   }
 
   void _submitReview() {
+    final l10n = AppLocalizations.of(context)!;
     if (_rating == 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please select a rating'),
-          backgroundColor: AppPalette.error,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10.r),
-          ),
-        ),
-      );
+      AppSnackBar.showWarning(context, l10n.pleaseSelectRating);
       return;
     }
 
@@ -93,62 +88,44 @@ class _WriteReviewPageState extends State<WriteReviewPage>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return BlocListener<ReviewsBloc, ReviewsState>(
       listener: (context, state) {
         if (state is ReviewSubmitted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Row(
-                children: [
-                  Icon(Icons.check_circle, color: Colors.white, size: 20),
-                  SizedBox(width: 8),
-                  Text('Review submitted successfully!'),
-                ],
-              ),
-              backgroundColor: AppPalette.success,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10.r),
-              ),
-            ),
-          );
+          final l10n = AppLocalizations.of(context)!;
+          AppSnackBar.showSuccess(context, l10n.reviewSubmittedSuccess);
           context.pop(true);
         } else if (state is ReviewSubmitError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: AppPalette.error,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10.r),
-              ),
-            ),
-          );
+          AppSnackBar.showError(context, state.message);
         }
       },
       child: Scaffold(
-        backgroundColor: AppPalette.background,
+        backgroundColor: AppColors.of(context).background,
         appBar: AppBar(
           scrolledUnderElevation: 0,
-          backgroundColor: AppPalette.background,
+          backgroundColor: AppColors.of(context).background,
           elevation: 0,
           leading: IconButton(
             icon: Container(
               padding: EdgeInsets.all(8.w),
-              decoration: const BoxDecoration(
-                color: Colors.white,
+              decoration: BoxDecoration(
+                color: AppColors.of(context).card,
                 shape: BoxShape.circle,
               ),
-              child: Icon(Iconsax.arrow_left, size: 20.sp, color: Colors.black),
+              child: Icon(
+                Iconsax.arrow_left,
+                size: 20.sp,
+                color: AppColors.of(context).textPrimary,
+              ),
             ),
             onPressed: () => context.pop(),
           ),
           title: Text(
-            'Write a Review',
+            l10n.writeAReview,
             style: TextStyle(
               fontSize: 20.sp,
               fontWeight: FontWeight.bold,
-              color: AppPalette.textPrimary,
+              color: AppColors.of(context).textPrimary,
             ),
           ),
           centerTitle: true,
@@ -185,11 +162,11 @@ class _WriteReviewPageState extends State<WriteReviewPage>
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.of(context).card,
         borderRadius: BorderRadius.circular(16.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: AppColors.of(context).textPrimary.withValues(alpha: 0.04),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -204,23 +181,27 @@ class _WriteReviewPageState extends State<WriteReviewPage>
               shape: BoxShape.circle,
               gradient: LinearGradient(
                 colors: [
-                  AppPalette.primary.withValues(alpha: 0.15),
-                  AppPalette.accent.withValues(alpha: 0.15),
+                  AppColors.of(context).primary.withValues(alpha: 0.15),
+                  AppColors.of(context).accent.withValues(alpha: 0.15),
                 ],
               ),
               border: Border.all(
-                color: AppPalette.primary.withValues(alpha: 0.3),
+                color: AppColors.of(context).primary.withValues(alpha: 0.3),
                 width: 2,
               ),
               image: widget.sellerAvatar != null
                   ? DecorationImage(
-                      image: NetworkImage(widget.sellerAvatar!),
+                      image: CachedNetworkImageProvider(widget.sellerAvatar!),
                       fit: BoxFit.cover,
                     )
                   : null,
             ),
             child: widget.sellerAvatar == null
-                ? Icon(Icons.person, size: 28.sp, color: AppPalette.primary)
+                ? Icon(
+                    Icons.person,
+                    size: 28.sp,
+                    color: AppColors.of(context).primary,
+                  )
                 : null,
           ),
           SizedBox(width: 14.w),
@@ -233,7 +214,7 @@ class _WriteReviewPageState extends State<WriteReviewPage>
                   style: TextStyle(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w600,
-                    color: AppPalette.textPrimary,
+                    color: AppColors.of(context).textPrimary,
                   ),
                 ),
                 if (widget.listingTitle != null) ...[
@@ -243,7 +224,7 @@ class _WriteReviewPageState extends State<WriteReviewPage>
                       Icon(
                         Iconsax.book,
                         size: 14.sp,
-                        color: AppPalette.primary,
+                        color: AppColors.of(context).primary,
                       ),
                       SizedBox(width: 6.w),
                       Expanded(
@@ -251,7 +232,7 @@ class _WriteReviewPageState extends State<WriteReviewPage>
                           widget.listingTitle!,
                           style: TextStyle(
                             fontSize: 13.sp,
-                            color: AppPalette.textSecondary,
+                            color: AppColors.of(context).textSecondary,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -269,14 +250,15 @@ class _WriteReviewPageState extends State<WriteReviewPage>
   }
 
   Widget _buildRatingSection() {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: EdgeInsets.symmetric(vertical: 24.h, horizontal: 20.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.of(context).card,
         borderRadius: BorderRadius.circular(16.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: AppColors.of(context).textPrimary.withValues(alpha: 0.04),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -285,17 +267,20 @@ class _WriteReviewPageState extends State<WriteReviewPage>
       child: Column(
         children: [
           Text(
-            'How was your experience?',
+            l10n.howWasYourExperience,
             style: TextStyle(
               fontSize: 16.sp,
               fontWeight: FontWeight.w600,
-              color: AppPalette.textPrimary,
+              color: AppColors.of(context).textPrimary,
             ),
           ),
           SizedBox(height: 6.h),
           Text(
-            'Tap a star to rate the seller',
-            style: TextStyle(fontSize: 13.sp, color: AppPalette.textLight),
+            l10n.tapStarToRate,
+            style: TextStyle(
+              fontSize: 13.sp,
+              color: AppColors.of(context).textLight,
+            ),
           ),
           SizedBox(height: 20.h),
 
@@ -319,8 +304,8 @@ class _WriteReviewPageState extends State<WriteReviewPage>
                           : Icons.star_outline_rounded,
                       size: 44.sp,
                       color: isSelected
-                          ? const Color(0xFFFBBF24)
-                          : AppPalette.gray400,
+                          ? AppColors.of(context).warning
+                          : AppColors.of(context).textLight,
                     ),
                   ),
                 ),
@@ -363,7 +348,7 @@ class _WriteReviewPageState extends State<WriteReviewPage>
                           ),
                           SizedBox(width: 8.w),
                           Text(
-                            _ratingLabels[_rating],
+                            _ratingLabels(l10n)[_rating],
                             style: TextStyle(
                               fontSize: 14.sp,
                               fontWeight: FontWeight.w600,
@@ -384,108 +369,102 @@ class _WriteReviewPageState extends State<WriteReviewPage>
   Color _getRatingColor() {
     switch (_rating) {
       case 1:
-        return AppPalette.error;
+        return AppColors.of(context).error;
       case 2:
-        return const Color(0xFFF97316); // Orange
+        return AppColors.of(context).warning; // Orange
       case 3:
-        return AppPalette.warning;
+        return AppColors.of(context).warning;
       case 4:
-        return const Color(0xFF22C55E); // Green
+        return AppColors.of(context).success; // Green
       case 5:
-        return AppPalette.success;
+        return AppColors.of(context).success;
       default:
-        return AppPalette.textSecondary;
+        return AppColors.of(context).textSecondary;
     }
   }
 
   Widget _buildCommentSection() {
-    return Container(
-      padding: EdgeInsets.all(20.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Iconsax.edit_2, size: 18.sp, color: AppPalette.primary),
-              SizedBox(width: 8.w),
-              Text(
-                'Write your feedback',
-                style: TextStyle(
-                  fontSize: 15.sp,
-                  fontWeight: FontWeight.w600,
-                  color: AppPalette.textPrimary,
-                ),
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Iconsax.edit_2,
+              size: 18.sp,
+              color: AppColors.of(context).primary,
+            ),
+            SizedBox(width: 8.w),
+            Text(
+              l10n.writeYourFeedback,
+              style: TextStyle(
+                fontSize: 15.sp,
+                fontWeight: FontWeight.w600,
+                color: AppColors.of(context).textPrimary,
               ),
-              const Spacer(),
-              Text(
-                'Optional',
-                style: TextStyle(
-                  fontSize: 12.sp,
-                  color: AppPalette.textLight,
-                  fontStyle: FontStyle.italic,
-                ),
+            ),
+            const Spacer(),
+            Text(
+              l10n.optionalLabel,
+              style: TextStyle(
+                fontSize: 12.sp,
+                color: AppColors.of(context).textLight,
+                fontStyle: FontStyle.italic,
               ),
-            ],
+            ),
+          ],
+        ),
+        SizedBox(height: 14.h),
+        TextField(
+          controller: _commentController,
+          maxLines: 4,
+          maxLength: 500,
+          style: TextStyle(
+            fontSize: 14.sp,
+            color: AppColors.of(context).textPrimary,
+            height: 1.5,
           ),
-          SizedBox(height: 14.h),
-          TextField(
-            controller: _commentController,
-            maxLines: 4,
-            maxLength: 500,
-            style: TextStyle(
-              fontSize: 14.sp,
-              color: AppPalette.textPrimary,
+          decoration: InputDecoration(
+            hintText: l10n.reviewHintText,
+            hintStyle: TextStyle(
+              fontSize: 13.sp,
+              color: AppColors.of(context).textLight,
               height: 1.5,
             ),
-            decoration: InputDecoration(
-              hintText:
-                  'Share your experience with this seller...\n\nWas the item as described? Was the seller responsive?',
-              hintStyle: TextStyle(
-                fontSize: 13.sp,
-                color: AppPalette.textLight,
-                height: 1.5,
-              ),
-              filled: true,
-              fillColor: AppPalette.gray50,
-              contentPadding: EdgeInsets.symmetric(
-                horizontal: 16.w,
-                vertical: 14.h,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.r),
-                borderSide: BorderSide(color: AppPalette.border),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.r),
-                borderSide: BorderSide(color: AppPalette.border),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.r),
-                borderSide: BorderSide(color: AppPalette.primary, width: 1.5),
-              ),
-              counterStyle: TextStyle(
-                fontSize: 11.sp,
-                color: AppPalette.textLight,
+            filled: true,
+            fillColor: AppColors.of(context).subtleFill,
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: 16.w,
+              vertical: 14.h,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: BorderSide(color: AppColors.of(context).border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: BorderSide(color: AppColors.of(context).border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: BorderSide(
+                color: AppColors.of(context).primary,
+                width: 1.5,
               ),
             ),
+            counterStyle: TextStyle(
+              fontSize: 11.sp,
+              color: AppColors.of(context).textLight,
+            ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
   Widget _buildSubmitButton() {
+    final l10n = AppLocalizations.of(context)!;
     return BlocBuilder<ReviewsBloc, ReviewsState>(
       builder: (context, state) {
         final isSubmitting = state is ReviewSubmitting;
@@ -495,11 +474,11 @@ class _WriteReviewPageState extends State<WriteReviewPage>
           child: ElevatedButton(
             onPressed: isSubmitting ? null : _submitReview,
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppPalette.primary,
-              foregroundColor: Colors.white,
-              disabledBackgroundColor: AppPalette.primary.withValues(
-                alpha: 0.5,
-              ),
+              backgroundColor: AppColors.of(context).primary,
+              foregroundColor: AppColors.of(context).onPrimary,
+              disabledBackgroundColor: AppColors.of(
+                context,
+              ).primary.withValues(alpha: 0.5),
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14.r),
@@ -509,8 +488,8 @@ class _WriteReviewPageState extends State<WriteReviewPage>
                 ? SizedBox(
                     width: 24.w,
                     height: 24.w,
-                    child: const CircularProgressIndicator(
-                      color: Colors.white,
+                    child: CircularProgressIndicator(
+                      color: AppColors.of(context).card,
                       strokeWidth: 2.5,
                     ),
                   )
@@ -520,7 +499,7 @@ class _WriteReviewPageState extends State<WriteReviewPage>
                       Icon(Iconsax.send_1, size: 20.sp),
                       SizedBox(width: 10.w),
                       Text(
-                        'Submit Review',
+                        l10n.submitReview,
                         style: TextStyle(
                           fontSize: 16.sp,
                           fontWeight: FontWeight.w600,

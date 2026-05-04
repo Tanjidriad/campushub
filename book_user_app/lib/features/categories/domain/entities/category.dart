@@ -11,6 +11,7 @@ class Category extends Equatable {
   final bool isActive;
   final int displayOrder;
   final int listingCount;
+  final bool hasEducationConfig;
 
   const Category({
     required this.id,
@@ -22,6 +23,7 @@ class Category extends Equatable {
     this.isActive = true,
     this.displayOrder = 0,
     this.listingCount = 0,
+    this.hasEducationConfig = false,
   });
 
   @override
@@ -35,5 +37,6 @@ class Category extends Equatable {
     isActive,
     displayOrder,
     listingCount,
+    hasEducationConfig,
   ];
 }

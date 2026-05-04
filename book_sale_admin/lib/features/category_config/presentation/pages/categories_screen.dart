@@ -48,17 +48,48 @@ class _CategoriesScreenState extends State<CategoriesScreen>
   void _syncFromConfig(EducationConfig config) {
     _levels = config.levels
         .map(
-          (l) => {
+          (l) => <String, dynamic>{
             'key': l.key ?? '',
             'label': l.label ?? '',
             'subLevels': l.subLevels
-                .map((s) => {'key': s.key ?? '', 'label': s.label ?? ''})
+                .map(
+                  (s) => <String, dynamic>{
+                    'key': s.key ?? '',
+                    'label': s.label ?? '',
+                  },
+                )
+                .toList(),
+            'streams': l.streams
+                .map(
+                  (s) => <String, dynamic>{
+                    'key': s.key ?? '',
+                    'label': s.label ?? '',
+                    'departments': s.departments
+                        .map(
+                          (d) => <String, dynamic>{
+                            'key': d.key ?? '',
+                            'label': d.label ?? '',
+                            'subLevels': d.subLevels
+                                .map(
+                                  (sl) => <String, dynamic>{
+                                    'key': sl.key ?? '',
+                                    'label': sl.label ?? '',
+                                  },
+                                )
+                                .toList(),
+                          },
+                        )
+                        .toList(),
+                  },
+                )
                 .toList(),
           },
         )
         .toList();
     _bookTypes = config.bookTypes
-        .map((b) => {'key': b.key ?? '', 'label': b.label ?? ''})
+        .map(
+          (b) => <String, dynamic>{'key': b.key ?? '', 'label': b.label ?? ''},
+        )
         .toList();
   }
 
@@ -71,6 +102,30 @@ class _CategoriesScreenState extends State<CategoriesScreen>
               label: l['label'],
               subLevels: (l['subLevels'] as List)
                   .map((s) => SubLevel(key: s['key'], label: s['label']))
+                  .toList(),
+              streams: (l['streams'] as List? ?? [])
+                  .map(
+                    (s) => EducationStream(
+                      key: s['key'],
+                      label: s['label'],
+                      departments: (s['departments'] as List? ?? [])
+                          .map(
+                            (d) => EducationDepartment(
+                              key: d['key'],
+                              label: d['label'],
+                              subLevels: (d['subLevels'] as List? ?? [])
+                                  .map(
+                                    (sl) => SubLevel(
+                                      key: sl['key'],
+                                      label: sl['label'],
+                                    ),
+                                  )
+                                  .toList(),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  )
                   .toList(),
             ),
           )
@@ -106,7 +161,91 @@ class _CategoriesScreenState extends State<CategoriesScreen>
               'key': keyCtl.text.trim(),
               'label': labelCtl.text.trim(),
               'subLevels': <Map<String, dynamic>>[],
+              'streams': <Map<String, dynamic>>[],
             });
+          });
+        }
+      },
+    );
+  }
+
+  void _addStream(int levelIndex) {
+    final keyCtl = TextEditingController();
+    final labelCtl = TextEditingController();
+    _showFormDialog(
+      title: 'Add Stream',
+      icon: Icons.account_tree_rounded,
+      iconColor: const Color(0xFF3B82F6),
+      fields: [
+        _buildTextField(keyCtl, 'Key', hint: 'e.g., science-engineering'),
+        _buildTextField(labelCtl, 'Label', hint: 'e.g., Science & Engineering'),
+      ],
+      onConfirm: () {
+        if (keyCtl.text.isNotEmpty && labelCtl.text.isNotEmpty) {
+          setState(() {
+            final streams = _levels[levelIndex]['streams'] as List? ?? [];
+            streams.add({
+              'key': keyCtl.text.trim(),
+              'label': labelCtl.text.trim(),
+              'departments': <Map<String, dynamic>>[],
+            });
+            _levels[levelIndex]['streams'] = streams;
+          });
+        }
+      },
+    );
+  }
+
+  void _addDepartment(int levelIndex, int streamIndex) {
+    final keyCtl = TextEditingController();
+    final labelCtl = TextEditingController();
+    _showFormDialog(
+      title: 'Add Department',
+      icon: Icons.domain_rounded,
+      iconColor: const Color(0xFF10B981),
+      fields: [
+        _buildTextField(keyCtl, 'Key', hint: 'e.g., cse'),
+        _buildTextField(labelCtl, 'Label', hint: 'e.g., CSE'),
+      ],
+      onConfirm: () {
+        if (keyCtl.text.isNotEmpty && labelCtl.text.isNotEmpty) {
+          setState(() {
+            final streams = _levels[levelIndex]['streams'] as List;
+            final depts = streams[streamIndex]['departments'] as List? ?? [];
+            depts.add({
+              'key': keyCtl.text.trim(),
+              'label': labelCtl.text.trim(),
+              'subLevels': <Map<String, dynamic>>[],
+            });
+            streams[streamIndex]['departments'] = depts;
+          });
+        }
+      },
+    );
+  }
+
+  void _addDeptSubLevel(int levelIndex, int streamIndex, int deptIndex) {
+    final keyCtl = TextEditingController();
+    final labelCtl = TextEditingController();
+    _showFormDialog(
+      title: 'Add Semester/Year',
+      icon: Icons.calendar_today_rounded,
+      iconColor: const Color(0xFFF59E0B),
+      fields: [
+        _buildTextField(keyCtl, 'Key', hint: 'e.g., sem-1'),
+        _buildTextField(labelCtl, 'Label', hint: 'e.g., Semester 1'),
+      ],
+      onConfirm: () {
+        if (keyCtl.text.isNotEmpty && labelCtl.text.isNotEmpty) {
+          setState(() {
+            final streams = _levels[levelIndex]['streams'] as List;
+            final depts = streams[streamIndex]['departments'] as List;
+            final subLevels = depts[deptIndex]['subLevels'] as List? ?? [];
+            subLevels.add({
+              'key': keyCtl.text.trim(),
+              'label': labelCtl.text.trim(),
+            });
+            depts[deptIndex]['subLevels'] = subLevels;
           });
         }
       },
@@ -1601,7 +1740,9 @@ class _CategoriesScreenState extends State<CategoriesScreen>
   }
 
   Widget _buildLevelCard(int li, Map<String, dynamic> level) {
-    final subLevels = level['subLevels'] as List;
+    final subLevels = level['subLevels'] as List? ?? [];
+    final streams = level['streams'] as List? ?? [];
+    final hasStreams = streams.isNotEmpty;
 
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
@@ -1614,6 +1755,7 @@ class _CategoriesScreenState extends State<CategoriesScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Level Header ──
           Padding(
             padding: EdgeInsets.fromLTRB(16.w, 14.h, 8.w, 0),
             child: Row(
@@ -1656,6 +1798,7 @@ class _CategoriesScreenState extends State<CategoriesScreen>
                     ),
                   ),
                 ),
+                // Add Sub-Level (for flat levels)
                 IconButton(
                   icon: Container(
                     padding: EdgeInsets.all(4.w),
@@ -1676,6 +1819,28 @@ class _CategoriesScreenState extends State<CategoriesScreen>
                   constraints: const BoxConstraints(),
                   padding: EdgeInsets.all(4.w),
                 ),
+                // Add Stream button
+                IconButton(
+                  icon: Container(
+                    padding: EdgeInsets.all(4.w),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF3B82F6).withAlpha(
+                        context.isDark ? 30 : 15,
+                      ),
+                      borderRadius: AppRadius.xs,
+                    ),
+                    child: const Icon(
+                      Icons.account_tree_rounded,
+                      size: 16,
+                      color: Color(0xFF3B82F6),
+                    ),
+                  ),
+                  onPressed: () => _addStream(li),
+                  tooltip: 'Add Stream',
+                  constraints: const BoxConstraints(),
+                  padding: EdgeInsets.all(4.w),
+                ),
+                // Delete level
                 IconButton(
                   icon: Container(
                     padding: EdgeInsets.all(4.w),
@@ -1699,6 +1864,8 @@ class _CategoriesScreenState extends State<CategoriesScreen>
               ],
             ),
           ),
+
+          // ── Flat Sub-Levels (School/College style) ──
           if (subLevels.isNotEmpty) ...[
             Padding(
               padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 14.h),
@@ -1742,11 +1909,27 @@ class _CategoriesScreenState extends State<CategoriesScreen>
                 }),
               ),
             ),
-          ] else
+          ],
+
+          // ── Streams (University style) ──
+          if (hasStreams) ...[
+            Divider(
+              height: 1,
+              color: context.cardBorder,
+              indent: 16.w,
+              endIndent: 16.w,
+            ),
+            ...List.generate(streams.length, (si) {
+              return _buildStreamSection(li, si, streams[si]);
+            }),
+          ],
+
+          // Empty state: no subLevels and no streams
+          if (subLevels.isEmpty && !hasStreams)
             Padding(
               padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 14.h),
               child: Text(
-                'No sub-levels yet — tap + to add',
+                'No sub-levels or streams — tap + to add',
                 style: AppTextStyles.caption.copyWith(
                   color: context.textMuted,
                   fontStyle: FontStyle.italic,
@@ -1754,6 +1937,279 @@ class _CategoriesScreenState extends State<CategoriesScreen>
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildStreamSection(
+    int levelIndex,
+    int streamIndex,
+    Map<String, dynamic> stream,
+  ) {
+    final departments = stream['departments'] as List? ?? [];
+    const streamColor = Color(0xFF3B82F6);
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16.w, 12.h, 12.w, 4.h),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Stream header
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(5.w),
+                decoration: BoxDecoration(
+                  color: streamColor.withAlpha(context.isDark ? 30 : 15),
+                  borderRadius: AppRadius.xs,
+                ),
+                child: const Icon(
+                  Icons.account_tree_rounded,
+                  size: 14,
+                  color: streamColor,
+                ),
+              ),
+              SizedBox(width: 8.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      stream['label'] ?? '',
+                      style: AppTextStyles.labelMedium.copyWith(
+                        color: context.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      '${departments.length} departments',
+                      style: AppTextStyles.overline.copyWith(
+                        color: context.textMuted,
+                        fontSize: 9.sp,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Add Department
+              IconButton(
+                icon: Container(
+                  padding: EdgeInsets.all(3.w),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withAlpha(
+                      context.isDark ? 30 : 15,
+                    ),
+                    borderRadius: AppRadius.xs,
+                  ),
+                  child: const Icon(
+                    Icons.domain_add_rounded,
+                    size: 14,
+                    color: Color(0xFF10B981),
+                  ),
+                ),
+                onPressed: () => _addDepartment(levelIndex, streamIndex),
+                tooltip: 'Add Department',
+                constraints: const BoxConstraints(),
+                padding: EdgeInsets.all(4.w),
+              ),
+              // Delete Stream
+              IconButton(
+                icon: Container(
+                  padding: EdgeInsets.all(3.w),
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withAlpha(
+                      context.isDark ? 25 : 12,
+                    ),
+                    borderRadius: AppRadius.xs,
+                  ),
+                  child: Icon(
+                    Icons.close_rounded,
+                    size: 14,
+                    color: AppColors.error,
+                  ),
+                ),
+                onPressed: () {
+                  setState(() {
+                    final streams = _levels[levelIndex]['streams'] as List;
+                    streams.removeAt(streamIndex);
+                  });
+                },
+                tooltip: 'Remove Stream',
+                constraints: const BoxConstraints(),
+                padding: EdgeInsets.all(4.w),
+              ),
+            ],
+          ),
+
+          // Departments
+          if (departments.isNotEmpty)
+            Padding(
+              padding: EdgeInsets.only(left: 28.w, top: 8.h, bottom: 8.h),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: List.generate(departments.length, (di) {
+                  return _buildDepartmentRow(
+                    levelIndex,
+                    streamIndex,
+                    di,
+                    departments[di],
+                  );
+                }),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDepartmentRow(
+    int levelIndex,
+    int streamIndex,
+    int deptIndex,
+    Map<String, dynamic> dept,
+  ) {
+    final deptSubLevels = dept['subLevels'] as List? ?? [];
+    const deptColor = Color(0xFF10B981);
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: 8.h),
+      child: Container(
+        padding: EdgeInsets.all(10.w),
+        decoration: BoxDecoration(
+          color: context.surface,
+          borderRadius: AppRadius.sm,
+          border: Border.all(color: context.cardBorder),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(4.w),
+                  decoration: BoxDecoration(
+                    color: deptColor.withAlpha(context.isDark ? 25 : 12),
+                    borderRadius: AppRadius.xs,
+                  ),
+                  child: const Icon(
+                    Icons.domain_rounded,
+                    size: 12,
+                    color: deptColor,
+                  ),
+                ),
+                SizedBox(width: 8.w),
+                Expanded(
+                  child: Text(
+                    '${dept['label'] ?? ''} (${dept['key'] ?? ''})',
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: context.textPrimary,
+                    ),
+                  ),
+                ),
+                // Add semester
+                InkWell(
+                  onTap: () => _addDeptSubLevel(
+                    levelIndex,
+                    streamIndex,
+                    deptIndex,
+                  ),
+                  borderRadius: AppRadius.full,
+                  child: Container(
+                    padding: EdgeInsets.all(3.w),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF59E0B).withAlpha(
+                        context.isDark ? 25 : 12,
+                      ),
+                      borderRadius: AppRadius.xs,
+                    ),
+                    child: const Icon(
+                      Icons.calendar_today_rounded,
+                      size: 12,
+                      color: Color(0xFFF59E0B),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 4.w),
+                // Delete department
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      final streams =
+                          _levels[levelIndex]['streams'] as List;
+                      final depts =
+                          streams[streamIndex]['departments'] as List;
+                      depts.removeAt(deptIndex);
+                    });
+                  },
+                  borderRadius: AppRadius.full,
+                  child: Container(
+                    padding: EdgeInsets.all(3.w),
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withAlpha(
+                        context.isDark ? 20 : 10,
+                      ),
+                      borderRadius: AppRadius.xs,
+                    ),
+                    child: Icon(
+                      Icons.close_rounded,
+                      size: 12,
+                      color: AppColors.error,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            // Semester chips
+            if (deptSubLevels.isNotEmpty) ...[
+              SizedBox(height: 6.h),
+              Wrap(
+                spacing: 4.w,
+                runSpacing: 4.h,
+                children: List.generate(deptSubLevels.length, (sli) {
+                  return Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 8.w,
+                      vertical: 3.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF59E0B).withAlpha(
+                        context.isDark ? 20 : 10,
+                      ),
+                      borderRadius: AppRadius.xs,
+                      border: Border.all(
+                        color: const Color(0xFFF59E0B).withAlpha(
+                          context.isDark ? 40 : 25,
+                        ),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          deptSubLevels[sli]['label'] ?? '',
+                          style: AppTextStyles.overline.copyWith(
+                            color: context.textPrimary,
+                            fontSize: 9.sp,
+                          ),
+                        ),
+                        SizedBox(width: 4.w),
+                        InkWell(
+                          onTap: () =>
+                              setState(() => deptSubLevels.removeAt(sli)),
+                          child: Icon(
+                            Icons.close_rounded,
+                            size: 10,
+                            color: context.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

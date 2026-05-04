@@ -12,6 +12,19 @@ class UpdateListingParams {
   final double? price;
   final String? condition;
 
+  final String? currency;
+  final String? locationName;
+  final String? locationAddress;
+  final String? meetupPreferences;
+  final List<String>? tags;
+  final String? educationLevel;
+  final String? classOrSemester;
+  final String? subject;
+  final String? bookType;
+  final String? division;
+  final String? district;
+  final String? upazila;
+
   const UpdateListingParams({
     required this.id,
     this.title,
@@ -20,6 +33,18 @@ class UpdateListingParams {
     this.priceType,
     this.price,
     this.condition,
+    this.currency,
+    this.locationName,
+    this.locationAddress,
+    this.meetupPreferences,
+    this.tags,
+    this.educationLevel,
+    this.classOrSemester,
+    this.subject,
+    this.bookType,
+    this.division,
+    this.district,
+    this.upazila,
   });
 }
 
@@ -36,7 +61,19 @@ class UpdateListingUseCase {
       category: params.category,
       priceType: params.priceType,
       price: params.price,
+      currency: params.currency,
       condition: params.condition,
+      locationName: params.locationName,
+      locationAddress: params.locationAddress,
+      meetupPreferences: params.meetupPreferences,
+      tags: params.tags,
+      educationLevel: params.educationLevel,
+      classOrSemester: params.classOrSemester,
+      subject: params.subject,
+      bookType: params.bookType,
+      division: params.division,
+      district: params.district,
+      upazila: params.upazila,
     );
   }
 }

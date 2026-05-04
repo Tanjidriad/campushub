@@ -1,7 +1,10 @@
+import 'package:book_user_app/core/theme/app_palette.dart';
+import 'package:book_user_app/core/constants/app_icons.dart';
+import 'package:book_user_app/core/widgets/app_cached_image.dart';
+import 'package:book_user_app/core/widgets/app_snackbar.dart';
+import 'package:book_user_app/l10n/app_localizations.dart';
 // ignore_for_file: deprecated_member_use
 
-import 'package:book_user_app/features/auth/domain/entities/user.dart';
-import 'package:book_user_app/features/listings/domain/entities/listing.dart';
 import 'package:book_user_app/features/listings/domain/repositories/listing_repository.dart';
 import 'package:book_user_app/features/listings/presentation/bloc/listings_bloc.dart';
 import 'package:book_user_app/features/listings/presentation/bloc/listings_event.dart';
@@ -14,10 +17,17 @@ import 'package:book_user_app/features/reviews/presentation/bloc/reviews_event.d
 import 'package:book_user_app/features/reviews/presentation/widgets/reviews_list.dart';
 import 'package:book_user_app/injection_container/injection_container.dart';
 import 'package:book_user_app/core/widgets/app_loader.dart';
+import 'package:book_user_app/features/profile/presentation/widgets/profile_info_row.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:book_user_app/features/report/domain/entities/report.dart';
+import 'package:book_user_app/features/report/presentation/widgets/report_dialog.dart';
+import 'package:book_user_app/features/chat/presentation/bloc/chat_bloc.dart';
+import 'package:book_user_app/features/listings/presentation/widgets/staggered_listing_card.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 class UserProfilePage extends StatefulWidget {
   final String userId;
@@ -36,9 +46,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
     // Validate userId
     if (widget.userId.isEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        ScaffoldMessenger.of(
+        AppSnackBar.showError(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Invalid user ID')));
+          AppLocalizations.of(context)!.invalidUserId,
+        );
         Navigator.of(context).pop();
       });
     }
@@ -61,15 +72,28 @@ class _UserProfilePageState extends State<UserProfilePage> {
             ),
         ),
         BlocProvider(create: (context) => sl<ReviewsBloc>()),
+        // Add ChatBloc for the BlockUser event
+        BlocProvider(create: (context) => ChatBloc()),
       ],
-      child: _UserProfileView(
-        userId: widget.userId,
-        selectedTabIndex: _selectedTabIndex,
-        onTabChanged: (index) {
-          setState(() {
-            _selectedTabIndex = index;
-          });
+      child: BlocListener<ChatBloc, ChatState>(
+        listenWhen: (prev, curr) => curr.isUserBlocked && !prev.isUserBlocked,
+        listener: (context, state) {
+          if (state.isUserBlocked) {
+            AppSnackBar.showSuccess(context, 'User blocked successfully');
+            if (Navigator.canPop(context)) {
+              context.pop();
+            }
+          }
         },
+        child: _UserProfileView(
+          userId: widget.userId,
+          selectedTabIndex: _selectedTabIndex,
+          onTabChanged: (index) {
+            setState(() {
+              _selectedTabIndex = index;
+            });
+          },
+        ),
       ),
     );
   }
@@ -108,7 +132,7 @@ class _UserProfileViewState extends State<_UserProfileView> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
 
     return BlocBuilder<ProfileBloc, ProfileState>(
       builder: (context, state) {
@@ -121,6 +145,26 @@ class _UserProfileViewState extends State<_UserProfileView> {
           );
         } else if (state is ProfileLoaded) {
           final user = state.user;
+          final phoneValue = (user.phone != null && user.phone!.trim().isNotEmpty)
+              ? user.phone!.trim()
+              : l10n.notSet;
+
+          final educationValue = [
+            user.educationLevel,
+            user.stream,
+            user.department,
+            user.classOrSemester,
+          ]
+              .where((v) => v != null && v.trim().isNotEmpty)
+              .map((v) => v!.trim())
+              .join(' • ');
+
+          final onlineValue = user.isOnline == true
+              ? l10n.online
+              : (user.lastActive != null)
+                  ? '${l10n.offline} • ${DateFormat('MMM d, HH:mm').format(user.lastActive!)}'
+                  : l10n.offline;
+
           return Scaffold(
             backgroundColor: theme.colorScheme.background,
             body: Stack(
@@ -132,9 +176,12 @@ class _UserProfileViewState extends State<_UserProfileView> {
                       pinned: true,
                       flexibleSpace: FlexibleSpaceBar(
                         background: Container(
-                          color: isDark ? Colors.grey[900] : Colors.grey[200],
+                          color: AppColors.of(context).border,
                           child: user.avatar != null
-                              ? Image.network(user.avatar!, fit: BoxFit.cover)
+                              ? AppCachedImage(
+                                  imageUrl: user.avatar,
+                                  fit: BoxFit.cover,
+                                )
                               : const Icon(Icons.person, size: 80),
                         ),
                       ),
@@ -142,6 +189,12 @@ class _UserProfileViewState extends State<_UserProfileView> {
                         icon: const Icon(Icons.arrow_back),
                         onPressed: () => context.pop(),
                       ),
+                      actions: [
+                        IconButton(
+                          icon: const Icon(Icons.more_vert),
+                          onPressed: () => _showOptionsMenu(context, user.id, user.name),
+                        ),
+                      ],
                     ),
                     SliverToBoxAdapter(
                       child: Padding(
@@ -167,30 +220,25 @@ class _UserProfileViewState extends State<_UserProfileView> {
                                       Text(
                                         '@${user.username ?? ""}',
                                         style: theme.textTheme.bodyMedium
-                                            ?.copyWith(color: Colors.grey),
+                                            ?.copyWith(
+                                              color: AppColors.of(
+                                                context,
+                                              ).textSecondary,
+                                            ),
                                       ),
                                     ],
                                   ),
                                 ),
-                                // Chat Button Placeholder
+                                // Chat Button
                                 ElevatedButton.icon(
                                   onPressed: () {
-                                    // Navigate to chat
-                                    // We need to create a conversation or go to existing
-                                    // For now show snackbar
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          "Chat not implemented yet",
-                                        ),
-                                      ),
-                                    );
+                                    context.goNamed('chat');
                                   },
                                   icon: const Icon(
                                     Icons.chat_bubble_outline,
                                     size: 18,
                                   ),
-                                  label: const Text("Chat"),
+                                  label: Text(l10n.chat),
                                   style: ElevatedButton.styleFrom(
                                     padding: EdgeInsets.symmetric(
                                       horizontal: 16.w,
@@ -200,13 +248,56 @@ class _UserProfileViewState extends State<_UserProfileView> {
                               ],
                             ),
                             SizedBox(height: 16.h),
-                            if (user.bio != null) ...[
-                              Text(
-                                user.bio!,
-                                style: theme.textTheme.bodyMedium,
+                            Text(
+                              l10n.aboutSeller,
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16.sp,
+                                color: AppColors.of(context).textPrimary,
                               ),
-                              SizedBox(height: 16.h),
-                            ],
+                            ),
+                            SizedBox(height: 12.h),
+                            if (user.createdAt != null)
+                              ProfileInfoRow(
+                                label: l10n.memberSince,
+                                value:
+                                    DateFormat('MMM yyyy').format(user.createdAt!),
+                                iconPath: AppIcons.memberSinceIcon,
+                              ),
+                            if (user.location != null)
+                              ProfileInfoRow(
+                                label: l10n.location,
+                                value: user.location ?? l10n.notSet,
+                                iconPath: AppIcons.locationIcon,
+                              ),
+                            ProfileInfoRow(
+                              label: l10n.email,
+                              value: user.email,
+                              iconPath: AppIcons.emailIcon,
+                            ),
+                            ProfileInfoRow(
+                              label: l10n.phoneNumber,
+                              value: phoneValue,
+                            ),
+                            if (educationValue.trim().isNotEmpty)
+                              ProfileInfoRow(
+                                label: l10n.educationLevel,
+                                value: educationValue,
+                              ),
+                            ProfileInfoRow(
+                              label: l10n.online,
+                              value: onlineValue,
+                              valueColor: user.isOnline == true
+                                  ? AppColors.of(context).success
+                                  : AppColors.of(context).textSecondary,
+                            ),
+                            if (user.bio != null && user.bio!.trim().isNotEmpty)
+                              ProfileInfoRow(
+                                label: l10n.bio,
+                                value: user.bio!.trim(),
+                                iconPath: AppIcons.descriptionIcon,
+                              ),
+                            SizedBox(height: 16.h),
 
                             // Stats
                             Row(
@@ -214,17 +305,17 @@ class _UserProfileViewState extends State<_UserProfileView> {
                               children: [
                                 _buildStatItem(
                                   user.activeListings.toString(),
-                                  "Active",
+                                  l10n.active,
                                   theme,
                                 ),
                                 _buildStatItem(
                                   user.totalSold.toString(),
-                                  "Sold",
+                                  l10n.sold,
                                   theme,
                                 ),
                                 _buildStatItem(
                                   user.averageRating.toStringAsFixed(1),
-                                  "Rating",
+                                  l10n.rating,
                                   theme,
                                 ),
                               ],
@@ -245,13 +336,13 @@ class _UserProfileViewState extends State<_UserProfileView> {
                           child: Row(
                             children: [
                               _buildTabItem(
-                                "Listings",
+                                l10n.listings,
                                 0,
                                 widget.selectedTabIndex == 0,
                                 theme,
                               ),
                               _buildTabItem(
-                                "Reviews",
+                                l10n.reviews,
                                 1,
                                 widget.selectedTabIndex == 1,
                                 theme,
@@ -276,39 +367,41 @@ class _UserProfileViewState extends State<_UserProfileView> {
                             );
                           } else if (listingsState is ListingsLoaded) {
                             if (listingsState.listings.isEmpty) {
-                              return const SliverToBoxAdapter(
+                              return SliverToBoxAdapter(
                                 child: Padding(
-                                  padding: EdgeInsets.all(32.0),
+                                  padding: const EdgeInsets.all(32.0),
                                   child: Center(
-                                    child: Text("No listings found."),
+                                    child: Text(l10n.noListingsFound),
                                   ),
                                 ),
                               );
                             }
                             return SliverPadding(
-                              padding: EdgeInsets.all(16.w),
-                              sliver: SliverGrid(
-                                gridDelegate:
-                                    SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 2,
-                                      mainAxisSpacing: 16.w,
-                                      crossAxisSpacing: 16.w,
-                                      childAspectRatio: 0.75,
-                                    ),
-                                delegate: SliverChildBuilderDelegate((
-                                  context,
-                                  index,
-                                ) {
+                              padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 32.h),
+                              sliver: SliverMasonryGrid.count(
+                                crossAxisCount: 2,
+                                mainAxisSpacing: 12.w,
+                                crossAxisSpacing: 12.w,
+                                childCount: listingsState.listings.length,
+                                itemBuilder: (context, index) {
                                   final listing = listingsState.listings[index];
-                                  return GestureDetector(
+                                  return StaggeredListingCard(
+                                    listing: listing,
+                                    isSmall: index.isOdd,
                                     onTap: () => context.pushNamed(
                                       'listing_detail',
                                       pathParameters: {'id': listing.id},
                                       extra: listing,
                                     ),
-                                    child: _buildListingItem(listing, theme),
+                                    onWishlistTap: () {
+                                      context.read<ListingsBloc>().add(
+                                        ListingWishlistToggled(
+                                          listingId: listing.id,
+                                        ),
+                                      );
+                                    },
                                   );
-                                }, childCount: listingsState.listings.length),
+                                },
                               ),
                             );
                           }
@@ -355,7 +448,9 @@ class _UserProfileViewState extends State<_UserProfileView> {
             label,
             style: TextStyle(
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected ? theme.colorScheme.primary : Colors.grey,
+              color: isSelected
+                  ? theme.colorScheme.primary
+                  : AppColors.of(context).textSecondary,
             ),
           ),
         ),
@@ -374,47 +469,148 @@ class _UserProfileViewState extends State<_UserProfileView> {
         ),
         Text(
           label,
-          style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: AppColors.of(context).textSecondary,
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildListingItem(Listing listing, ThemeData theme) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12.r),
-              color: Colors.grey[200],
-              image: listing.images.isNotEmpty
-                  ? DecorationImage(
-                      image: NetworkImage(listing.images.first.url),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
+  void _showOptionsMenu(BuildContext context, String userId, String userName) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => Container(
+        decoration: BoxDecoration(
+          color: AppColors.of(context).surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Drag handle
+              Center(
+                child: Container(
+                  margin: EdgeInsets.symmetric(vertical: 12.h),
+                  width: 48.w,
+                  height: 4.h,
+                  decoration: BoxDecoration(
+                    color: AppColors.of(context).border,
+                    borderRadius: BorderRadius.circular(2.r),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 8.h),
+                child: Row(
+                  children: [
+                    Text(
+                      'More Options',
+                      style: TextStyle(
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.of(context).textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Divider(height: 1, color: AppColors.of(context).border),
+              ListTile(
+                contentPadding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
+                leading: Container(
+                  padding: EdgeInsets.all(8.w),
+                  decoration: BoxDecoration(
+                    color: AppColors.of(context).warning.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.flag_outlined,
+                    color: AppColors.of(context).warning,
+                    size: 22.sp,
+                  ),
+                ),
+                title: Text(
+                  'Report User',
+                  style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w500),
+                ),
+                trailing: Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16.sp,
+                  color: AppColors.of(context).textLight,
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  ReportDialog.show(
+                    context,
+                    targetType: ReportTargetType.user,
+                    targetId: userId,
+                    targetName: userName,
+                  );
+                },
+              ),
+              Divider(height: 1, indent: 72.w, color: AppColors.of(context).subtleFill),
+              ListTile(
+                contentPadding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
+                leading: Container(
+                  padding: EdgeInsets.all(8.w),
+                  decoration: BoxDecoration(
+                    color: AppColors.of(context).error.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.block_outlined,
+                    color: AppColors.of(context).error,
+                    size: 22.sp,
+                  ),
+                ),
+                title: Text(
+                  'Block User',
+                  style: TextStyle(color: AppColors.of(context).error, fontWeight: FontWeight.w500),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showBlockConfirmationDialog(context, userId, userName);
+                },
+              ),
+              SizedBox(height: 16.h),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showBlockConfirmationDialog(BuildContext context, String userId, String userName) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+        title: const Text('Block User'),
+        content: Text(
+          'Are you sure you want to block $userName? They will no longer be able to message you, and their active listings won\'t be visible to you.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: Text('Cancel', style: TextStyle(color: AppColors.of(context).textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.of(context).error,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
             ),
-            child: listing.images.isEmpty
-                ? const Center(child: Icon(Icons.image, color: Colors.grey))
-                : null,
+            onPressed: () {
+              Navigator.pop(dialogCtx);
+              context.read<ChatBloc>().add(BlockUser(userId));
+            },
+            child: Text('Block', style: TextStyle(color: AppColors.of(context).onPrimary)),
           ),
-        ),
-        SizedBox(height: 8.h),
-        Text(
-          listing.title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        Text(
-          '\$${(listing.price ?? 0).toStringAsFixed(0)}',
-          style: theme.textTheme.bodySmall,
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

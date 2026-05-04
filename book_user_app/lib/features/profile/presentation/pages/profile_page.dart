@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:book_user_app/core/constants/app_icons.dart';
 import 'package:book_user_app/core/theme/app_palette.dart';
@@ -8,6 +9,7 @@ import 'package:book_user_app/features/listings/presentation/bloc/listings_bloc.
 import 'package:book_user_app/features/listings/presentation/bloc/listings_event.dart';
 import 'package:book_user_app/features/listings/presentation/bloc/listings_state.dart';
 import 'package:book_user_app/features/listings/presentation/widgets/custom_bottom_nav.dart';
+import 'package:book_user_app/features/listings/presentation/widgets/staggered_listing_card.dart';
 import 'package:book_user_app/features/reviews/presentation/bloc/reviews_bloc.dart';
 import 'package:book_user_app/features/reviews/presentation/bloc/reviews_event.dart';
 import 'package:book_user_app/features/reviews/presentation/widgets/reviews_list.dart';
@@ -15,23 +17,34 @@ import 'package:book_user_app/features/profile/presentation/widgets/profile_head
 import 'package:book_user_app/features/profile/presentation/widgets/profile_info_header.dart';
 import 'package:book_user_app/features/profile/presentation/widgets/profile_info_row.dart';
 import 'package:book_user_app/injection_container/injection_container.dart';
+import 'package:book_user_app/core/services/listing_status_notifier.dart';
 import 'package:book_user_app/core/widgets/app_loader.dart';
+import 'package:book_user_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key});
+  final int initialTabIndex;
+
+  const ProfilePage({super.key, this.initialTabIndex = 0});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  int _selectedTabIndex =
-      0; // 0: Profile, 1: My Listings, 2: Favorites, 3: Sold, 4: Reviews
+  // 0: Profile, 1: My Listings, 2: Favorites, 3: Sold, 4: Reviews
+  late int _selectedTabIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedTabIndex = widget.initialTabIndex;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,10 +79,18 @@ class _ProfileView extends StatefulWidget {
 }
 
 class _ProfileViewState extends State<_ProfileView> {
+  StreamSubscription<String>? _listingStatusSub;
+
   @override
   void initState() {
     super.initState();
     _loadDataForTab(widget.selectedTabIndex);
+
+    // Listen for listing status changes (e.g. sold via offer acceptance)
+    _listingStatusSub = ListingStatusNotifier.instance.onStatusChanged.listen((_) {
+      debugPrint('🟢 ListingStatusNotifier: listing sold, refreshing tab ${widget.selectedTabIndex}');
+      _loadDataForTab(widget.selectedTabIndex);
+    });
   }
 
   @override
@@ -81,6 +102,7 @@ class _ProfileViewState extends State<_ProfileView> {
   }
 
   void _loadDataForTab(int tabIndex) {
+    if (!mounted) return;
     if (tabIndex == 1) {
       context.read<ListingsBloc>().add(const MyListingsLoadRequested());
     } else if (tabIndex == 2) {
@@ -100,30 +122,36 @@ class _ProfileViewState extends State<_ProfileView> {
   }
 
   @override
+  void dispose() {
+    _listingStatusSub?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final bgColor = isDark ? theme.colorScheme.background : Colors.white;
-    const tabActiveColor = Color(0xFFE53935);
-    const actionGreenColor = Color(0xFF4CAF50);
+    final colors = AppColors.of(context);
+    final isDark = colors.isDark;
+    final bgColor = colors.background;
+    final tabActiveColor = AppColors.of(context).error;
+    final actionGreenColor = AppColors.of(context).success;
+    final l10n = AppLocalizations.of(context)!;
 
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         final user = state is AuthAuthenticated ? state.user : null;
 
         return Scaffold(
-          backgroundColor: isDark
-              ? theme.colorScheme.background
-              : const Color(0xFFF9F9F9),
+          backgroundColor: colors.background,
           appBar: AppBar(
             backgroundColor: bgColor,
             elevation: 0,
             scrolledUnderElevation: 0,
             title: Text(
-              'Profile',
+              l10n.myProfile,
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : Colors.black,
+                color: AppColors.of(context).textPrimary,
               ),
             ),
             centerTitle: false,
@@ -131,7 +159,7 @@ class _ProfileViewState extends State<_ProfileView> {
               IconButton(
                 icon: Icon(
                   Icons.edit_note_outlined,
-                  color: isDark ? Colors.white : Colors.black,
+                  color: AppColors.of(context).textPrimary,
                   size: 28.sp,
                 ),
                 onPressed: () {
@@ -155,8 +183,8 @@ class _ProfileViewState extends State<_ProfileView> {
                       border: Border(
                         bottom: BorderSide(
                           color: isDark
-                              ? Colors.white.withOpacity(0.1)
-                              : const Color(0xFFE0E0E0),
+                              ? AppColors.of(context).onPrimary.withOpacity(0.1)
+                              : AppColors.of(context).border,
                           width: 1,
                         ),
                       ),
@@ -165,11 +193,11 @@ class _ProfileViewState extends State<_ProfileView> {
                       scrollDirection: Axis.horizontal,
                       padding: EdgeInsets.symmetric(horizontal: 16.w),
                       children: [
-                        _buildTabItem('Profile', 0, tabActiveColor),
-                        _buildTabItem('My Listings', 1, tabActiveColor),
-                        _buildTabItem('Favorites', 2, tabActiveColor),
-                        _buildTabItem('Sold', 3, tabActiveColor),
-                        _buildTabItem('Reviews', 4, tabActiveColor),
+                        _buildTabItem(l10n.myProfile, 0, tabActiveColor),
+                        _buildTabItem(l10n.myListings, 1, tabActiveColor),
+                        _buildTabItem(l10n.wishlist, 2, tabActiveColor),
+                        _buildTabItem(l10n.sold, 3, tabActiveColor),
+                        _buildTabItem(l10n.reviews, 4, tabActiveColor),
                       ],
                     ),
                   ),
@@ -179,7 +207,6 @@ class _ProfileViewState extends State<_ProfileView> {
                     child: _buildTabContent(
                       user,
                       theme,
-                      isDark,
                       actionGreenColor,
                     ),
                   ),
@@ -203,8 +230,6 @@ class _ProfileViewState extends State<_ProfileView> {
   // ── Tab Header Item ──
   Widget _buildTabItem(String label, int index, Color activeColor) {
     final isSelected = widget.selectedTabIndex == index;
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return GestureDetector(
       onTap: () => widget.onTabChanged(index),
@@ -226,7 +251,7 @@ class _ProfileViewState extends State<_ProfileView> {
               fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
               color: isSelected
                   ? activeColor
-                  : (isDark ? Colors.grey[400] : Colors.grey[600]),
+                  : (AppColors.of(context).textSecondary),
             ),
           ),
         ),
@@ -238,18 +263,17 @@ class _ProfileViewState extends State<_ProfileView> {
   Widget _buildTabContent(
     user,
     ThemeData theme,
-    bool isDark,
     Color actionGreenColor,
   ) {
     if (widget.selectedTabIndex == 0) {
-      return _buildProfileTab(user, theme, isDark, actionGreenColor);
+      return _buildProfileTab(user, theme, actionGreenColor);
     } else if (widget.selectedTabIndex == 4) {
       return ListView(
         padding: EdgeInsets.only(top: 16.h, bottom: 100.h),
         children: const [ReviewsList()],
       );
     } else {
-      return _buildListingsGrid(theme, isDark);
+      return _buildListingsGrid();
     }
   }
 
@@ -257,26 +281,46 @@ class _ProfileViewState extends State<_ProfileView> {
   Widget _buildProfileTab(
     user,
     ThemeData theme,
-    bool isDark,
     Color actionGreenColor,
   ) {
+    final l10n = AppLocalizations.of(context)!;
+
+    final phoneValue = (user?.phone != null && user!.phone!.trim().isNotEmpty)
+        ? user.phone!.trim()
+        : l10n.notSet;
+
+    final educationValue = [
+      user?.educationLevel,
+      user?.stream,
+      user?.department,
+      user?.classOrSemester,
+    ]
+        .where((v) => v != null && v.trim().isNotEmpty)
+        .map((v) => v!.trim())
+        .join(' • ');
+
+    final onlineValue = user?.isOnline == true
+        ? l10n.online
+        : (user?.lastActive != null)
+            ? '${l10n.offline} • ${DateFormat('MMM d, HH:mm').format(user!.lastActive!)}'
+            : l10n.offline;
+
     return SingleChildScrollView(
       child: Column(
         children: [
           // Cover Photo & Avatar Stack
-          ProfileHeader(avatarUrl: user?.avatar, isDark: isDark),
+          ProfileHeader(avatarUrl: user?.avatar),
 
           SizedBox(height: 8.h),
 
           // Rating, Name aligned to the right perfectly matching the avatar
           ProfileInfoHeader(
-            name: user?.name ?? 'Guest User',
+            name: user?.name ?? l10n.guestUser,
             username: user?.username,
             isVerified: user?.isVerified == true,
             rating: user?.averageRating ?? 0.0,
             reviewCount:
                 0, // ProfilePage currently displays rating value directly in the review spot "X Reviews"
-            isDark: isDark,
           ),
           SizedBox(height: 35.h),
           // ── Enriched Information Section (Grey Boxes) ──
@@ -286,70 +330,73 @@ class _ProfileViewState extends State<_ProfileView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'About Seller',
+                  l10n.aboutSeller,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     fontSize: 16.sp,
-                    color: isDark ? Colors.white : Colors.black87,
+                    color: AppColors.of(context).textPrimary,
                   ),
                 ),
                 SizedBox(height: 12.h),
                 ProfileInfoRow(
-                  label: 'Member Since',
+                  label: l10n.memberSince,
                   value: user?.createdAt != null
                       ? DateFormat('MMM yyyy').format(user!.createdAt!)
-                      : 'Unknown',
-                  isDark: isDark,
+                      : l10n.unknown,
                   iconPath: AppIcons.memberSinceIcon,
                 ),
                 ProfileInfoRow(
-                  label: 'Location',
-                  value: user?.location ?? 'Not Set',
-                  isDark: isDark,
+                  label: l10n.location,
+                  value: user?.location ?? l10n.notSet,
                   iconPath: AppIcons.locationIcon,
                 ),
                 ProfileInfoRow(
-                  label: 'Email',
-                  value: user?.email ?? 'Not Set',
-                  isDark: isDark,
+                  label: l10n.email,
+                  value: user?.email ?? l10n.notSet,
                   iconPath: AppIcons.emailIcon,
                 ),
+
                 ProfileInfoRow(
-                  label: 'Response Rate',
-                  value: 'Usually replies in 1 hr',
-                  valueColor: actionGreenColor,
-                  isDark: isDark,
-                  iconPath: AppIcons.responseIcon,
+                  label: l10n.phoneNumber,
+                  value: phoneValue,
                 ),
+
                 ProfileInfoRow(
-                  label: 'Meeting Spot',
-                  value: 'Main Library',
-                  isDark: isDark,
-                  iconPath: AppIcons.meetingSpotIcon,
+                  label: l10n.educationLevel,
+                  value: educationValue.trim().isNotEmpty
+                      ? educationValue
+                      : l10n.notSet,
                 ),
+
                 ProfileInfoRow(
-                  label: 'Accepts',
-                  value: 'Cash, Zelle, CashApp',
-                  isDark: isDark,
-                  iconPath: AppIcons.paymentIcon,
+                  label: l10n.online,
+                  value: onlineValue,
+                  valueColor:
+                      (user?.isOnline == true) ? AppColors.of(context).success : null,
                 ),
+
+                if (user?.bio != null && user!.bio!.trim().isNotEmpty)
+                  ProfileInfoRow(
+                    label: l10n.bio,
+                    value: user!.bio!.trim(),
+                    iconPath: AppIcons.descriptionIcon,
+                  ),
 
                 SizedBox(height: 24.h),
                 // Utilities Section
                 Text(
-                  'Account Options',
+                  l10n.account,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     fontSize: 16.sp,
-                    color: isDark ? Colors.white : Colors.black87,
+                    color: AppColors.of(context).textPrimary,
                   ),
                 ),
                 SizedBox(height: 12.h),
                 ProfileInfoRow(
-                  label: 'Blocked Users',
-                  value: 'Click Here',
-                  valueColor: Colors.redAccent,
-                  isDark: isDark,
+                  label: l10n.blockedUsers,
+                  value: l10n.clickHere,
+                  valueColor: AppColors.of(context).error,
                   iconPath: AppIcons.blockIcon,
                 ),
               ],
@@ -363,7 +410,8 @@ class _ProfileViewState extends State<_ProfileView> {
   }
 
   // ── Tabs 1,2,3: Listings Grid ──
-  Widget _buildListingsGrid(ThemeData theme, bool isDark) {
+  Widget _buildListingsGrid() {
+    final l10n = AppLocalizations.of(context)!;
     return BlocBuilder<ListingsBloc, ListingsState>(
       builder: (context, listingsState) {
         if (listingsState is ListingsLoading) {
@@ -387,168 +435,46 @@ class _ProfileViewState extends State<_ProfileView> {
                 Icon(
                   Icons.inventory_2_outlined,
                   size: 48.sp,
-                  color: AppPalette.gray300,
+                  color: AppColors.of(context).border,
                 ),
                 SizedBox(height: 12.h),
                 Text(
-                  "No items found.",
-                  style: TextStyle(color: Colors.grey, fontSize: 15.sp),
+                  l10n.noItemsFound,
+                  style: TextStyle(
+                    color: AppColors.of(context).textSecondary,
+                    fontSize: 15.sp,
+                  ),
                 ),
               ],
             ),
           );
         }
 
-        return GridView.builder(
+        return MasonryGridView.count(
           padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 100.h),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 12.w,
-            crossAxisSpacing: 12.w,
-            childAspectRatio: 0.72,
-          ),
+          crossAxisCount: 2,
+          mainAxisSpacing: 12.w,
+          crossAxisSpacing: 12.w,
           itemCount: listings.length,
           itemBuilder: (context, index) {
             final listing = listings[index];
-            return GestureDetector(
+            return StaggeredListingCard(
+              listing: listing,
+              isSmall: index.isOdd,
               onTap: () => context.pushNamed(
                 'listing_detail',
                 pathParameters: {'id': listing.id},
                 extra: listing,
               ),
-              child: _buildListingCard(listing, theme, isDark),
+              onWishlistTap: () {
+                context.read<ListingsBloc>().add(
+                  ListingWishlistToggled(listingId: listing.id),
+                );
+              },
             );
           },
         );
       },
-    );
-  }
-
-  Widget _buildListingCard(Listing listing, ThemeData theme, bool isDark) {
-    final statusColor = listing.status == 'approved'
-        ? Colors.white
-        : theme.colorScheme.secondary;
-    final statusLabel = listing.status == 'approved'
-        ? 'Available'
-        : listing.status;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? AppPalette.gray900 : Colors.white,
-        borderRadius: BorderRadius.circular(8.r),
-        boxShadow: isDark
-            ? []
-            : [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Image area with overlays
-          Expanded(
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                // Image
-                listing.images.isNotEmpty
-                    ? Image.network(
-                        listing.images.first.url,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: AppPalette.gray200,
-                          child: const Center(
-                            child: Icon(
-                              Icons.image_not_supported_outlined,
-                              color: AppPalette.gray400,
-                            ),
-                          ),
-                        ),
-                      )
-                    : Container(
-                        color: AppPalette.gray200,
-                        child: const Center(
-                          child: Icon(
-                            Icons.image_outlined,
-                            color: AppPalette.gray400,
-                          ),
-                        ),
-                      ),
-
-                // Status badge
-                Positioned(
-                  top: 8.w,
-                  left: 8.w,
-                  child: Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 8.w,
-                      vertical: 3.h,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.6),
-                      borderRadius: BorderRadius.circular(4.r),
-                    ),
-                    child: Text(
-                      statusLabel.toUpperCase(),
-                      style: TextStyle(
-                        color: statusColor,
-                        fontSize: 9.sp,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Details area
-          Padding(
-            padding: EdgeInsets.all(10.w),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  listing.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13.sp,
-                  ),
-                ),
-                SizedBox(height: 4.h),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      listing.formattedPrice,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13.sp,
-                        color: theme.colorScheme.secondary,
-                      ),
-                    ),
-                    Text(
-                      listing.timeAgo,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        fontSize: 10.sp,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

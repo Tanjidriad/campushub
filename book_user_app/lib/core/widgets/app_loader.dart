@@ -13,7 +13,10 @@ class AppLoader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SpinKitFadingCube(color: color ?? AppPalette.primary, size: size.sp);
+    return SpinKitFadingCube(
+      color: color ?? AppColors.of(context).primary,
+      size: size.sp,
+    );
   }
 }
 
@@ -25,7 +28,10 @@ class AppLoaderSmall extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SpinKitThreeBounce(color: color ?? Colors.white, size: 20.sp);
+    return SpinKitThreeBounce(
+      color: color ?? AppColors.of(context).onPrimary,
+      size: 20.sp,
+    );
   }
 }
 
@@ -41,13 +47,13 @@ class AppLoaderFullPage extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SpinKitFadingCube(color: AppPalette.primary, size: 40.sp),
+          SpinKitFadingCube(color: AppColors.of(context).primary, size: 40.sp),
           if (message != null) ...[
             SizedBox(height: 16.h),
             Text(
               message!,
               style: TextStyle(
-                color: AppPalette.textSecondary,
+                color: AppColors.of(context).textSecondary,
                 fontSize: 14.sp,
               ),
             ),

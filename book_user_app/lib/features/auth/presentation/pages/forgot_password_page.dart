@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:book_user_app/l10n/app_localizations.dart';
 import 'package:iconsax/iconsax.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
@@ -28,13 +29,14 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   }
 
   void _handleSubmit() {
+    final l10n = AppLocalizations.of(context)!;
     final email = _emailController.text.trim();
     if (email.isEmpty) {
-      AppSnackBar.showWarning(context, 'Please enter your email');
+      AppSnackBar.showWarning(context, l10n.loginEmailRequired);
       return;
     }
     if (!_isValidEmail(email)) {
-      AppSnackBar.showWarning(context, 'Please enter a valid email address');
+      AppSnackBar.showWarning(context, l10n.validEmailRequired);
       return;
     }
 
@@ -47,100 +49,103 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthForgotPasswordSuccess) {
-          AppSnackBar.showSuccess(
-            context,
-            'Password reset link sent to your email',
-          );
+          AppSnackBar.showSuccess(context, l10n.resetLinkSent);
           context.pop(); // Go back to login
         } else if (state is AuthError) {
           AppSnackBar.showError(context, state.message);
         }
       },
-      child: Scaffold(
-        backgroundColor: AppPalette.background,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppPalette.textPrimary),
-            onPressed: () => context.pop(),
+      child: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Scaffold(
+          backgroundColor: AppColors.of(context).background,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            leading: IconButton(
+              icon: Icon(
+                Icons.arrow_back,
+                color: AppColors.of(context).textPrimary,
+              ),
+              onPressed: () => context.pop(),
+            ),
           ),
-        ),
-        body: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 24.w),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(height: 20.h),
-              Text(
-                "Forgot Password?",
-                style: TextStyle(
-                  fontSize: 28.sp,
-                  fontWeight: FontWeight.bold,
-                  color: AppPalette.textPrimary,
+          body: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24.w),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(height: 20.h),
+                Text(
+                  l10n.forgotPasswordTitle,
+                  style: TextStyle(
+                    fontSize: 28.sp,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.of(context).textPrimary,
+                  ),
                 ),
-              ),
-              SizedBox(height: 12.h),
-              Text(
-                "Don't worry! It happens. Please enter the email address associated with your account.",
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  color: AppPalette.textSecondary,
-                  height: 1.5,
+                SizedBox(height: 12.h),
+                Text(
+                  l10n.forgotPasswordDescription,
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    color: AppColors.of(context).textSecondary,
+                    height: 1.5,
+                  ),
                 ),
-              ),
-              SizedBox(height: 32.h),
-              _buildLabel("Email Address"),
-              BlocBuilder<AuthBloc, AuthState>(
-                builder: (context, state) {
-                  final isLoading = state is AuthForgotPasswordLoading;
-                  return AuthTextField(
-                    controller: _emailController,
-                    hintText: "Enter your email",
-                    prefixIcon: Iconsax.sms,
-                    keyboardType: TextInputType.emailAddress,
-                    enabled: !isLoading,
-                  );
-                },
-              ),
-              SizedBox(height: 32.h),
-              BlocBuilder<AuthBloc, AuthState>(
-                builder: (context, state) {
-                  final isLoading = state is AuthForgotPasswordLoading;
-                  return SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: isLoading ? null : _handleSubmit,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppPalette.primary,
-                        padding: EdgeInsets.symmetric(vertical: 16.h),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16.r),
+                SizedBox(height: 32.h),
+                _buildLabel(l10n.emailAddress),
+                BlocBuilder<AuthBloc, AuthState>(
+                  builder: (context, state) {
+                    final isLoading = state is AuthForgotPasswordLoading;
+                    return AuthTextField(
+                      controller: _emailController,
+                      hintText: l10n.enterEmailHint,
+                      prefixIcon: Iconsax.sms,
+                      keyboardType: TextInputType.emailAddress,
+                      enabled: !isLoading,
+                    );
+                  },
+                ),
+                SizedBox(height: 32.h),
+                BlocBuilder<AuthBloc, AuthState>(
+                  builder: (context, state) {
+                    final isLoading = state is AuthForgotPasswordLoading;
+                    return SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: isLoading ? null : _handleSubmit,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.of(context).primary,
+                          padding: EdgeInsets.symmetric(vertical: 16.h),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16.r),
+                          ),
+                          elevation: 0,
                         ),
-                        elevation: 0,
-                      ),
-                      child: isLoading
-                          ? SizedBox(
-                              height: 24.h,
-                              width: 24.h,
-                              child: const AppLoaderSmall(),
-                            )
-                          : Text(
-                              "Send Reset Link",
-                              style: TextStyle(
-                                fontSize: 16.sp,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                        child: isLoading
+                            ? SizedBox(
+                                height: 24.h,
+                                child: const AppLoaderSmall(),
+                              )
+                            : Text(
+                                l10n.sendResetLink,
+                                style: TextStyle(
+                                  fontSize: 16.sp,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.of(context).onPrimary,
+                                ),
                               ),
-                            ),
-                    ),
-                  );
-                },
-              ),
-            ],
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -155,7 +160,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         style: TextStyle(
           fontSize: 14.sp,
           fontWeight: FontWeight.w600,
-          color: AppPalette.textPrimary,
+          color: AppColors.of(context).textPrimary,
         ),
       ),
     );

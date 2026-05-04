@@ -70,6 +70,7 @@ class SellerInfoModel extends SellerInfo {
     super.username,
     super.isVerified,
     super.rating,
+    super.createdAt,
   });
 
   factory SellerInfoModel.fromJson(Map<String, dynamic> json) {
@@ -86,7 +87,10 @@ class SellerInfoModel extends SellerInfo {
       avatar: json['avatar'] as String?,
       username: json['username'] as String?,
       isVerified: json['isVerified'] ?? false,
-      rating: (json['rating'] as num?)?.toDouble(),
+      rating: ((json['averageRating'] ?? json['rating']) as num?)?.toDouble(),
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'].toString())
+          : null,
     );
   }
 }
@@ -101,6 +105,9 @@ class ListingModel extends Listing {
     required super.category,
     required super.priceType,
     super.price,
+    super.previousPrice,
+    super.priceDroppedAt,
+    super.highlightType,
     super.currency,
     super.condition,
     super.location,
@@ -170,6 +177,11 @@ class ListingModel extends Listing {
       category: json['category'] ?? '',
       priceType: json['priceType'] ?? 'fixed',
       price: (json['price'] as num?)?.toDouble(),
+      previousPrice: (json['previousPrice'] as num?)?.toDouble(),
+      priceDroppedAt: json['priceDroppedAt'] != null
+          ? DateTime.tryParse(json['priceDroppedAt'].toString())
+          : null,
+      highlightType: json['highlightType'] as String?,
       currency: json['currency'] ?? 'USD',
       condition: json['condition'] ?? 'good',
       location: ListingLocationModel.fromJson(json['location']),

@@ -1,3 +1,4 @@
+// ignore_for_file: unnecessary_underscores
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -5,6 +6,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shimmer/shimmer.dart';
 import '../core/theme/theme.dart';
 import '../core/utils/csv_export.dart';
+import '../features/auth/presentation/bloc/auth_bloc.dart';
+import '../features/auth/presentation/bloc/auth_state.dart';
 import '../features/users/domain/entities/user_entity.dart';
 import '../features/users/presentation/bloc/users_bloc.dart';
 import '../features/users/presentation/bloc/users_event.dart';
@@ -86,6 +89,10 @@ class _UsersScreenState extends State<UsersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authState = context.watch<AuthBloc>().state;
+    final canChangeRoles =
+        authState is Authenticated && authState.user.role == 'superadmin';
+
     return BlocBuilder<UsersBloc, UsersState>(
       builder: (context, state) {
         final isLoading = state is UsersLoading;
@@ -240,13 +247,14 @@ class _UsersScreenState extends State<UsersScreen> {
                               context,
                               user: user,
                               onBanToggle: () => _toggleBan(user.id),
-                              onRoleChange: (role) =>
-                                  context.read<UsersBloc>().add(
-                                    ChangeRoleEvent(
-                                      userId: user.id,
-                                      newRole: role,
-                                    ),
-                                  ),
+                              onRoleChange: canChangeRoles
+                                  ? (role) => context.read<UsersBloc>().add(
+                                      ChangeRoleEvent(
+                                        userId: user.id,
+                                        newRole: role,
+                                      ),
+                                    )
+                                  : null,
                             ),
                             child: Container(
                               margin: EdgeInsets.only(bottom: 8.h),
@@ -349,7 +357,7 @@ class _UsersScreenState extends State<UsersScreen> {
                                     padding: EdgeInsets.all(6.w),
                                     decoration: BoxDecoration(
                                       color: context.isDark
-                                          ? Colors.white.withOpacity(0.05)
+                                          ? Colors.white.withValues(alpha: 0.05)
                                           : AppColors.backgroundLight,
                                       borderRadius: AppRadius.sm,
                                     ),

@@ -1,3 +1,4 @@
+// ignore_for_file: unnecessary_underscores
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -226,18 +227,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
               end: Alignment.bottomRight,
               colors: context.isDark
                   ? [
-                      AppColors.primaryDark.withOpacity(0.4),
-                      AppColors.primaryDeep.withOpacity(0.2),
+                      AppColors.primaryDark.withValues(alpha: 0.4),
+                      AppColors.primaryDeep.withValues(alpha: 0.2),
                     ]
                   : [
-                      AppColors.primary.withOpacity(0.08),
-                      AppColors.primaryLight.withOpacity(0.5),
+                      AppColors.primary.withValues(alpha: 0.08),
+                      AppColors.primaryLight.withValues(alpha: 0.5),
                     ],
             ),
             borderRadius: AppRadius.xl,
             border: Border.all(
-              color: AppColors.primary.withOpacity(
-                context.isDark ? 0.15 : 0.12,
+              color: AppColors.primary.withValues(
+                alpha: context.isDark ? 0.15 : 0.12,
               ),
             ),
           ),
@@ -315,13 +316,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
                 decoration: BoxDecoration(
                   color: context.isDark
-                      ? Colors.white.withOpacity(0.08)
-                      : Colors.white.withOpacity(0.7),
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : Colors.white.withValues(alpha: 0.7),
                   borderRadius: AppRadius.full,
                   border: Border.all(
                     color: context.isDark
-                        ? Colors.white.withOpacity(0.1)
-                        : AppColors.primary.withOpacity(0.1),
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : AppColors.primary.withValues(alpha: 0.1),
                   ),
                 ),
                 child: Text(
@@ -553,7 +554,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Icon(
                       Icons.show_chart_rounded,
                       size: 32,
-                      color: context.textMuted.withOpacity(0.5),
+                      color: context.textMuted.withValues(alpha: 0.5),
                     ),
                     SizedBox(height: 8.h),
                     Text(
@@ -717,11 +718,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      AppColors.primary.withOpacity(
-                        context.isDark ? 0.15 : 0.1,
+                      AppColors.primary.withValues(
+                        alpha: context.isDark ? 0.15 : 0.1,
                       ),
-                      AppColors.primary.withOpacity(
-                        context.isDark ? 0.06 : 0.03,
+                      AppColors.primary.withValues(
+                        alpha: context.isDark ? 0.06 : 0.03,
                       ),
                     ],
                   ),
@@ -755,8 +756,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
                 decoration: BoxDecoration(
-                  color: AppColors.success.withOpacity(
-                    context.isDark ? 0.12 : 0.08,
+                  color: AppColors.success.withValues(
+                    alpha: context.isDark ? 0.12 : 0.08,
                   ),
                   borderRadius: AppRadius.full,
                 ),
@@ -802,7 +803,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       child: Icon(
                         Icons.history_rounded,
                         size: 32,
-                        color: context.textMuted.withOpacity(0.6),
+                        color: context.textMuted.withValues(alpha: 0.6),
                       ),
                     ),
                     SizedBox(height: 12.h),
@@ -841,10 +842,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: context.isDark
-            ? Colors.white.withOpacity(0.03)
-            : AppColors.backgroundLight.withOpacity(0.6),
+            ? Colors.white.withValues(alpha: 0.03)
+            : AppColors.backgroundLight.withValues(alpha: 0.6),
         borderRadius: AppRadius.md,
-        border: Border.all(color: context.cardBorder.withOpacity(0.5)),
+        border: Border.all(color: context.cardBorder.withValues(alpha: 0.5)),
       ),
       child: Row(
         children: [
@@ -856,7 +857,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [color, color.withOpacity(0.3)],
+                colors: [color, color.withValues(alpha: 0.3)],
               ),
             ),
           ),
@@ -868,7 +869,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             height: 34.w,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: color.withOpacity(context.isDark ? 0.15 : 0.1),
+              color: color.withValues(alpha: context.isDark ? 0.15 : 0.1),
             ),
             child: Icon(_activityIcon(a.icon), color: color, size: 15),
           ),
@@ -910,8 +911,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
             decoration: BoxDecoration(
               color: context.isDark
-                  ? Colors.white.withOpacity(0.06)
-                  : Colors.black.withOpacity(0.04),
+                  ? Colors.white.withValues(alpha: 0.06)
+                  : Colors.black.withValues(alpha: 0.04),
               borderRadius: AppRadius.full,
             ),
             child: Text(

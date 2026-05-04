@@ -1,5 +1,7 @@
+import 'package:book_user_app/core/theme/app_palette.dart';
 // ignore_for_file: deprecated_member_use
 
+import 'package:book_user_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -92,18 +94,18 @@ class _EducationFilterBarState extends State<EducationFilterBar> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final colors = AppColors.of(context);
+    final isDark = colors.isDark;
     final primary = theme.colorScheme.primary;
-    final borderColor = isDark
-        ? const Color(0xFF344155)
-        : const Color(0xFFE2E8F0);
-    final bgColor = isDark ? const Color(0xFF1A242F) : const Color(0xFFFFFFFF);
+    final borderColor = colors.border;
+    final bgColor = colors.background;
 
     final config = _config ?? EducationConfig.fallback;
+    final l10n = AppLocalizations.of(context)!;
 
     // Build level list: "All" + dynamic levels from config
     final levelItems = <Map<String, String?>>[
-      {'value': null, 'label': 'All'},
+      {'value': null, 'label': l10n.all},
       ...config.levels.map((l) => {'value': l.key, 'label': l.label}),
     ];
 
@@ -161,8 +163,8 @@ class _EducationFilterBarState extends State<EducationFilterBar> {
                             ? FontWeight.w600
                             : FontWeight.w500,
                         color: isActive
-                            ? Colors.white
-                            : (isDark ? Colors.grey[300] : Colors.grey[700]),
+                            ? AppColors.of(context).onPrimary
+                            : (AppColors.of(context).textSecondary),
                       ),
                     ),
                   ),
@@ -215,8 +217,10 @@ class _EducationFilterBarState extends State<EducationFilterBar> {
                                   color: isActive
                                       ? primary
                                       : (isDark
-                                            ? Colors.grey[300]
-                                            : Colors.grey[600]),
+                                            ? AppColors.of(context).border
+                                            : AppColors.of(
+                                                context,
+                                              ).textSecondary),
                                 ),
                               ),
                             ),

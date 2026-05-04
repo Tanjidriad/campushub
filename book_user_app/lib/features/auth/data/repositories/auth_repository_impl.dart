@@ -102,6 +102,10 @@ class AuthRepositoryImpl implements AuthRepository {
     String? phone,
     String? bio,
     String? location,
+    String? educationLevel,
+    String? stream,
+    String? department,
+    String? classOrSemester,
   }) async {
     try {
       final user = await remoteDataSource.updateProfile(
@@ -110,6 +114,10 @@ class AuthRepositoryImpl implements AuthRepository {
         phone: phone,
         bio: bio,
         location: location,
+        educationLevel: educationLevel,
+        stream: stream,
+        department: department,
+        classOrSemester: classOrSemester,
       );
       return Right(user);
     } on ApiException catch (e) {

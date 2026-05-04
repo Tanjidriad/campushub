@@ -37,6 +37,7 @@ class SellerInfo extends Equatable {
   final String? username;
   final bool isVerified;
   final double? rating;
+  final DateTime? createdAt;
 
   const SellerInfo({
     required this.id,
@@ -45,10 +46,19 @@ class SellerInfo extends Equatable {
     this.username,
     this.isVerified = false,
     this.rating,
+    this.createdAt,
   });
 
   @override
-  List<Object?> get props => [id, name, avatar, username, isVerified, rating];
+  List<Object?> get props => [
+    id,
+    name,
+    avatar,
+    username,
+    isVerified,
+    rating,
+    createdAt,
+  ];
 }
 
 /// Main Listing entity
@@ -60,6 +70,9 @@ class Listing extends Equatable {
   final String category;
   final String priceType; // fixed, negotiable, free, auction
   final double? price;
+  final double? previousPrice;
+  final DateTime? priceDroppedAt;
+  final String? highlightType; // 'price_drop' | 'new_arrival' | null
   final String currency;
   final String condition; // new, like-new, good, fair, poor
   final ListingLocation? location;
@@ -98,6 +111,9 @@ class Listing extends Equatable {
     required this.category,
     required this.priceType,
     this.price,
+    this.previousPrice,
+    this.priceDroppedAt,
+    this.highlightType,
     this.currency = 'USD',
     this.condition = 'good',
     this.location,
@@ -163,6 +179,9 @@ class Listing extends Equatable {
     category,
     priceType,
     price,
+    previousPrice,
+    priceDroppedAt,
+    highlightType,
     currency,
     condition,
     location,
@@ -199,6 +218,9 @@ class Listing extends Equatable {
     String? category,
     String? priceType,
     double? price,
+    double? previousPrice,
+    DateTime? priceDroppedAt,
+    String? highlightType,
     String? currency,
     String? condition,
     ListingLocation? location,
@@ -233,6 +255,9 @@ class Listing extends Equatable {
       category: category ?? this.category,
       priceType: priceType ?? this.priceType,
       price: price ?? this.price,
+      previousPrice: previousPrice ?? this.previousPrice,
+      priceDroppedAt: priceDroppedAt ?? this.priceDroppedAt,
+      highlightType: highlightType ?? this.highlightType,
       currency: currency ?? this.currency,
       condition: condition ?? this.condition,
       location: location ?? this.location,

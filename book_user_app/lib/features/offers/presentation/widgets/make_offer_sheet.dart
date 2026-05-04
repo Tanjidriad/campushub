@@ -1,3 +1,7 @@
+import 'package:book_user_app/core/theme/app_palette.dart';
+import 'package:book_user_app/core/widgets/app_snackbar.dart';
+import 'package:book_user_app/l10n/app_localizations.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -12,7 +16,7 @@ class MakeOfferSheet extends StatefulWidget {
   final String listingTitle;
   final double listingPrice;
   final String? listingImage;
-  final void Function(double amount)? onOfferSent;
+  final void Function(String offerId, double amount)? onOfferSent;
 
   const MakeOfferSheet({
     super.key,
@@ -29,7 +33,7 @@ class MakeOfferSheet extends StatefulWidget {
     required String listingTitle,
     required double listingPrice,
     String? listingImage,
-    void Function(double amount)? onOfferSent,
+    void Function(String offerId, double amount)? onOfferSent,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -74,14 +78,15 @@ class _MakeOfferSheetState extends State<MakeOfferSheet> {
       : 0;
 
   Color get _differenceColor {
-    if (_offerAmount == null) return Colors.grey;
-    if (_percentage >= 90) return const Color(0xFF22C55E);
-    if (_percentage >= 70) return const Color(0xFFF59E0B);
-    return const Color(0xFFEF4444);
+    if (_offerAmount == null) return AppColors.of(context).textSecondary;
+    if (_percentage >= 90) return AppColors.of(context).success;
+    if (_percentage >= 70) return AppColors.of(context).warning;
+    return AppColors.of(context).error;
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return BlocProvider(
       create: (_) => sl<OfferBloc>(),
       child: BlocConsumer<OfferBloc, OfferState>(
@@ -89,29 +94,11 @@ class _MakeOfferSheetState extends State<MakeOfferSheet> {
           if (state is OfferCreated) {
             if (!mounted) return;
             Navigator.pop(context);
-            widget.onOfferSent?.call(state.offer.amount);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('🎉 Offer sent successfully!'),
-                backgroundColor: const Color(0xFF22C55E),
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-              ),
-            );
+            widget.onOfferSent?.call(state.offer.id, state.offer.amount);
+            AppSnackBar.showSuccess(context, l10n.offerSentSuccess);
           } else if (state is OfferError) {
             if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-              ),
-            );
+            AppSnackBar.showError(context, state.message);
           }
         },
         builder: (context, state) {
@@ -121,7 +108,7 @@ class _MakeOfferSheetState extends State<MakeOfferSheet> {
             ),
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.of(context).card,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
               ),
               child: Column(
@@ -133,7 +120,7 @@ class _MakeOfferSheetState extends State<MakeOfferSheet> {
                     width: 40.w,
                     height: 4.h,
                     decoration: BoxDecoration(
-                      color: Colors.grey[300],
+                      color: AppColors.of(context).border,
                       borderRadius: BorderRadius.circular(2.r),
                     ),
                   ),
@@ -145,11 +132,11 @@ class _MakeOfferSheetState extends State<MakeOfferSheet> {
                       children: [
                         // Header
                         Text(
-                          'Make an Offer',
+                          l10n.makeAnOffer,
                           style: TextStyle(
                             fontSize: 22.sp,
                             fontWeight: FontWeight.bold,
-                            color: const Color(0xFF0E141B),
+                            color: AppColors.of(context).textPrimary,
                           ),
                         ),
                         SizedBox(height: 16.h),
@@ -158,9 +145,11 @@ class _MakeOfferSheetState extends State<MakeOfferSheet> {
                         Container(
                           padding: EdgeInsets.all(12.w),
                           decoration: BoxDecoration(
-                            color: Colors.grey[50],
+                            color: AppColors.of(context).inputFill,
                             borderRadius: BorderRadius.circular(12.r),
-                            border: Border.all(color: Colors.grey[200]!),
+                            border: Border.all(
+                              color: AppColors.of(context).border,
+                            ),
                           ),
                           child: Row(
                             children: [
@@ -170,10 +159,10 @@ class _MakeOfferSheetState extends State<MakeOfferSheet> {
                                 height: 56.w,
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(10.r),
-                                  color: Colors.grey[200],
+                                  color: AppColors.of(context).border,
                                   image: widget.listingImage != null
                                       ? DecorationImage(
-                                          image: NetworkImage(
+                                          image: CachedNetworkImageProvider(
                                             widget.listingImage!,
                                           ),
                                           fit: BoxFit.cover,
@@ -181,7 +170,10 @@ class _MakeOfferSheetState extends State<MakeOfferSheet> {
                                       : null,
                                 ),
                                 child: widget.listingImage == null
-                                    ? Icon(Icons.image, color: Colors.grey[400])
+                                    ? Icon(
+                                        Icons.image,
+                                        color: AppColors.of(context).textLight,
+                                      )
                                     : null,
                               ),
                               SizedBox(width: 12.w),
@@ -194,18 +186,22 @@ class _MakeOfferSheetState extends State<MakeOfferSheet> {
                                       style: TextStyle(
                                         fontSize: 14.sp,
                                         fontWeight: FontWeight.w600,
-                                        color: const Color(0xFF0E141B),
+                                        color: AppColors.of(
+                                          context,
+                                        ).textPrimary,
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                     SizedBox(height: 4.h),
                                     Text(
-                                      'Asking: \$${widget.listingPrice.toStringAsFixed(2)}',
+                                      l10n.askingPrice(
+                                        widget.listingPrice.toStringAsFixed(2),
+                                      ),
                                       style: TextStyle(
                                         fontSize: 14.sp,
                                         fontWeight: FontWeight.bold,
-                                        color: const Color(0xFF4794E6),
+                                        color: AppColors.of(context).accent,
                                       ),
                                     ),
                                   ],
@@ -218,11 +214,11 @@ class _MakeOfferSheetState extends State<MakeOfferSheet> {
 
                         // Price Input
                         Text(
-                          'Your Offer',
+                          l10n.yourOffer,
                           style: TextStyle(
                             fontSize: 14.sp,
                             fontWeight: FontWeight.w600,
-                            color: Colors.grey[700],
+                            color: AppColors.of(context).textPrimary,
                           ),
                         ),
                         SizedBox(height: 8.h),
@@ -235,35 +231,39 @@ class _MakeOfferSheetState extends State<MakeOfferSheet> {
                           style: TextStyle(
                             fontSize: 28.sp,
                             fontWeight: FontWeight.bold,
-                            color: const Color(0xFF0E141B),
+                            color: AppColors.of(context).textPrimary,
                           ),
                           decoration: InputDecoration(
                             prefixText: '\$ ',
                             prefixStyle: TextStyle(
                               fontSize: 28.sp,
                               fontWeight: FontWeight.bold,
-                              color: const Color(0xFF0E141B),
+                              color: AppColors.of(context).textPrimary,
                             ),
                             hintText: '0.00',
                             hintStyle: TextStyle(
                               fontSize: 28.sp,
                               fontWeight: FontWeight.bold,
-                              color: Colors.grey[300],
+                              color: AppColors.of(context).border,
                             ),
                             filled: true,
-                            fillColor: Colors.grey[50],
+                            fillColor: AppColors.of(context).inputFill,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(16.r),
-                              borderSide: BorderSide(color: Colors.grey[200]!),
+                              borderSide: BorderSide(
+                                color: AppColors.of(context).border,
+                              ),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(16.r),
-                              borderSide: BorderSide(color: Colors.grey[200]!),
+                              borderSide: BorderSide(
+                                color: AppColors.of(context).border,
+                              ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(16.r),
-                              borderSide: const BorderSide(
-                                color: Color(0xFF4794E6),
+                              borderSide: BorderSide(
+                                color: AppColors.of(context).accent,
                                 width: 2,
                               ),
                             ),
@@ -306,7 +306,9 @@ class _MakeOfferSheetState extends State<MakeOfferSheet> {
                                     ),
                                     SizedBox(width: 6.w),
                                     Text(
-                                      '${_percentage.toStringAsFixed(0)}% of asking price',
+                                      l10n.percentOfAskingPrice(
+                                        _percentage.toStringAsFixed(0),
+                                      ),
                                       style: TextStyle(
                                         fontSize: 13.sp,
                                         fontWeight: FontWeight.w600,
@@ -347,8 +349,10 @@ class _MakeOfferSheetState extends State<MakeOfferSheet> {
                                     );
                                   },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF4794E6),
-                              disabledBackgroundColor: Colors.grey[300],
+                              backgroundColor: AppColors.of(context).accent,
+                              disabledBackgroundColor: AppColors.of(
+                                context,
+                              ).border,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(14.r),
                               ),
@@ -358,17 +362,17 @@ class _MakeOfferSheetState extends State<MakeOfferSheet> {
                                 ? SizedBox(
                                     width: 24.w,
                                     height: 24.w,
-                                    child: const CircularProgressIndicator(
+                                    child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      color: Colors.white,
+                                      color: AppColors.of(context).card,
                                     ),
                                   )
                                 : Text(
-                                    'Send Offer',
+                                    l10n.sendOffer,
                                     style: TextStyle(
                                       fontSize: 16.sp,
                                       fontWeight: FontWeight.bold,
-                                      color: Colors.white,
+                                      color: AppColors.of(context).card,
                                     ),
                                   ),
                           ),

@@ -1,10 +1,12 @@
 // ignore_for_file: deprecated_member_use
 import 'dart:async';
 import 'package:book_user_app/features/listings/domain/entities/listing.dart';
-import 'package:book_user_app/core/widgets/section_header.dart';
+import 'package:book_user_app/features/listings/presentation/widgets/dashboard_section_container.dart';
 import 'package:book_user_app/features/listings/presentation/widgets/modern_featured_card.dart';
+import 'package:book_user_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
 
 class FeaturedListingsSection extends StatefulWidget {
   final List<Listing> listings;
@@ -78,50 +80,50 @@ class _FeaturedListingsSectionState extends State<FeaturedListingsSection> {
   @override
   Widget build(BuildContext context) {
     if (widget.listings.isEmpty) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context)!;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Header
-        const SectionHeader(title: 'Featured Ads', actionText: 'See All'),
-        SizedBox(height: 24.h), // Increased spacing from 8.h to 16.h
-        // Auto-scrolling carousel
-        NotificationListener<ScrollNotification>(
-          onNotification: (notification) {
-            if (notification is ScrollStartNotification) {
-              // User started scrolling — pause auto-scroll
-              if (notification.dragDetails != null) {
-                _pauseAutoScroll();
-              }
-            } else if (notification is ScrollEndNotification) {
-              // User stopped scrolling — resume after delay
-              _resumeAutoScroll();
-              // Update current index based on scroll position
-              _currentIndex = (_scrollController.offset / _itemWidth).round();
+    return DashboardSectionContainer(
+      title: l10n.featuredSection,
+      actionLabel: l10n.seeAll,
+      onActionTap: () => context.pushNamed(
+        'see-all',
+        pathParameters: {'type': 'featured'},
+      ),
+      compactPadding: true,
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (notification) {
+          if (notification is ScrollStartNotification) {
+            // User started scrolling — pause auto-scroll
+            if (notification.dragDetails != null) {
+              _pauseAutoScroll();
             }
-            return false;
-          },
-          child: SizedBox(
-            height: 250.h,
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(
-                parent: AlwaysScrollableScrollPhysics(),
-              ),
-              itemCount: widget.listings.length,
-              itemBuilder: (context, index) {
-                return Padding(
-                  padding: EdgeInsets.only(right: 16.w),
-                  child: ModernFeaturedCard(listing: widget.listings[index]),
-                );
-              },
+          } else if (notification is ScrollEndNotification) {
+            // User stopped scrolling — resume after delay
+            _resumeAutoScroll();
+            // Update current index based on scroll position
+            _currentIndex = (_scrollController.offset / _itemWidth).round();
+          }
+          return false;
+        },
+        child: SizedBox(
+          height: 250.h,
+          child: ListView.builder(
+            controller: _scrollController,
+            padding: EdgeInsets.symmetric(horizontal: 16.w),
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics(),
             ),
+            itemCount: widget.listings.length,
+            itemBuilder: (context, index) {
+              return Padding(
+                padding: EdgeInsets.only(right: 16.w),
+                child: ModernFeaturedCard(listing: widget.listings[index]),
+              );
+            },
           ),
         ),
-        SizedBox(height: 16.h),
-      ],
+      ),
     );
   }
 }

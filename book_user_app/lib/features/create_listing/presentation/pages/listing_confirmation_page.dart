@@ -1,3 +1,5 @@
+import 'package:book_user_app/core/theme/app_palette.dart';
+import 'package:book_user_app/l10n/app_localizations.dart';
 // ignore_for_file: deprecated_member_use
 
 import 'package:book_user_app/config/routes/app_router.dart';
@@ -10,8 +12,8 @@ class ListingConfirmationPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: theme.colorScheme.background,
@@ -22,7 +24,7 @@ class ListingConfirmationPage extends StatelessWidget {
         leading: Padding(
           padding: const EdgeInsets.all(8.0),
           child: CircleAvatar(
-            backgroundColor: isDark ? Colors.grey[800] : Colors.grey[200],
+            backgroundColor: AppColors.of(context).border,
             child: IconButton(
               icon: const Icon(Icons.close),
               color: theme.iconTheme.color,
@@ -31,7 +33,7 @@ class ListingConfirmationPage extends StatelessWidget {
           ),
         ),
         title: Text(
-          "Confirmation",
+          l10n.confirmation,
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.bold,
           ),
@@ -77,7 +79,7 @@ class ListingConfirmationPage extends StatelessWidget {
                         ),
                         child: Icon(
                           Icons.check,
-                          color: Colors.white,
+                          color: AppColors.of(context).card,
                           size: 48.sp,
                         ),
                       ),
@@ -88,8 +90,8 @@ class ListingConfirmationPage extends StatelessWidget {
                         child: Container(
                           width: 16.w,
                           height: 16.w,
-                          decoration: const BoxDecoration(
-                            color: Colors.greenAccent,
+                          decoration: BoxDecoration(
+                            color: AppColors.of(context).success,
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -100,8 +102,8 @@ class ListingConfirmationPage extends StatelessWidget {
                         child: Container(
                           width: 12.w,
                           height: 12.w,
-                          decoration: const BoxDecoration(
-                            color: Colors.lightBlueAccent,
+                          decoration: BoxDecoration(
+                            color: AppColors.of(context).accent,
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -112,7 +114,7 @@ class ListingConfirmationPage extends StatelessWidget {
               ),
               SizedBox(height: 24.h),
               Text(
-                "Listing Submitted!",
+                l10n.listingSubmitted,
                 style: theme.textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.w800,
                   color: theme.textTheme.bodyLarge?.color,
@@ -122,10 +124,10 @@ class ListingConfirmationPage extends StatelessWidget {
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 48.w),
                 child: Text(
-                  "Your listing has been submitted for review. Our team will review it and you'll be notified once it's approved.",
+                  l10n.listingSubmittedDescription,
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey,
+                    color: AppColors.of(context).textSecondary,
                     height: 1.5,
                   ),
                 ),
@@ -139,12 +141,12 @@ class ListingConfirmationPage extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: theme.cardColor,
                   borderRadius: BorderRadius.circular(16.r),
-                  border: Border.all(
-                    color: isDark ? Colors.grey[700]! : Colors.grey[200]!,
-                  ),
-                  boxShadow: const [
+                  border: Border.all(color: AppColors.of(context).border),
+                  boxShadow: [
                     BoxShadow(
-                      color: Colors.black12,
+                      color: AppColors.of(
+                        context,
+                      ).textPrimary.withOpacity(0.05),
                       blurRadius: 4,
                       offset: Offset(0, 2),
                     ),
@@ -160,11 +162,13 @@ class ListingConfirmationPage extends StatelessWidget {
                           height: 56.w,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12.r),
-                            color: Colors.orange.withOpacity(0.1),
+                            color: AppColors.of(
+                              context,
+                            ).warning.withOpacity(0.1),
                           ),
                           child: Icon(
                             Icons.pending_actions,
-                            color: Colors.orange,
+                            color: AppColors.of(context).warning,
                             size: 28.sp,
                           ),
                         ),
@@ -180,13 +184,15 @@ class ListingConfirmationPage extends StatelessWidget {
                                   vertical: 4.h,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Colors.orange.withOpacity(0.1),
+                                  color: AppColors.of(
+                                    context,
+                                  ).warning.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(999),
                                 ),
                                 child: Text(
-                                  "PENDING APPROVAL",
+                                  l10n.pendingApproval,
                                   style: TextStyle(
-                                    color: Colors.orange,
+                                    color: AppColors.of(context).warning,
                                     fontSize: 10.sp,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -194,7 +200,7 @@ class ListingConfirmationPage extends StatelessWidget {
                               ),
                               SizedBox(height: 8.h),
                               Text(
-                                "Your listing is being reviewed",
+                                l10n.listingBeingReviewed,
                                 style: theme.textTheme.bodyLarge?.copyWith(
                                   fontWeight: FontWeight.bold,
                                   height: 1.2,
@@ -202,9 +208,9 @@ class ListingConfirmationPage extends StatelessWidget {
                               ),
                               SizedBox(height: 4.h),
                               Text(
-                                "Usually within 24 hours",
+                                l10n.usuallyWithin24Hours,
                                 style: TextStyle(
-                                  color: Colors.grey,
+                                  color: AppColors.of(context).textSecondary,
                                   fontSize: 13.sp,
                                 ),
                               ),
@@ -214,9 +220,7 @@ class ListingConfirmationPage extends StatelessWidget {
                       ],
                     ),
                     SizedBox(height: 16.h),
-                    Divider(
-                      color: isDark ? Colors.grey[700] : Colors.grey[200],
-                    ),
+                    Divider(color: AppColors.of(context).border),
                     SizedBox(height: 12.h),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -226,14 +230,14 @@ class ListingConfirmationPage extends StatelessWidget {
                             Icon(
                               Icons.notifications_active_outlined,
                               size: 16.sp,
-                              color: Colors.grey,
+                              color: AppColors.of(context).iconMuted,
                             ),
                             SizedBox(width: 6.w),
                             Text(
-                              "We'll notify you",
+                              l10n.wellNotifyYou,
                               style: TextStyle(
                                 fontSize: 12.sp,
-                                color: Colors.grey,
+                                color: AppColors.of(context).textSecondary,
                               ),
                             ),
                           ],
@@ -243,14 +247,14 @@ class ListingConfirmationPage extends StatelessWidget {
                             Icon(
                               Icons.visibility_outlined,
                               size: 16.sp,
-                              color: Colors.grey,
+                              color: AppColors.of(context).iconMuted,
                             ),
                             SizedBox(width: 6.w),
                             Text(
-                              "Visible after approval",
+                              l10n.visibleAfterApproval,
                               style: TextStyle(
                                 fontSize: 12.sp,
-                                color: Colors.grey,
+                                color: AppColors.of(context).textSecondary,
                               ),
                             ),
                           ],
@@ -275,7 +279,7 @@ class ListingConfirmationPage extends StatelessWidget {
                         onPressed: () => context.go(AppRouter.home),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: theme.colorScheme.primary,
-                          foregroundColor: Colors.white,
+                          foregroundColor: AppColors.of(context).onPrimary,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12.r),
                           ),
@@ -284,12 +288,12 @@ class ListingConfirmationPage extends StatelessWidget {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Text(
-                              "Back to Home",
+                            Text(
+                              l10n.backToHome,
                               style: TextStyle(fontWeight: FontWeight.bold),
                             ),
                             SizedBox(width: 8.w),
-                            const Icon(Icons.home_outlined),
+                            Icon(Icons.home_outlined),
                           ],
                         ),
                       ),
@@ -300,11 +304,12 @@ class ListingConfirmationPage extends StatelessWidget {
                       height: 56.h,
                       child: TextButton(
                         onPressed: () {
-                          // TODO: Navigate to user's listings
-                          context.go(AppRouter.home);
+                          // Navigate directly to the Profile page with
+                          // the "My Listings" tab pre-selected.
+                          context.goNamed('profile', extra: 1);
                         },
                         child: Text(
-                          "View My Listings",
+                          l10n.viewMyListings,
                           style: TextStyle(
                             color: theme.colorScheme.primary,
                             fontWeight: FontWeight.bold,

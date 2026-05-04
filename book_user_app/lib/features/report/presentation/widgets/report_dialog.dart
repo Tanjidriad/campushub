@@ -1,8 +1,10 @@
 // ignore_for_file: deprecated_member_use
 import 'package:book_user_app/core/theme/app_palette.dart';
+import 'package:book_user_app/core/widgets/app_snackbar.dart';
 import 'package:book_user_app/features/report/domain/entities/report.dart';
 import 'package:book_user_app/features/report/presentation/bloc/report_bloc.dart';
 import 'package:book_user_app/injection_container/injection_container.dart';
+import 'package:book_user_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -70,13 +72,14 @@ class _ReportDialogState extends State<ReportDialog> {
   }
 
   String get _title {
+    final l10n = AppLocalizations.of(context)!;
     switch (widget.targetType) {
       case ReportTargetType.listing:
-        return 'Report Listing';
+        return l10n.reportListing;
       case ReportTargetType.user:
-        return 'Report User';
+        return l10n.reportUser;
       case ReportTargetType.message:
-        return 'Report Message';
+        return l10n.reportMessage;
     }
   }
 
@@ -94,53 +97,10 @@ class _ReportDialogState extends State<ReportDialog> {
         listener: (context, state) {
           if (state is ReportSuccess) {
             Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Row(
-                  children: [
-                    const Icon(
-                      Icons.check_circle,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                    SizedBox(width: 8.w),
-                    const Expanded(
-                      child: Text(
-                        'Report submitted. We\'ll review it shortly.',
-                      ),
-                    ),
-                  ],
-                ),
-                backgroundColor: AppPalette.success,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                margin: EdgeInsets.all(16.w),
-              ),
-            );
+            final l10n = AppLocalizations.of(context)!;
+            AppSnackBar.showSuccess(context, l10n.reportSubmittedSuccess);
           } else if (state is ReportFailure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Row(
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                    SizedBox(width: 8.w),
-                    Expanded(child: Text(state.error)),
-                  ],
-                ),
-                backgroundColor: AppPalette.error,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                margin: EdgeInsets.all(16.w),
-              ),
-            );
+            AppSnackBar.showError(context, state.error);
           }
         },
         builder: (context, state) {
@@ -149,7 +109,7 @@ class _ReportDialogState extends State<ReportDialog> {
               maxHeight: MediaQuery.of(context).size.height * 0.85,
             ),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.of(context).card,
               borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
             ),
             child: Form(
@@ -198,7 +158,7 @@ class _ReportDialogState extends State<ReportDialog> {
         width: 40.w,
         height: 4.h,
         decoration: BoxDecoration(
-          color: AppPalette.gray400,
+          color: AppColors.of(context).textLight,
           borderRadius: BorderRadius.circular(2.r),
         ),
       ),
@@ -206,6 +166,7 @@ class _ReportDialogState extends State<ReportDialog> {
   }
 
   Widget _buildHeader() {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: EdgeInsets.all(20.w),
       child: Row(
@@ -213,10 +174,14 @@ class _ReportDialogState extends State<ReportDialog> {
           Container(
             padding: EdgeInsets.all(10.w),
             decoration: BoxDecoration(
-              color: AppPalette.error.withOpacity(0.1),
+              color: AppColors.of(context).error.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12.r),
             ),
-            child: Icon(Iconsax.flag, color: AppPalette.error, size: 20.sp),
+            child: Icon(
+              Iconsax.flag,
+              color: AppColors.of(context).error,
+              size: 20.sp,
+            ),
           ),
           SizedBox(width: 12.w),
           Expanded(
@@ -228,15 +193,15 @@ class _ReportDialogState extends State<ReportDialog> {
                   style: TextStyle(
                     fontSize: 18.sp,
                     fontWeight: FontWeight.bold,
-                    color: AppPalette.textPrimary,
+                    color: AppColors.of(context).textPrimary,
                   ),
                 ),
                 SizedBox(height: 2.h),
                 Text(
-                  'Help us keep the community safe',
+                  l10n.helpKeepCommunitySafe,
                   style: TextStyle(
                     fontSize: 12.sp,
-                    color: AppPalette.textLight,
+                    color: AppColors.of(context).textLight,
                   ),
                 ),
               ],
@@ -247,13 +212,13 @@ class _ReportDialogState extends State<ReportDialog> {
             child: Container(
               padding: EdgeInsets.all(8.w),
               decoration: BoxDecoration(
-                color: AppPalette.gray100,
+                color: AppColors.of(context).subtleFill,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.close,
                 size: 18.sp,
-                color: AppPalette.textSecondary,
+                color: AppColors.of(context).textSecondary,
               ),
             ),
           ),
@@ -266,9 +231,9 @@ class _ReportDialogState extends State<ReportDialog> {
     return Container(
       padding: EdgeInsets.all(12.w),
       decoration: BoxDecoration(
-        color: AppPalette.gray50,
+        color: AppColors.of(context).subtleFill,
         borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: AppPalette.border),
+        border: Border.all(color: AppColors.of(context).border),
       ),
       child: Row(
         children: [
@@ -279,7 +244,7 @@ class _ReportDialogState extends State<ReportDialog> {
                 ? Iconsax.book_1
                 : Iconsax.message,
             size: 20.sp,
-            color: AppPalette.textSecondary,
+            color: AppColors.of(context).textSecondary,
           ),
           SizedBox(width: 10.w),
           Expanded(
@@ -288,7 +253,7 @@ class _ReportDialogState extends State<ReportDialog> {
               style: TextStyle(
                 fontSize: 13.sp,
                 fontWeight: FontWeight.w600,
-                color: AppPalette.textPrimary,
+                color: AppColors.of(context).textPrimary,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -300,15 +265,16 @@ class _ReportDialogState extends State<ReportDialog> {
   }
 
   Widget _buildReasonSection() {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Why are you reporting this?',
+          l10n.whyReporting,
           style: TextStyle(
             fontSize: 14.sp,
             fontWeight: FontWeight.w700,
-            color: AppPalette.textPrimary,
+            color: AppColors.of(context).textPrimary,
           ),
         ),
         SizedBox(height: 10.h),
@@ -324,13 +290,13 @@ class _ReportDialogState extends State<ReportDialog> {
                 padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? AppPalette.error.withOpacity(0.08)
-                      : AppPalette.gray50,
+                      ? AppColors.of(context).error.withOpacity(0.08)
+                      : AppColors.of(context).subtleFill,
                   borderRadius: BorderRadius.circular(12.r),
                   border: Border.all(
                     color: isSelected
-                        ? AppPalette.error.withOpacity(0.4)
-                        : AppPalette.border,
+                        ? AppColors.of(context).error.withOpacity(0.4)
+                        : AppColors.of(context).border,
                     width: isSelected ? 1.5 : 1,
                   ),
                 ),
@@ -347,8 +313,8 @@ class _ReportDialogState extends State<ReportDialog> {
                             ? FontWeight.w700
                             : FontWeight.w500,
                         color: isSelected
-                            ? AppPalette.error
-                            : AppPalette.textSecondary,
+                            ? AppColors.of(context).error
+                            : AppColors.of(context).textSecondary,
                       ),
                     ),
                   ],
@@ -362,23 +328,27 @@ class _ReportDialogState extends State<ReportDialog> {
   }
 
   Widget _buildDescriptionField() {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
             Text(
-              'Additional details',
+              l10n.additionalDetails,
               style: TextStyle(
                 fontSize: 14.sp,
                 fontWeight: FontWeight.w700,
-                color: AppPalette.textPrimary,
+                color: AppColors.of(context).textPrimary,
               ),
             ),
             SizedBox(width: 6.w),
             Text(
-              '(optional)',
-              style: TextStyle(fontSize: 12.sp, color: AppPalette.textLight),
+              l10n.optional,
+              style: TextStyle(
+                fontSize: 12.sp,
+                color: AppColors.of(context).textLight,
+              ),
             ),
           ],
         ),
@@ -387,28 +357,37 @@ class _ReportDialogState extends State<ReportDialog> {
           controller: _descriptionController,
           maxLines: 3,
           maxLength: 500,
-          style: TextStyle(fontSize: 14.sp, color: AppPalette.textPrimary),
+          style: TextStyle(
+            fontSize: 14.sp,
+            color: AppColors.of(context).textPrimary,
+          ),
           decoration: InputDecoration(
-            hintText: 'Tell us more about the issue...',
-            hintStyle: TextStyle(fontSize: 13.sp, color: AppPalette.textLight),
+            hintText: l10n.tellUsMoreHint,
+            hintStyle: TextStyle(
+              fontSize: 13.sp,
+              color: AppColors.of(context).textLight,
+            ),
             filled: true,
-            fillColor: AppPalette.gray50,
+            fillColor: AppColors.of(context).subtleFill,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14.r),
-              borderSide: BorderSide(color: AppPalette.border),
+              borderSide: BorderSide(color: AppColors.of(context).border),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14.r),
-              borderSide: BorderSide(color: AppPalette.border),
+              borderSide: BorderSide(color: AppColors.of(context).border),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14.r),
-              borderSide: BorderSide(color: AppPalette.primary, width: 1.5),
+              borderSide: BorderSide(
+                color: AppColors.of(context).primary,
+                width: 1.5,
+              ),
             ),
             contentPadding: EdgeInsets.all(14.w),
             counterStyle: TextStyle(
               fontSize: 11.sp,
-              color: AppPalette.textLight,
+              color: AppColors.of(context).textLight,
             ),
           ),
         ),
@@ -417,6 +396,7 @@ class _ReportDialogState extends State<ReportDialog> {
   }
 
   Widget _buildSubmitButton(BuildContext context, ReportState state) {
+    final l10n = AppLocalizations.of(context)!;
     final isLoading = state is ReportLoading;
     final isEnabled = _selectedReason != null && !isLoading;
 
@@ -441,9 +421,9 @@ class _ReportDialogState extends State<ReportDialog> {
               }
             : null,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppPalette.error,
-          disabledBackgroundColor: AppPalette.error.withOpacity(0.3),
-          foregroundColor: Colors.white,
+          backgroundColor: AppColors.of(context).error,
+          disabledBackgroundColor: AppColors.of(context).error.withOpacity(0.3),
+          foregroundColor: AppColors.of(context).onPrimary,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14.r),
           ),
@@ -453,9 +433,9 @@ class _ReportDialogState extends State<ReportDialog> {
             ? SizedBox(
                 width: 22.w,
                 height: 22.w,
-                child: const CircularProgressIndicator(
+                child: CircularProgressIndicator(
                   strokeWidth: 2.5,
-                  color: Colors.white,
+                  color: AppColors.of(context).card,
                 ),
               )
             : Row(
@@ -464,7 +444,7 @@ class _ReportDialogState extends State<ReportDialog> {
                   Icon(Iconsax.flag, size: 18.sp),
                   SizedBox(width: 8.w),
                   Text(
-                    'Submit Report',
+                    l10n.submitReport,
                     style: TextStyle(
                       fontSize: 15.sp,
                       fontWeight: FontWeight.w700,

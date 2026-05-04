@@ -24,6 +24,8 @@ class DetailsUpdated extends CreateListingEvent {
   final String condition;
   final String description;
   final String? educationLevel;
+  final String? stream;
+  final String? department;
   final String? classOrSemester;
   final String? subject;
   final String? bookType;
@@ -37,6 +39,8 @@ class DetailsUpdated extends CreateListingEvent {
     required this.condition,
     required this.description,
     this.educationLevel,
+    this.stream,
+    this.department,
     this.classOrSemester,
     this.subject,
     this.bookType,
@@ -52,6 +56,8 @@ class DetailsUpdated extends CreateListingEvent {
     condition,
     description,
     educationLevel,
+    stream,
+    department,
     classOrSemester,
     subject,
     bookType,

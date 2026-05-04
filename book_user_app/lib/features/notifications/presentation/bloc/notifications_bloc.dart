@@ -9,6 +9,7 @@ class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
   final NotificationsRepository repository;
 
   final SocketService _socketService;
+  bool _isListening = false;
 
   NotificationsBloc({required this.repository, SocketService? socketService})
     : _socketService = socketService ?? SocketService(),
@@ -26,6 +27,7 @@ class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
   @override
   Future<void> close() {
     _socketService.removeMessageListener(_handleNewMessage);
+    _isListening = false;
     return super.close();
   }
 
@@ -40,6 +42,8 @@ class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
     StartNotificationListening event,
     Emitter<NotificationsState> emit,
   ) {
+    if (_isListening) return; // prevent duplicate listeners
+    _isListening = true;
     debugPrint('🔔 NotificationsBloc: Starting to listen for socket messages');
     _socketService.addMessageListener(_handleNewMessage);
     // You can add other listeners here like 'notification:new' if backend supports it
@@ -50,6 +54,7 @@ class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
     Emitter<NotificationsState> emit,
   ) {
     _socketService.removeMessageListener(_handleNewMessage);
+    _isListening = false;
   }
 
   Future<void> _onNotificationReceived(
@@ -91,7 +96,7 @@ class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
       (failure) => emit(
         state.copyWith(
           status: NotificationsStatus.error,
-          errorMessage: failure.message ?? 'An unknown error occurred',
+          errorMessage: failure.message,
         ),
       ),
       (paginatedResponse) {
@@ -134,7 +139,7 @@ class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
     result.fold(
       (failure) => emit(
         state.copyWith(
-          errorMessage: failure.message ?? 'An unknown error occurred',
+          errorMessage: failure.message,
         ),
       ),
       (_) {
@@ -157,7 +162,7 @@ class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
     result.fold(
       (failure) => emit(
         state.copyWith(
-          errorMessage: failure.message ?? 'An unknown error occurred',
+          errorMessage: failure.message,
         ),
       ),
       (_) {
@@ -176,7 +181,7 @@ class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
     result.fold(
       (failure) => emit(
         state.copyWith(
-          errorMessage: failure.message ?? 'An unknown error occurred',
+          errorMessage: failure.message,
         ),
       ),
       (_) {

@@ -1,4 +1,7 @@
+import 'package:book_user_app/core/theme/app_palette.dart';
+import 'package:book_user_app/core/widgets/empty_state_widget.dart';
 import 'package:book_user_app/core/widgets/shimmer_skeletons.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -8,6 +11,7 @@ import 'package:intl/intl.dart';
 import 'package:book_user_app/features/chat/data/models/conversation.dart';
 import 'package:book_user_app/features/chat/presentation/bloc/conversations_bloc.dart';
 import 'package:book_user_app/features/listings/presentation/widgets/custom_bottom_nav.dart';
+import 'package:book_user_app/l10n/app_localizations.dart';
 
 class MessagesPage extends StatefulWidget {
   const MessagesPage({super.key});
@@ -17,9 +21,9 @@ class MessagesPage extends StatefulWidget {
 }
 
 class _MessagesPageState extends State<MessagesPage> {
-  static const Color iosBlue = Color(0xFF007AFF);
-  static const Color iosGray = Color(0xFF8E8E93);
-  static const Color iosLightGray = Color(0xFFF2F2F7);
+  Color get iosBlue => AppColors.of(context).accent;
+  Color get iosGray => AppColors.of(context).textSecondary;
+  Color get iosLightGray => AppColors.of(context).inputFill;
 
   // Reference to the root-level ConversationsBloc — do NOT close it here.
   late ConversationsBloc _bloc;
@@ -60,7 +64,7 @@ class _MessagesPageState extends State<MessagesPage> {
   Widget build(BuildContext context) {
     // No BlocProvider wrapper needed — root already provides ConversationsBloc.
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.of(context).background,
       body: SafeArea(
         child: Column(
           children: [
@@ -75,6 +79,7 @@ class _MessagesPageState extends State<MessagesPage> {
   }
 
   Widget _buildHeader() {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
       child: Row(
@@ -89,16 +94,16 @@ class _MessagesPageState extends State<MessagesPage> {
             ),
           ),
           Text(
-            'Messages',
+            l10n.messages,
             style: TextStyle(
-              color: Colors.black,
+              color: AppColors.of(context).textPrimary,
               fontSize: 17.sp,
               fontWeight: FontWeight.bold,
             ),
           ),
           GestureDetector(
             onTap: () {
-              // TODO: New conversation
+              _showNewConversationInfo();
             },
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
@@ -108,12 +113,16 @@ class _MessagesPageState extends State<MessagesPage> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.edit_outlined, color: Colors.white, size: 16.sp),
+                  Icon(
+                    Icons.edit_outlined,
+                    color: AppColors.of(context).onPrimary,
+                    size: 16.sp,
+                  ),
                   SizedBox(width: 4.w),
                   Text(
-                    'New',
+                    l10n.newLabel,
                     style: TextStyle(
-                      color: Colors.white,
+                      color: AppColors.of(context).onPrimary,
                       fontSize: 15.sp,
                       fontWeight: FontWeight.bold,
                     ),
@@ -127,13 +136,90 @@ class _MessagesPageState extends State<MessagesPage> {
     );
   }
 
+  void _showNewConversationInfo() {
+    final l10n = AppLocalizations.of(context)!;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: BoxDecoration(
+          color: AppColors.of(context).surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+        ),
+        padding: EdgeInsets.fromLTRB(24.w, 16.h, 24.w, 24.h),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40.w,
+                  height: 4.h,
+                  margin: EdgeInsets.only(bottom: 16.h),
+                  decoration: BoxDecoration(
+                    color: AppColors.of(context).border,
+                    borderRadius: BorderRadius.circular(2.r),
+                  ),
+                ),
+              ),
+              Text(
+                l10n.messages,
+                style: TextStyle(
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.of(context).textPrimary,
+                ),
+              ),
+              SizedBox(height: 8.h),
+              Text(
+                l10n.startChattingWithSellers,
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  color: AppColors.of(context).textSecondary,
+                ),
+              ),
+              SizedBox(height: 16.h),
+              SizedBox(
+                width: double.infinity,
+                height: 48.h,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    // Guide user to browse listings to start a conversation.
+                    context.go('/home');
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.of(context).accent,
+                    foregroundColor: AppColors.of(context).onPrimary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
+                  ),
+                  child: Text(
+                    l10n.exploreListings,
+                    style: TextStyle(
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSearchBar() {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
       child: TextField(
         textAlignVertical: TextAlignVertical.center,
         decoration: InputDecoration(
-          hintText: 'Search',
+          hintText: l10n.search,
           hintStyle: TextStyle(color: iosGray, fontSize: 17.sp),
           prefixIcon: Icon(Icons.search, color: iosGray, size: 20.sp),
           filled: true,
@@ -153,7 +239,10 @@ class _MessagesPageState extends State<MessagesPage> {
           contentPadding: EdgeInsets.zero,
           isDense: true,
         ),
-        style: TextStyle(fontSize: 17.sp, color: Colors.black),
+        style: TextStyle(
+          fontSize: 17.sp,
+          color: AppColors.of(context).textPrimary,
+        ),
       ),
     );
   }
@@ -161,6 +250,7 @@ class _MessagesPageState extends State<MessagesPage> {
   Widget _buildConversationsList() {
     return BlocBuilder<ConversationsBloc, ConversationsState>(
       builder: (context, state) {
+        final l10n = AppLocalizations.of(context)!;
         if (state.status == ConversationsStatus.loading &&
             state.conversations.isEmpty) {
           return const ConversationListShimmer();
@@ -172,7 +262,11 @@ class _MessagesPageState extends State<MessagesPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.error_outline, size: 48.sp, color: Colors.grey),
+                Icon(
+                  Icons.error_outline,
+                  size: 48.sp,
+                  color: AppColors.of(context).textSecondary,
+                ),
                 SizedBox(height: 16.h),
                 Text(state.error ?? 'Failed to load conversations'),
                 SizedBox(height: 16.h),
@@ -187,25 +281,10 @@ class _MessagesPageState extends State<MessagesPage> {
 
         if (state.conversations.isEmpty) {
           return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.chat_bubble_outline,
-                  size: 64.sp,
-                  color: Colors.grey[300],
-                ),
-                SizedBox(height: 16.h),
-                Text(
-                  'No conversations yet',
-                  style: TextStyle(color: Colors.grey[500], fontSize: 16.sp),
-                ),
-                SizedBox(height: 8.h),
-                Text(
-                  'Start chatting with sellers!',
-                  style: TextStyle(color: Colors.grey[400], fontSize: 14.sp),
-                ),
-              ],
+            child: EmptyStateWidget(
+              icon: Icons.chat_bubble_outline,
+              title: l10n.noConversationsYet,
+              subtitle: l10n.startChattingWithSellers,
             ),
           );
         }
@@ -221,7 +300,7 @@ class _MessagesPageState extends State<MessagesPage> {
             separatorBuilder: (_, __) => Padding(
               padding: EdgeInsets.only(left: 76.w),
               child: Divider(
-                color: Colors.grey[300],
+                color: AppColors.of(context).border,
                 height: 1,
                 thickness: 0.5,
               ),
@@ -246,10 +325,10 @@ class _MessagesPageState extends State<MessagesPage> {
       key: Key(conversation.id),
       direction: DismissDirection.endToStart,
       background: Container(
-        color: Colors.red,
+        color: AppColors.of(context).error,
         alignment: Alignment.centerRight,
         padding: EdgeInsets.only(right: 16.w),
-        child: const Icon(Icons.delete, color: Colors.white),
+        child: Icon(Icons.delete, color: AppColors.of(context).onPrimary),
       ),
       onDismissed: (_) {
         _bloc.add(DeleteConversation(conversation.id));
@@ -300,7 +379,7 @@ class _MessagesPageState extends State<MessagesPage> {
                           style: TextStyle(
                             fontSize: 17.sp,
                             fontWeight: FontWeight.w600,
-                            color: Colors.black,
+                            color: AppColors.of(context).textPrimary,
                           ),
                         ),
                         Text(
@@ -338,7 +417,7 @@ class _MessagesPageState extends State<MessagesPage> {
                             child: Text(
                               _getUnreadCount(conversation).toString(),
                               style: TextStyle(
-                                color: Colors.white,
+                                color: AppColors.of(context).onPrimary,
                                 fontSize: 13.sp,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -360,19 +439,19 @@ class _MessagesPageState extends State<MessagesPage> {
     if (participant.avatar != null && participant.avatar!.isNotEmpty) {
       return CircleAvatar(
         radius: 24.r,
-        backgroundImage: NetworkImage(participant.avatar!),
-        backgroundColor: Colors.grey[300],
+        backgroundImage: CachedNetworkImageProvider(participant.avatar!),
+        backgroundColor: AppColors.of(context).border,
       );
     }
 
     return CircleAvatar(
       radius: 24.r,
-      backgroundColor: const Color(0xFFE9E9EB),
+      backgroundColor: AppColors.of(context).subtleFill,
       child: Text(
         participant.name.isNotEmpty ? participant.name[0].toUpperCase() : '?',
         style: TextStyle(
           fontSize: 22.sp,
-          color: Colors.black54,
+          color: AppColors.of(context).textSecondary,
           fontWeight: FontWeight.w500,
         ),
       ),
@@ -388,7 +467,7 @@ class _MessagesPageState extends State<MessagesPage> {
     if (diff.inDays == 0) {
       return DateFormat('h:mm a').format(dateTime);
     } else if (diff.inDays == 1) {
-      return 'Yesterday';
+      return AppLocalizations.of(context)!.yesterday;
     } else if (diff.inDays < 7) {
       return DateFormat('EEEE').format(dateTime);
     } else {

@@ -2,6 +2,7 @@ import 'package:book_user_app/core/network/api_client.dart';
 import 'package:book_user_app/features/auth/data/datasources/auth_remote_datasource.dart';
 import 'package:book_user_app/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:book_user_app/features/auth/domain/repositories/auth_repository.dart';
+import 'package:book_user_app/features/auth/domain/usecases/change_password_usecase.dart';
 import 'package:book_user_app/features/auth/domain/usecases/forgot_password_usecase.dart';
 import 'package:book_user_app/features/auth/domain/usecases/get_current_user_usecase.dart';
 import 'package:book_user_app/features/auth/domain/usecases/login_usecase.dart';
@@ -37,6 +38,7 @@ import 'package:book_user_app/features/listings/domain/usecases/get_my_listings_
 import 'package:book_user_app/features/listings/domain/usecases/update_listing_usecase.dart';
 import 'package:book_user_app/features/listings/domain/usecases/delete_listing_usecase.dart';
 import 'package:book_user_app/features/listings/domain/usecases/mark_listing_sold_usecase.dart';
+import 'package:book_user_app/features/listings/domain/usecases/delete_listing_image_usecase.dart';
 import 'package:book_user_app/features/listings/presentation/bloc/listings_bloc.dart';
 import 'package:book_user_app/features/create_listing/presentation/bloc/create_listing_bloc.dart';
 import 'package:book_user_app/features/create_listing/data/datasources/create_listing_remote_datasource.dart';
@@ -58,6 +60,9 @@ import 'package:book_user_app/features/chat/data/datasources/chat_remote_data_so
 import 'package:book_user_app/features/chat/data/repositories/chat_repository.dart';
 import 'package:book_user_app/features/chat/presentation/bloc/chat_bloc.dart';
 import 'package:book_user_app/features/chat/presentation/bloc/conversations_bloc.dart';
+import 'package:book_user_app/features/chat/domain/usecases/get_blocked_users_usecase.dart';
+import 'package:book_user_app/features/chat/domain/usecases/unblock_user_usecase.dart';
+import 'package:book_user_app/features/chat/presentation/bloc/blocked_users/blocked_users_bloc.dart';
 
 // Profile imports
 import 'package:book_user_app/features/profile/data/datasources/profile_remote_datasource.dart';
@@ -83,6 +88,8 @@ import 'package:book_user_app/features/report/data/datasources/report_remote_dat
 import 'package:book_user_app/features/report/data/repositories/report_repository_impl.dart';
 import 'package:book_user_app/features/report/domain/repositories/report_repository.dart';
 
+import 'package:book_user_app/core/services/recently_viewed_service.dart';
+import 'package:book_user_app/core/services/search_history_service.dart';
 import 'package:get_it/get_it.dart';
 
 final sl = GetIt.instance; // sl = Service Locator
@@ -90,6 +97,8 @@ final sl = GetIt.instance; // sl = Service Locator
 Future<void> initDependencies() async {
   // Core
   sl.registerLazySingleton(() => ApiClient());
+  sl.registerLazySingleton(() => SearchHistoryService());
+  sl.registerLazySingleton(() => RecentlyViewedService());
 
   // Features - Auth
   await _initAuth();
@@ -149,6 +158,7 @@ Future<void> _initAuth() async {
   sl.registerLazySingleton(() => ResetPasswordUseCase(sl()));
   sl.registerLazySingleton(() => UpdateProfileUseCase(sl()));
   sl.registerLazySingleton(() => UpdateAvatarUseCase(sl()));
+  sl.registerLazySingleton(() => ChangePasswordUseCase(sl()));
 
   // Blocs
   sl.registerFactory(
@@ -162,6 +172,7 @@ Future<void> _initAuth() async {
       resetPasswordUseCase: sl(),
       updateProfileUseCase: sl(),
       updateAvatarUseCase: sl(),
+      changePasswordUseCase: sl(),
     ),
   );
 }
@@ -187,6 +198,7 @@ Future<void> _initListings() async {
   sl.registerLazySingleton(() => UpdateListingUseCase(sl()));
   sl.registerLazySingleton(() => DeleteListingUseCase(sl()));
   sl.registerLazySingleton(() => MarkListingSoldUseCase(sl()));
+  sl.registerLazySingleton(() => DeleteListingImageUseCase(sl()));
 
   // Blocs
   sl.registerFactory(
@@ -200,6 +212,7 @@ Future<void> _initListings() async {
       updateListingUseCase: sl(),
       deleteListingUseCase: sl(),
       markListingSoldUseCase: sl(),
+      deleteListingImageUseCase: sl(),
       repository: sl(),
     ),
   );
@@ -255,11 +268,22 @@ Future<void> _initChat() async {
     () => ChatRepository(remoteDataSource: sl(), socketService: sl()),
   );
 
+  // Usecases
+  sl.registerLazySingleton(() => GetBlockedUsersUseCase(sl()));
+  sl.registerLazySingleton(() => UnblockUserUseCase(sl()));
+
   // Blocs
   // Use Factory to ensure currentUserId is refreshed based on current session
   sl.registerFactory(() => ConversationsBloc(repository: sl()));
 
-  sl.registerFactory(() => ChatBloc(repository: sl()));
+  sl.registerFactory(() => ChatBloc(repository: sl(), offerDataSource: sl()));
+
+  sl.registerFactory(
+    () => BlockedUsersBloc(
+      getBlockedUsersUseCase: sl(),
+      unblockUserUseCase: sl(),
+    ),
+  );
 }
 
 Future<void> _initProfile() async {
@@ -313,7 +337,7 @@ Future<void> _initNotifications() async {
   );
 
   // Blocs
-  sl.registerFactory(() => NotificationsBloc(repository: sl()));
+  sl.registerLazySingleton(() => NotificationsBloc(repository: sl()));
 }
 
 Future<void> _initReport() async {

@@ -29,7 +29,9 @@ exports.getListings = asyncHandler(async (req, res) => {
         sortBy,
         sortOrder,
         // Education filters
-        educationLevel,
+        educationLevel, // Keep educationLevel for now, as the instruction only shows a snippet for reordering.
+        stream,
+        department,
         classOrSemester,
         subject,
         bookType,
@@ -60,6 +62,8 @@ exports.getListings = asyncHandler(async (req, res) => {
     if (classOrSemester) filters.classOrSemester = classOrSemester;
     if (subject) filters.subject = { $regex: subject, $options: 'i' };
     if (bookType) filters.bookType = bookType;
+    if (stream) filters.stream = stream;
+    if (department) filters.department = department;
     if (division) filters.division = division;
     if (district) filters.district = district;
     if (upazila) filters.upazila = upazila;
@@ -138,7 +142,7 @@ exports.getListing = asyncHandler(async (req, res) => {
 // @access  Private
 exports.createListing = asyncHandler(async (req, res) => {
     const { title, description, category, priceType, price, condition, location, tags,
-        educationLevel, classOrSemester, subject, bookType, division, district, upazila } = req.body;
+        educationLevel, stream, department, classOrSemester, subject, bookType, division, district, upazila } = req.body;
 
     // Validate category exists and is active
     const categoryExists = await Category.findOne({ slug: category, isActive: true });
@@ -204,6 +208,8 @@ exports.createListing = asyncHandler(async (req, res) => {
         location: parsedLocation,
         tags: parsedTags,
         educationLevel: educationLevel || undefined,
+        stream: stream || undefined,
+        department: department || undefined,
         classOrSemester: classOrSemester || undefined,
         subject: subject || undefined,
         bookType: bookType || undefined,
@@ -254,7 +260,7 @@ exports.updateListing = asyncHandler(async (req, res) => {
     }
 
     const { title, description, category, priceType, price, condition, location, tags,
-        educationLevel, classOrSemester, subject, bookType, division, district, upazila } = req.body;
+        educationLevel, stream, department, classOrSemester, subject, bookType, division, district, upazila } = req.body;
 
     // Validate category if provided
     if (category) {
@@ -330,6 +336,8 @@ exports.updateListing = asyncHandler(async (req, res) => {
     if (parsedLocation) listing.location = parsedLocation;
     if (parsedTags) listing.tags = parsedTags;
     if (educationLevel !== undefined) listing.educationLevel = educationLevel || null;
+    if (stream !== undefined) listing.stream = stream || null;
+    if (department !== undefined) listing.department = department || null;
     if (classOrSemester !== undefined) listing.classOrSemester = classOrSemester || null;
     if (subject !== undefined) listing.subject = subject || null;
     if (bookType !== undefined) listing.bookType = bookType || null;
@@ -394,6 +402,83 @@ exports.getHighlights = asyncHandler(async (req, res) => {
     }
 
     res.json({ success: true, data: highlights });
+});
+
+// @desc    Get personalized recommended listings for authenticated user
+// @route   GET /api/listings/recommended
+// @access  Private
+exports.getRecommendedListings = asyncHandler(async (req, res) => {
+    const user = req.user;
+    let recommendations = [];
+    const limitNum = 10;
+    
+    // Ranked matching tiers: department + classOrSemester -> stream -> educationLevel
+    if (user.department || user.classOrSemester) {
+        const query = { status: 'approved' };
+        if (user.department) query.department = user.department;
+        // Optionally strict match classOrSemester, but department is stronger indicator
+        // If we strictly match both, it might be too narrow. Let's match OR or AND.
+        // For best personalization, we want an exact match first
+        query.$or = [];
+        if (user.department) query.$or.push({ department: user.department });
+        if (user.classOrSemester) query.$or.push({ classOrSemester: user.classOrSemester });
+        
+        recommendations = await Listing.find({ status: 'approved', $or: query.$or })
+            .populate('seller', 'name avatar')
+            .sort({ isFeatured: -1, createdAt: -1 })
+            .limit(limitNum)
+            .lean();
+    }
+    
+    if (recommendations.length < limitNum && user.stream) {
+        const streamRecs = await Listing.find({ 
+            status: 'approved',
+            stream: user.stream,
+            _id: { $nin: recommendations.map(r => r._id) }
+        })
+        .populate('seller', 'name avatar')
+        .sort({ isFeatured: -1, createdAt: -1 })
+        .limit(limitNum - recommendations.length)
+        .lean();
+        
+        recommendations = [...recommendations, ...streamRecs];
+    }
+    
+    if (recommendations.length < limitNum && user.educationLevel) {
+        const edRecs = await Listing.find({ 
+            status: 'approved',
+            educationLevel: user.educationLevel,
+            _id: { $nin: recommendations.map(r => r._id) }
+        })
+        .populate('seller', 'name avatar')
+        .sort({ isFeatured: -1, createdAt: -1 })
+        .limit(limitNum - recommendations.length)
+        .lean();
+        
+        recommendations = [...recommendations, ...edRecs];
+    }
+    
+    // Fallback if profile is incomplete or no matches
+    if (recommendations.length < 5) { // If fewer than 5 personalized recs, pad with recent/popular
+        const fallback = await Listing.find({
+            status: 'approved',
+            _id: { $nin: recommendations.map(r => r._id) }
+        })
+        .populate('seller', 'name avatar')
+        .sort({ isFeatured: -1, views: -1, createdAt: -1 }) // prioritize featured/popular
+        .limit(limitNum - recommendations.length)
+        .lean();
+        
+        recommendations = [...recommendations, ...fallback];
+    }
+    
+    // Tag them for the frontend
+    const finalRecs = recommendations.map(r => ({
+        ...r,
+        highlightType: 'recommended'
+    }));
+
+    res.json({ success: true, data: finalRecs });
 });
 
 // @desc    Delete listing

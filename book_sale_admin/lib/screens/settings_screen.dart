@@ -75,6 +75,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final file = File('${dir.path}/${type}_export.csv');
       await file.writeAsBytes(res.data);
 
+      // ignore: deprecated_member_use
       await Share.shareXFiles([
         XFile(file.path),
       ], text: '${isUsers ? 'Users' : 'Listings'} Export');
@@ -477,7 +478,7 @@ class _ToggleTile extends StatelessWidget {
       trailing: Switch(
         value: value,
         onChanged: onChanged,
-        activeColor: AppColors.primary,
+        activeThumbColor: AppColors.primary,
       ),
     );
   }

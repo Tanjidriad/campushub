@@ -30,29 +30,14 @@ const bangladeshConfig = {
         {
             key: 'college',
             label: 'College',
-            subLevels: [],
+            subLevels: [
+                { key: 'hsc-1', label: 'HSC 1st Year' },
+                { key: 'hsc-2', label: 'HSC 2nd Year' }
+            ],
             streams: [
-                {
-                    key: 'science',
-                    label: 'Science',
-                    departments: [
-                        { key: 'science-general', label: 'General Science', subLevels: [{ key: 'hsc-1', label: 'HSC 1st Year' }, { key: 'hsc-2', label: 'HSC 2nd Year' }] },
-                    ],
-                },
-                {
-                    key: 'arts',
-                    label: 'Arts',
-                    departments: [
-                        { key: 'arts-general', label: 'General Arts', subLevels: [{ key: 'hsc-1', label: 'HSC 1st Year' }, { key: 'hsc-2', label: 'HSC 2nd Year' }] },
-                    ],
-                },
-                {
-                    key: 'commerce',
-                    label: 'Commerce',
-                    departments: [
-                        { key: 'commerce-general', label: 'General Commerce', subLevels: [{ key: 'hsc-1', label: 'HSC 1st Year' }, { key: 'hsc-2', label: 'HSC 2nd Year' }] },
-                    ],
-                },
+                { key: 'science', label: 'Science', departments: [] },
+                { key: 'arts', label: 'Arts', departments: [] },
+                { key: 'commerce', label: 'Commerce', departments: [] },
             ],
         },
         {

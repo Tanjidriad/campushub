@@ -1,3 +1,5 @@
+import 'package:book_user_app/core/theme/app_palette.dart';
+import 'package:book_user_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -7,7 +9,6 @@ class ProfileInfoHeader extends StatelessWidget {
   final bool isVerified;
   final double rating;
   final int reviewCount;
-  final bool isDark;
 
   const ProfileInfoHeader({
     super.key,
@@ -16,12 +17,12 @@ class ProfileInfoHeader extends StatelessWidget {
     this.isVerified = false,
     this.rating = 0.0,
     this.reviewCount = 0,
-    required this.isDark,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Padding(
       padding: EdgeInsets.only(
@@ -41,7 +42,7 @@ class ProfileInfoHeader extends StatelessWidget {
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     fontSize: 18.sp,
-                    color: isDark ? Colors.white : Colors.black,
+                    color: AppColors.of(context).textPrimary,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -62,7 +63,7 @@ class ProfileInfoHeader extends StatelessWidget {
             Text(
               '@$username',
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: Colors.grey,
+                color: AppColors.of(context).textSecondary,
                 fontSize: 13.sp,
               ),
               maxLines: 1,
@@ -72,14 +73,18 @@ class ProfileInfoHeader extends StatelessWidget {
           SizedBox(height: 6.h),
           Row(
             children: [
-              Icon(Icons.star, color: Colors.amber, size: 16.sp),
+              Icon(
+                Icons.star,
+                color: AppColors.of(context).warning,
+                size: 16.sp,
+              ),
               SizedBox(width: 4.w),
               Text(
-                '${rating.toStringAsFixed(1)} Reviews',
+                '${rating.toStringAsFixed(1)} ${l10n.reviews}',
                 style: TextStyle(
                   fontSize: 12.sp,
                   fontWeight: FontWeight.w500,
-                  color: isDark ? Colors.grey[300] : Colors.grey[800],
+                  color: AppColors.of(context).textSecondary,
                 ),
               ),
             ],

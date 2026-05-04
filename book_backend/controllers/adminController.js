@@ -221,36 +221,73 @@ exports.getUsers = asyncHandler(async (req, res) => {
         query.isBlocked = isBlocked === 'true';
     }
 
-    const [users, total] = await Promise.all([
-        User.find(query)
-            .select('-password -refreshToken -verificationToken -passwordResetToken')
-            .sort(safeSort)
-            .skip(skip)
-            .limit(limitNum)
-            .lean(),
-        User.countDocuments(query),
-    ]);
-
-    // Determine online status based on lastActive (5 minutes threshold)
     const ONLINE_THRESHOLD = 5 * 60 * 1000; // 5 minutes
-    const now = new Date();
+    const onlineCutoff = new Date(Date.now() - ONLINE_THRESHOLD);
+    const sortDir = safeSort.startsWith('-') ? -1 : 1;
+    const sortField = safeSort.startsWith('-') ? safeSort.slice(1) : safeSort;
+    const sortStage = { [sortField]: sortDir };
 
-    let usersWithStatus = users.map(user => {
-        const lastActive = user.lastActive ? new Date(user.lastActive) : null;
-        const isOnline = lastActive && (now - lastActive) < ONLINE_THRESHOLD;
+    const shouldFilterOnline = status === 'active' || status === 'offline';
 
-        return {
-            ...user,
-            isOnline,
-            lastActive: user.lastActive,
-        };
-    });
+    let usersWithStatus = [];
+    let filteredTotal = 0;
 
-    // Further filter by online/offline status if needed
-    if (status === 'active') {
-        usersWithStatus = usersWithStatus.filter(u => u.isOnline === true);
-    } else if (status === 'offline') {
-        usersWithStatus = usersWithStatus.filter(u => u.isOnline === false);
+    if (shouldFilterOnline) {
+        const onlineMatch = status === 'active'
+            ? { isOnline: true }
+            : { isOnline: false };
+
+        const basePipeline = [
+            { $match: query },
+            { $addFields: { isOnline: { $gte: ['$lastActive', onlineCutoff] } } },
+            { $match: onlineMatch },
+        ];
+
+        const [usersResult, countResult] = await Promise.all([
+            User.aggregate([
+                ...basePipeline,
+                { $sort: sortStage },
+                { $skip: skip },
+                { $limit: limitNum },
+                {
+                    $project: {
+                        password: 0,
+                        refreshToken: 0,
+                        verificationToken: 0,
+                        passwordResetToken: 0,
+                    },
+                },
+            ]),
+            User.aggregate([
+                ...basePipeline,
+                { $count: 'total' },
+            ]),
+        ]);
+
+        usersWithStatus = usersResult;
+        filteredTotal = countResult[0]?.total || 0;
+    } else {
+        const [users, total] = await Promise.all([
+            User.find(query)
+                .select('-password -refreshToken -verificationToken -passwordResetToken')
+                .sort(safeSort)
+                .skip(skip)
+                .limit(limitNum)
+                .lean(),
+            User.countDocuments(query),
+        ]);
+
+        const now = new Date();
+        usersWithStatus = users.map(user => {
+            const lastActive = user.lastActive ? new Date(user.lastActive) : null;
+            const isOnline = lastActive && (now - lastActive) < ONLINE_THRESHOLD;
+            return {
+                ...user,
+                isOnline,
+                lastActive: user.lastActive,
+            };
+        });
+        filteredTotal = total;
     }
 
     // Calculate statistics for all users (not just current page)
@@ -263,7 +300,7 @@ exports.getUsers = asyncHandler(async (req, res) => {
     res.json({
         success: true,
         data: usersWithStatus,
-        pagination: paginationMeta(status === 'active' || status === 'offline' ? usersWithStatus.length : total, pageNum, limitNum),
+        pagination: paginationMeta(filteredTotal, pageNum, limitNum),
         statistics: {
             total: await User.countDocuments({}),
             active: totalActive,

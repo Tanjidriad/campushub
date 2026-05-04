@@ -28,6 +28,7 @@ class ListingsLoaded extends ListingsState {
   final List<Listing> listings;
   final List<Listing> featuredListings;
   final List<Listing> staffPicks;
+  final List<Listing> recommendedListings;
   final int currentPage;
   final int totalPages;
   final int totalItems;
@@ -52,6 +53,7 @@ class ListingsLoaded extends ListingsState {
     required this.listings,
     this.featuredListings = const [],
     this.staffPicks = const [],
+    this.recommendedListings = const [],
     required this.currentPage,
     required this.totalPages,
     required this.totalItems,
@@ -78,6 +80,7 @@ class ListingsLoaded extends ListingsState {
     listings,
     featuredListings,
     staffPicks,
+    recommendedListings,
     currentPage,
     totalPages,
     totalItems,
@@ -103,6 +106,7 @@ class ListingsLoaded extends ListingsState {
     List<Listing>? listings,
     List<Listing>? featuredListings,
     List<Listing>? staffPicks,
+    List<Listing>? recommendedListings,
     int? currentPage,
     int? totalPages,
     int? totalItems,
@@ -127,6 +131,7 @@ class ListingsLoaded extends ListingsState {
       listings: listings ?? this.listings,
       featuredListings: featuredListings ?? this.featuredListings,
       staffPicks: staffPicks ?? this.staffPicks,
+      recommendedListings: recommendedListings ?? this.recommendedListings,
       currentPage: currentPage ?? this.currentPage,
       totalPages: totalPages ?? this.totalPages,
       totalItems: totalItems ?? this.totalItems,
@@ -264,6 +269,21 @@ class ListingUpdated extends ListingsState {
   final Listing listing;
 
   const ListingUpdated({required this.listing});
+
+  @override
+  List<Object?> get props => [listing];
+}
+
+/// Deleting listing image
+class ListingImageDeleting extends ListingsState {
+  const ListingImageDeleting();
+}
+
+/// Listing image deleted successfully
+class ListingImageDeleted extends ListingsState {
+  final Listing listing;
+
+  const ListingImageDeleted({required this.listing});
 
   @override
   List<Object?> get props => [listing];

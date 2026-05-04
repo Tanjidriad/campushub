@@ -1,4 +1,9 @@
+import 'package:book_user_app/core/theme/app_palette.dart';
+import 'package:book_user_app/core/constants/api_constants.dart';
+import 'package:book_user_app/core/widgets/app_snackbar.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:book_user_app/core/widgets/app_loader.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -8,6 +13,7 @@ import '../../domain/entities/offer.dart';
 import '../bloc/offer_bloc.dart';
 import '../bloc/offer_event.dart';
 import '../bloc/offer_state.dart';
+import 'package:book_user_app/l10n/app_localizations.dart';
 
 class OfferRequestPage extends StatefulWidget {
   final String offerId;
@@ -36,57 +42,52 @@ class _OfferRequestPageState extends State<OfferRequestPage> {
 class _OfferRequestBody extends StatelessWidget {
   const _OfferRequestBody();
 
+  static const FlutterSecureStorage _storage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    iOptions: IOSOptions(
+      accessibility: KeychainAccessibility.first_unlock_this_device,
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.of(context).background,
       appBar: AppBar(
         title: Text(
-          'Offer Request',
+          l10n.offerRequest,
           style: TextStyle(
             fontSize: 18.sp,
             fontWeight: FontWeight.bold,
-            color: const Color(0xFF0E141B),
+            color: AppColors.of(context).textPrimary,
           ),
         ),
         centerTitle: true,
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.of(context).background,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF0E141B)),
+        iconTheme: IconThemeData(color: AppColors.of(context).textPrimary),
       ),
       body: BlocConsumer<OfferBloc, OfferState>(
         listener: (context, state) {
           if (state is OfferResponded) {
             final actionText = state.action == 'accept'
-                ? 'Offer accepted! 🎉'
+                ? l10n.offerAccepted
                 : state.action == 'decline'
-                ? 'Offer declined'
-                : 'Counter offer sent!';
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(actionText),
-                backgroundColor: state.action == 'accept'
-                    ? const Color(0xFF22C55E)
-                    : state.action == 'counter'
-                    ? const Color(0xFF4794E6)
-                    : Colors.grey[700],
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-              ),
-            );
+                ? l10n.offerDeclined
+                : l10n.counterOfferSent;
+            if (state.action == 'accept') {
+              AppSnackBar.showSuccess(context, actionText);
+            } else if (state.action == 'counter') {
+              AppSnackBar.showInfo(context, actionText);
+            } else {
+              AppSnackBar.showWarning(context, actionText);
+            }
             if (context.canPop()) {
               context.pop();
             }
           } else if (state is OfferError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
+            AppSnackBar.showError(context, state.message);
           }
         },
         builder: (context, state) {
@@ -101,7 +102,11 @@ class _OfferRequestBody extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Iconsax.warning_2, size: 48.sp, color: Colors.red[300]),
+                  Icon(
+                    Iconsax.warning_2,
+                    size: 48.sp,
+                    color: AppColors.of(context).error.withOpacity(0.7),
+                  ),
                   SizedBox(height: 12.h),
                   Text(state.message, style: TextStyle(fontSize: 14.sp)),
                 ],
@@ -115,6 +120,7 @@ class _OfferRequestBody extends StatelessWidget {
   }
 
   Widget _buildOfferDetail(BuildContext context, Offer offer) {
+    final l10n = AppLocalizations.of(context)!;
     final listing = offer.listing;
     final buyer = offer.buyer;
 
@@ -129,13 +135,17 @@ class _OfferRequestBody extends StatelessWidget {
               child: PageView.builder(
                 itemCount: listing.images.length,
                 itemBuilder: (context, index) {
-                  return Image.network(
-                    listing.images[index].url,
+                  return CachedNetworkImage(
+                    imageUrl: listing.images[index].url,
                     fit: BoxFit.cover,
                     width: double.infinity,
-                    errorBuilder: (_, __, ___) => Container(
-                      color: Colors.grey[200],
-                      child: Icon(Icons.image, size: 48.sp, color: Colors.grey),
+                    errorWidget: (_, __, ___) => Container(
+                      color: AppColors.of(context).border,
+                      child: Icon(
+                        Icons.image,
+                        size: 48.sp,
+                        color: AppColors.of(context).iconMuted,
+                      ),
                     ),
                   );
                 },
@@ -154,9 +164,9 @@ class _OfferRequestBody extends StatelessWidget {
                       CircleAvatar(
                         radius: 20.r,
                         backgroundImage: buyer.avatar != null
-                            ? NetworkImage(buyer.avatar!)
+                            ? CachedNetworkImageProvider(buyer.avatar!)
                             : null,
-                        backgroundColor: const Color(0xFFE8F0FE),
+                        backgroundColor: AppColors.of(context).subtleFill,
                         child: buyer.avatar == null
                             ? Text(
                                 buyer.name.isNotEmpty
@@ -165,7 +175,7 @@ class _OfferRequestBody extends StatelessWidget {
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16.sp,
-                                  color: const Color(0xFF4794E6),
+                                  color: AppColors.of(context).primary,
                                 ),
                               )
                             : null,
@@ -182,10 +192,10 @@ class _OfferRequestBody extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            'Round ${offer.roundNumber} of 3',
+                            l10n.roundOfThree(offer.roundNumber),
                             style: TextStyle(
                               fontSize: 12.sp,
-                              color: Colors.grey[500],
+                              color: AppColors.of(context).textSecondary,
                             ),
                           ),
                         ],
@@ -198,11 +208,11 @@ class _OfferRequestBody extends StatelessWidget {
 
                 // Listing Title
                 Text(
-                  listing?.title ?? 'Listing',
+                  listing?.title ?? l10n.listing,
                   style: TextStyle(
                     fontSize: 20.sp,
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFF0E141B),
+                    color: AppColors.of(context).textPrimary,
                   ),
                 ),
                 SizedBox(height: 6.h),
@@ -213,7 +223,7 @@ class _OfferRequestBody extends StatelessWidget {
                     listing!.description!,
                     style: TextStyle(
                       fontSize: 13.sp,
-                      color: Colors.grey[600],
+                      color: AppColors.of(context).textSecondary,
                       height: 1.4,
                     ),
                     maxLines: 3,
@@ -222,11 +232,11 @@ class _OfferRequestBody extends StatelessWidget {
                 SizedBox(height: 16.h),
 
                 // Details Table
-                _buildDetailsTable(offer),
+                _buildDetailsTable(context, offer),
                 SizedBox(height: 20.h),
 
                 // Price Comparison Card
-                _buildPriceComparison(offer),
+                _buildPriceComparison(context, offer),
                 SizedBox(height: 24.h),
 
                 // Action Buttons (only if offer is still actionable)
@@ -234,7 +244,7 @@ class _OfferRequestBody extends StatelessWidget {
                   _buildActionButtons(context, offer),
 
                 // Leave a Review button (after offer accepted)
-                if (offer.isAccepted && offer.seller != null)
+                if (offer.isAccepted)
                   _buildLeaveReviewButton(context, offer),
               ],
             ),
@@ -244,55 +254,68 @@ class _OfferRequestBody extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailsTable(Offer offer) {
+  Widget _buildDetailsTable(BuildContext context, Offer offer) {
+    final l10n = AppLocalizations.of(context)!;
     final listing = offer.listing;
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
+        color: AppColors.of(context).surface,
         borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: Colors.grey[200]!),
+        border: Border.all(color: AppColors.of(context).border),
       ),
       child: Column(
         children: [
           if (listing?.condition != null)
-            _detailRow('Condition', _capitalize(listing!.condition!)),
+            _detailRow(
+              context,
+              l10n.condition,
+              _capitalize(listing!.condition!),
+            ),
           if (listing?.category != null) ...[
-            Divider(height: 20.h, color: Colors.grey[200]),
-            _detailRow('Category', _capitalize(listing!.category!)),
+            Divider(height: 20.h, color: AppColors.of(context).border),
+            _detailRow(context, l10n.category, _capitalize(listing!.category!)),
           ],
           if (listing?.location?.name != null) ...[
-            Divider(height: 20.h, color: Colors.grey[200]),
-            _detailRow('Location', listing!.location!.name!),
+            Divider(height: 20.h, color: AppColors.of(context).border),
+            _detailRow(context, l10n.location, listing!.location!.name!),
           ],
-          Divider(height: 20.h, color: Colors.grey[200]),
-          _detailRow('Expires', _formatExpiry(offer.expiresAt)),
+          Divider(height: 20.h, color: AppColors.of(context).border),
+          _detailRow(
+            context,
+            l10n.expires,
+            _formatExpiry(context, offer.expiresAt),
+          ),
         ],
       ),
     );
   }
 
-  Widget _detailRow(String label, String value) {
+  Widget _detailRow(BuildContext context, String label, String value) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           label,
-          style: TextStyle(fontSize: 13.sp, color: Colors.grey[500]),
+          style: TextStyle(
+            fontSize: 13.sp,
+            color: AppColors.of(context).textSecondary,
+          ),
         ),
         Text(
           value,
           style: TextStyle(
             fontSize: 13.sp,
             fontWeight: FontWeight.w600,
-            color: const Color(0xFF0E141B),
+            color: AppColors.of(context).textPrimary,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildPriceComparison(Offer offer) {
+  Widget _buildPriceComparison(BuildContext context, Offer offer) {
+    final l10n = AppLocalizations.of(context)!;
     final listingPrice = offer.listing?.price ?? 0;
     final difference = offer.amount - listingPrice;
     final percentage = listingPrice > 0
@@ -304,14 +327,16 @@ class _OfferRequestBody extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            const Color(0xFF4794E6).withOpacity(0.05),
-            const Color(0xFF4794E6).withOpacity(0.02),
+            AppColors.of(context).accent.withOpacity(0.05),
+            AppColors.of(context).accent.withOpacity(0.02),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: const Color(0xFF4794E6).withOpacity(0.2)),
+        border: Border.all(
+          color: AppColors.of(context).accent.withOpacity(0.2),
+        ),
       ),
       child: Column(
         children: [
@@ -320,14 +345,17 @@ class _OfferRequestBody extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Asking Price',
-                style: TextStyle(fontSize: 13.sp, color: Colors.grey[600]),
+                l10n.askingPriceLabel,
+                style: TextStyle(
+                  fontSize: 13.sp,
+                  color: AppColors.of(context).textSecondary,
+                ),
               ),
               Text(
                 '\$${listingPrice.toStringAsFixed(2)}',
                 style: TextStyle(
                   fontSize: 14.sp,
-                  color: Colors.grey[500],
+                  color: AppColors.of(context).textSecondary,
                   decoration: TextDecoration.lineThrough,
                 ),
               ),
@@ -340,11 +368,11 @@ class _OfferRequestBody extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Offered Price',
+                l10n.offeredPrice,
                 style: TextStyle(
                   fontSize: 15.sp,
                   fontWeight: FontWeight.bold,
-                  color: const Color(0xFF0E141B),
+                  color: AppColors.of(context).textPrimary,
                 ),
               ),
               Text(
@@ -352,7 +380,7 @@ class _OfferRequestBody extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 20.sp,
                   fontWeight: FontWeight.bold,
-                  color: const Color(0xFF4794E6),
+                  color: AppColors.of(context).accent,
                 ),
               ),
             ],
@@ -365,11 +393,11 @@ class _OfferRequestBody extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Counter Offer',
+                  l10n.counterOffer,
                   style: TextStyle(
                     fontSize: 15.sp,
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFFF59E0B),
+                    color: AppColors.of(context).warning,
                   ),
                 ),
                 Text(
@@ -377,7 +405,7 @@ class _OfferRequestBody extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 20.sp,
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFFF59E0B),
+                    color: AppColors.of(context).warning,
                   ),
                 ),
               ],
@@ -389,22 +417,22 @@ class _OfferRequestBody extends StatelessWidget {
           Container(
             padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.of(context).card,
               borderRadius: BorderRadius.circular(8.r),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '${percentage.toStringAsFixed(0)}% of asking price',
+                  l10n.percentOfAskingPrice(percentage.toStringAsFixed(0)),
                   style: TextStyle(
                     fontSize: 12.sp,
                     fontWeight: FontWeight.w500,
                     color: percentage >= 90
-                        ? const Color(0xFF22C55E)
+                        ? AppColors.of(context).success
                         : percentage >= 70
-                        ? const Color(0xFFF59E0B)
-                        : const Color(0xFFEF4444),
+                        ? AppColors.of(context).warning
+                        : AppColors.of(context).error,
                   ),
                 ),
                 Text(
@@ -413,8 +441,8 @@ class _OfferRequestBody extends StatelessWidget {
                     fontSize: 12.sp,
                     fontWeight: FontWeight.bold,
                     color: difference >= 0
-                        ? const Color(0xFF22C55E)
-                        : const Color(0xFFEF4444),
+                        ? AppColors.of(context).success
+                        : AppColors.of(context).error,
                   ),
                 ),
               ],
@@ -426,6 +454,7 @@ class _OfferRequestBody extends StatelessWidget {
   }
 
   Widget _buildActionButtons(BuildContext context, Offer offer) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         // Accept
@@ -436,11 +465,12 @@ class _OfferRequestBody extends StatelessWidget {
             onPressed: () {
               _showConfirmDialog(
                 context,
-                title: 'Accept Offer',
-                message:
-                    'Accept this offer of \$${offer.amount.toStringAsFixed(2)}?',
-                confirmText: 'Accept',
-                confirmColor: const Color(0xFF22C55E),
+                title: l10n.acceptOffer,
+                message: l10n.acceptOfferConfirm(
+                  offer.amount.toStringAsFixed(2),
+                ),
+                confirmText: l10n.accept,
+                confirmColor: AppColors.of(context).success,
                 onConfirm: () {
                   context.read<OfferBloc>().add(
                     OfferAccepted(offerId: offer.id),
@@ -450,12 +480,12 @@ class _OfferRequestBody extends StatelessWidget {
             },
             icon: const Icon(Iconsax.tick_circle, size: 20),
             label: Text(
-              'Accept Offer',
+              l10n.acceptOffer,
               style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.bold),
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF22C55E),
-              foregroundColor: Colors.white,
+              backgroundColor: AppColors.of(context).success,
+              foregroundColor: AppColors.of(context).onPrimary,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14.r),
               ),
@@ -477,15 +507,15 @@ class _OfferRequestBody extends StatelessWidget {
                     onPressed: () => _showCounterDialog(context, offer),
                     icon: const Icon(Iconsax.refresh, size: 18),
                     label: Text(
-                      'Counter',
+                      l10n.counter,
                       style: TextStyle(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4794E6),
-                      foregroundColor: Colors.white,
+                      backgroundColor: AppColors.of(context).accent,
+                      foregroundColor: AppColors.of(context).onPrimary,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14.r),
                       ),
@@ -504,10 +534,10 @@ class _OfferRequestBody extends StatelessWidget {
                   onPressed: () {
                     _showConfirmDialog(
                       context,
-                      title: 'Decline Offer',
-                      message: 'Decline this offer?',
-                      confirmText: 'Decline',
-                      confirmColor: const Color(0xFFEF4444),
+                      title: l10n.declineOffer,
+                      message: l10n.confirmDeclineOffer,
+                      confirmText: l10n.decline,
+                      confirmColor: AppColors.of(context).error,
                       onConfirm: () {
                         context.read<OfferBloc>().add(
                           OfferDeclined(offerId: offer.id),
@@ -518,18 +548,18 @@ class _OfferRequestBody extends StatelessWidget {
                   icon: Icon(
                     Iconsax.close_circle,
                     size: 18,
-                    color: Colors.grey[600],
+                    color: AppColors.of(context).textSecondary,
                   ),
                   label: Text(
-                    'Decline',
+                    l10n.decline,
                     style: TextStyle(
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w600,
-                      color: Colors.grey[600],
+                      color: AppColors.of(context).textSecondary,
                     ),
                   ),
                   style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: Colors.grey[300]!),
+                    side: BorderSide(color: AppColors.of(context).border),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14.r),
                     ),
@@ -544,33 +574,98 @@ class _OfferRequestBody extends StatelessWidget {
   }
 
   Widget _buildLeaveReviewButton(BuildContext context, Offer offer) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       width: double.infinity,
       margin: EdgeInsets.only(top: 8.h),
-      child: OutlinedButton.icon(
-        onPressed: () {
-          context.pushNamed(
-            'write_review',
-            extra: {
-              'sellerId': offer.sellerId,
-              'sellerName': offer.seller?.name ?? 'Seller',
-              'sellerAvatar': offer.seller?.avatar,
-              'listingId': offer.listingId,
-              'listingTitle': offer.listing?.title,
-            },
-          );
-        },
-        icon: Icon(Iconsax.star_1, size: 18.sp),
-        label: Text(
-          'Leave a Review',
-          style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600),
-        ),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: const Color(0xFFFBBF24),
-          side: const BorderSide(color: Color(0xFFFBBF24), width: 1.5),
-          padding: EdgeInsets.symmetric(vertical: 14.h),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.r),
+      child: SizedBox(
+        height: 48.h,
+        child: ElevatedButton(
+          onPressed: () async {
+            if (!offer.isAccepted) {
+              AppSnackBar.showWarning(
+                context,
+                'Cannot leave review yet. Transaction is not completed.',
+              );
+              return;
+            }
+
+            final currentUserId = await _storage.read(key: StorageKeys.userId);
+            if (!context.mounted) return;
+            if (currentUserId == null || currentUserId.isEmpty) {
+              AppSnackBar.showWarning(
+                context,
+                'Cannot leave review right now. Unable to identify your account. Please log in again.',
+              );
+              return;
+            }
+
+            // Resolve review target as counterparty:
+            // seller reviews buyer, buyer reviews seller.
+            String revieweeId = '';
+            String? revieweeName;
+            String? revieweeAvatar;
+
+            if (currentUserId == offer.sellerId) {
+              revieweeId = offer.buyerId;
+              revieweeName = offer.buyer?.name;
+              revieweeAvatar = offer.buyer?.avatar;
+            } else if (currentUserId == offer.buyerId) {
+              revieweeId = offer.sellerId;
+              revieweeName = offer.seller?.name;
+              revieweeAvatar = offer.seller?.avatar;
+            } else {
+              AppSnackBar.showWarning(
+                context,
+                'Cannot leave review right now. Unable to match your role for this transaction.',
+              );
+              return;
+            }
+
+            if (revieweeId.isEmpty) {
+              final missingRole =
+                  currentUserId == offer.buyerId
+                  ? 'seller'
+                  : 'buyer';
+              AppSnackBar.showWarning(
+                context,
+                'Cannot leave review right now. Missing $missingRole information.',
+              );
+              return;
+            }
+
+            context.pushNamed(
+              'write_review',
+              extra: {
+                // Route/API contract uses sellerId key; value is review target user id.
+                'sellerId': revieweeId,
+                'sellerName': revieweeName ?? 'User',
+                'sellerAvatar': revieweeAvatar,
+                'listingId': offer.listingId,
+                'listingTitle': offer.listing?.title,
+              },
+            );
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Theme.of(context).primaryColor,
+            foregroundColor: AppColors.of(context).onPrimary,
+            minimumSize: Size(double.infinity, 48.h),
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12.r),
+            ),
+            elevation: 0,
+          ),
+          child: Text(
+            l10n.leaveAReview,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 14.sp,
+              fontWeight: FontWeight.w700,
+              color: AppColors.of(context).onPrimary,
+            ),
           ),
         ),
       ),
@@ -585,6 +680,7 @@ class _OfferRequestBody extends StatelessWidget {
     required Color confirmColor,
     required VoidCallback onConfirm,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -596,7 +692,7 @@ class _OfferRequestBody extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           ElevatedButton(
             onPressed: () {
@@ -605,7 +701,7 @@ class _OfferRequestBody extends StatelessWidget {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: confirmColor,
-              foregroundColor: Colors.white,
+              foregroundColor: AppColors.of(context).onPrimary,
             ),
             child: Text(confirmText),
           ),
@@ -615,6 +711,7 @@ class _OfferRequestBody extends StatelessWidget {
   }
 
   void _showCounterDialog(BuildContext context, Offer offer) {
+    final l10n = AppLocalizations.of(context)!;
     final controller = TextEditingController();
     showDialog(
       context: context,
@@ -622,14 +719,11 @@ class _OfferRequestBody extends StatelessWidget {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16.r),
         ),
-        title: const Text('Counter Offer'),
+        title: Text(l10n.counterOfferTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              'Enter your counter price:',
-              style: TextStyle(fontSize: 14.sp),
-            ),
+            Text(l10n.enterCounterPrice, style: TextStyle(fontSize: 14.sp)),
             SizedBox(height: 12.h),
             TextField(
               controller: controller,
@@ -650,7 +744,7 @@ class _OfferRequestBody extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           ElevatedButton(
             onPressed: () {
@@ -663,10 +757,10 @@ class _OfferRequestBody extends StatelessWidget {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4794E6),
-              foregroundColor: Colors.white,
+              backgroundColor: AppColors.of(context).accent,
+              foregroundColor: AppColors.of(context).onPrimary,
             ),
-            child: const Text('Send Counter'),
+            child: Text(l10n.sendCounter),
           ),
         ],
       ),
@@ -676,14 +770,18 @@ class _OfferRequestBody extends StatelessWidget {
   String _capitalize(String s) =>
       s.isNotEmpty ? '${s[0].toUpperCase()}${s.substring(1)}' : s;
 
-  String _formatExpiry(DateTime expiresAt) {
+  String _formatExpiry(BuildContext context, DateTime expiresAt) {
+    final l10n = AppLocalizations.of(context)!;
     final remaining = expiresAt.difference(DateTime.now());
-    if (remaining.isNegative) return 'Expired';
+    if (remaining.isNegative) return l10n.expired;
     if (remaining.inHours >= 24)
-      return '${remaining.inHours ~/ 24}d ${remaining.inHours % 24}h remaining';
+      return l10n.daysHoursRemaining(remaining.inDays, remaining.inHours % 24);
     if (remaining.inHours > 0)
-      return '${remaining.inHours}h ${remaining.inMinutes % 60}m remaining';
-    return '${remaining.inMinutes}m remaining';
+      return l10n.hoursMinutesRemaining(
+        remaining.inHours,
+        remaining.inMinutes % 60,
+      );
+    return l10n.minutesRemaining(remaining.inMinutes);
   }
 }
 
@@ -694,39 +792,40 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     Color bgColor;
     Color textColor;
     String label;
 
     switch (status) {
       case 'pending':
-        bgColor = const Color(0xFFFFF3CD);
-        textColor = const Color(0xFFF59E0B);
-        label = 'Pending';
+        bgColor = AppColors.of(context).warning.withOpacity(0.15);
+        textColor = AppColors.of(context).warning;
+        label = l10n.pending;
         break;
       case 'accepted':
-        bgColor = const Color(0xFFD1FAE5);
-        textColor = const Color(0xFF22C55E);
-        label = 'Accepted';
+        bgColor = AppColors.of(context).success.withOpacity(0.15);
+        textColor = AppColors.of(context).success;
+        label = l10n.accepted;
         break;
       case 'declined':
-        bgColor = const Color(0xFFFEE2E2);
-        textColor = const Color(0xFFEF4444);
-        label = 'Declined';
+        bgColor = AppColors.of(context).error.withOpacity(0.15);
+        textColor = AppColors.of(context).error;
+        label = l10n.declined;
         break;
       case 'countered':
-        bgColor = const Color(0xFFE0ECFF);
-        textColor = const Color(0xFF4794E6);
-        label = 'Countered';
+        bgColor = AppColors.of(context).accent.withOpacity(0.15);
+        textColor = AppColors.of(context).accent;
+        label = l10n.countered;
         break;
       case 'expired':
-        bgColor = Colors.grey[200]!;
-        textColor = Colors.grey[600]!;
-        label = 'Expired';
+        bgColor = AppColors.of(context).border;
+        textColor = AppColors.of(context).textSecondary;
+        label = l10n.expired;
         break;
       default:
-        bgColor = Colors.grey[200]!;
-        textColor = Colors.grey[600]!;
+        bgColor = AppColors.of(context).border;
+        textColor = AppColors.of(context).textSecondary;
         label = status;
     }
 

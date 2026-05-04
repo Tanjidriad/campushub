@@ -20,14 +20,14 @@ class ShimmerLoading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Shimmer.fromColors(
-      baseColor: Colors.grey[300]!,
-      highlightColor: Colors.grey[100]!,
+      baseColor: AppColors.of(context).border,
+      highlightColor: AppColors.of(context).subtleFill,
       child: Container(
         width: width,
         height: height,
         margin: margin,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.of(context).card,
           borderRadius: borderRadius ?? BorderRadius.circular(8.r),
         ),
       ),
@@ -75,11 +75,11 @@ class ShimmerProductCard extends StatelessWidget {
       width: 160.w,
       margin: EdgeInsets.only(right: 12.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.of(context).card,
         borderRadius: BorderRadius.circular(12.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: AppColors.of(context).textPrimary.withOpacity(0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -135,11 +135,11 @@ class ShimmerGrid extends StatelessWidget {
       itemCount: itemCount,
       itemBuilder: (context, index) => Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.of(context).card,
           borderRadius: BorderRadius.circular(12.r),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: AppColors.of(context).textPrimary.withOpacity(0.05),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),

@@ -8,9 +8,7 @@ import 'constants.dart';
 class ApiClient {
   static ApiClient? _instance;
   late final Dio dio;
-  final _storage = const FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  );
+  final _storage = const FlutterSecureStorage(aOptions: AndroidOptions());
   Completer<bool>? _refreshCompleter;
 
   ApiClient._() {
@@ -19,7 +17,7 @@ class ApiClient {
         baseUrl: ApiConstants.apiBaseUrl,
         connectTimeout: ApiConstants.connectTimeout,
         receiveTimeout: ApiConstants.receiveTimeout,
-        headers: {
+        headers: <String, dynamic>{
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
@@ -86,14 +84,21 @@ class ApiClient {
       );
 
       if (response.data['success'] == true) {
-        await _storage.write(
-          key: StorageKeys.accessToken,
-          value: response.data['accessToken'],
-        );
-        if (response.data['refreshToken'] != null) {
+        final tokenData =
+            response.data['data'] as Map<String, dynamic>? ?? const {};
+        final accessToken = tokenData['accessToken'] as String?;
+        final refreshToken = tokenData['refreshToken'] as String?;
+
+        if (accessToken == null || accessToken.isEmpty) {
+          _refreshCompleter!.complete(false);
+          return false;
+        }
+
+        await _storage.write(key: StorageKeys.accessToken, value: accessToken);
+        if (refreshToken != null && refreshToken.isNotEmpty) {
           await _storage.write(
             key: StorageKeys.refreshToken,
-            value: response.data['refreshToken'],
+            value: refreshToken,
           );
         }
         _refreshCompleter!.complete(true);
@@ -101,7 +106,7 @@ class ApiClient {
       }
       _refreshCompleter!.complete(false);
     } catch (e) {
-      debugPrint('Token refresh failed: $e');
+      if (kDebugMode) debugPrint('Token refresh failed: $e');
       _refreshCompleter!.complete(false);
     } finally {
       _refreshCompleter = null;

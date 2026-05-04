@@ -1,6 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
@@ -25,7 +24,7 @@ class _ReportsScreenState extends State<ReportsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final ScrollController _scrollController = ScrollController();
-  String _selectedFilter = 'all';
+  final String _selectedFilter = 'all';
 
   // Per-tab cache
   final Map<String, List<Report>> _tabCache = {};
@@ -148,14 +147,14 @@ class _ReportsScreenState extends State<ReportsScreen>
             Container(
               padding: EdgeInsets.all(6.w),
               decoration: BoxDecoration(
-                color: Colors.white.withAlpha(30),
+                color: AppColors.cardLight.withAlpha(30),
                 borderRadius: AppRadius.xs,
               ),
               child: Icon(
                 isError
                     ? Icons.error_outline_rounded
                     : Icons.check_circle_outline_rounded,
-                color: Colors.white,
+                color: AppColors.cardLight,
                 size: 18,
               ),
             ),
@@ -163,7 +162,7 @@ class _ReportsScreenState extends State<ReportsScreen>
             Expanded(
               child: Text(
                 message,
-                style: AppTextStyles.labelMedium.copyWith(color: Colors.white),
+                style: AppTextStyles.labelMedium.copyWith(color: AppColors.cardLight),
               ),
             ),
           ],
@@ -388,10 +387,10 @@ class _ReportsScreenState extends State<ReportsScreen>
         padding: EdgeInsets.only(bottom: 12.h),
         child: Shimmer.fromColors(
           baseColor: context.isDark
-              ? Colors.white.withAlpha(8)
+              ? AppColors.cardLight.withAlpha(8)
               : Colors.grey.withAlpha(30),
           highlightColor: context.isDark
-              ? Colors.white.withAlpha(20)
+              ? AppColors.cardLight.withAlpha(20)
               : Colors.grey.withAlpha(15),
           child: Container(
             height: 140.h,
@@ -585,13 +584,13 @@ class _ReportsScreenState extends State<ReportsScreen>
                                       const Icon(
                                         Icons.gavel_rounded,
                                         size: 16,
-                                        color: Colors.white,
+                                        color: AppColors.cardLight,
                                       ),
                                       SizedBox(width: 6.w),
                                       Text(
                                         'Review',
                                         style: AppTextStyles.labelMedium
-                                            .copyWith(color: Colors.white),
+                                            .copyWith(color: AppColors.cardLight),
                                       ),
                                     ],
                                   ),
@@ -1317,7 +1316,7 @@ class _ReportDetailsSheetState extends State<_ReportDetailsSheet> {
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
+                      foregroundColor: AppColors.cardLight,
                       padding: EdgeInsets.symmetric(vertical: 14.h),
                       elevation: 0,
                       shape: RoundedRectangleBorder(borderRadius: AppRadius.md),
@@ -1330,7 +1329,7 @@ class _ReportDetailsSheetState extends State<_ReportDetailsSheet> {
                         Text(
                           'Save Changes',
                           style: AppTextStyles.labelMedium.copyWith(
-                            color: Colors.white,
+                            color: AppColors.cardLight,
                           ),
                         ),
                       ],
@@ -1475,3 +1474,4 @@ class _ReportDetailsSheetState extends State<_ReportDetailsSheet> {
     );
   }
 }
+

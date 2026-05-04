@@ -31,8 +31,22 @@ class AuthInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
+    final statusCode = err.response?.statusCode;
+    final responseData = err.response?.data;
+    final errorCode = responseData is Map<String, dynamic>
+        ? responseData['code']?.toString()
+        : null;
+
+    // Keep logged-in unverified users inside the verification flow.
+    if (statusCode == 403 && errorCode == 'EMAIL_NOT_VERIFIED') {
+      if (AppRouter.router.state.uri.path != '/verify-email') {
+        AppRouter.router.go('/verify-email');
+      }
+      return handler.next(err);
+    }
+
     // Handle 401 Unauthorized
-    if (err.response?.statusCode == 401 && !_isRefreshing) {
+    if (statusCode == 401 && !_isRefreshing) {
       _isRefreshing = true;
 
       try {
@@ -89,8 +103,17 @@ class AuthInterceptor extends Interceptor {
       );
 
       if (response.statusCode == 200) {
-        final newAccessToken = response.data['accessToken'];
-        final newRefreshToken = response.data['refreshToken'];
+        final responseData = response.data;
+        final tokenPayload =
+            responseData is Map<String, dynamic>
+                ? (responseData['data'] as Map<String, dynamic>? ?? responseData)
+                : <String, dynamic>{};
+        final newAccessToken = tokenPayload['accessToken']?.toString();
+        final newRefreshToken = tokenPayload['refreshToken']?.toString();
+
+        if (newAccessToken == null || newAccessToken.isEmpty) {
+          return false;
+        }
 
         await secureStorage.write(
           key: StorageKeys.accessToken,

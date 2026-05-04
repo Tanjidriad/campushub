@@ -1,5 +1,6 @@
 import 'package:book_user_app/core/constants/api_constants.dart';
 import 'package:book_user_app/core/theme/app_palette.dart';
+import 'package:book_user_app/l10n/app_localizations.dart';
 import 'package:book_user_app/features/auth/presentation/widgets/onboarding_content.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -28,75 +29,65 @@ class _OnboardingPageState extends State<OnboardingPage> {
     if (mounted) context.go('/login');
   }
 
-  final List<OnboardingContent> _contents = [
-    // Screen 1 (Splash/Intro)
-    const OnboardingContent(
-      isSplash: true,
-      image:
-          "https://lh3.googleusercontent.com/aida-public/AB6AXuBdTYwVm70L7jI50awq3a-KePJP_Po6lCJXl2bo4-sEs9bFj0K25E5fT7tw1jDEdKXsCuDE6llWigMZ27QBb_HZNcbVUPxzz-WTTJ2tEGvPo-cqtM5s5elYd1ISGTPNKX_lf3GFB5q8StgrqF-cfkk7ZYklMovL-7EgGEFEsHqqn8JJ4leoVXQUdyMOByhF0Of9Vgm2bN3hPuGzz6ibxTPiUpn0O__gjpla66mIFwXYVIfThGK0U46sdgWkn1uNlzfPwdTavtrRWJ8",
-      title: "Your Campus.\nYour Marketplace.",
-      description:
-          "Turn your old textbooks into cash and find great deals on dorm essentials. Safe, local, and student-verified.",
-    ),
-    // Screen 2 (Shop)
-    const OnboardingContent(
-      image:
-          "https://lh3.googleusercontent.com/aida-public/AB6AXuDBtAozbigN-LnAGEbWtGMTXbMTgXyq4ZwIfyqc3-22OxeUt--31j7kiGFKkfti3HzCKKuRXo5FzjTwIluYkiafvl-tUVg0lglBECJYpsGr1JavsAU3oAbgv_oLv129hAxCbbQt8csoxeY2kyMP9jvBpLVTrowwwWqe7I-SDg5zTZlRejMQSUgG_Yr27jKteI4UM1ewlHW7qHahfP0NLIpvJzkNilRKLsJCGLZqikCFbep5pLbaZMLLGymM-rORNNtyt9BAVUpKATg",
-      title: "Shop Your Campus",
-      description:
-          "Safe, local deals from students near you. Buy textbooks, furniture, and more.",
-      steps: [
-        OnboardingStep(
-          icon: 'search',
-          title: "Search & Filter",
-          description:
-              "Find exactly what you need by category or dorm location.",
-        ),
-        OnboardingStep(
-          icon: 'message',
-          title: "Chat Securely",
-          description:
-              "Message sellers directly in-app to ask questions and negotiate.",
-        ),
-        OnboardingStep(
-          icon: 'location',
-          title: "Meet on Campus",
-          description:
-              "Safe exchange at designated campus spots like the student union.",
-        ),
-      ],
-    ),
-    // Screen 3 (Sell)
-    const OnboardingContent(
-      image:
-          "https://lh3.googleusercontent.com/aida-public/AB6AXuAi6Ndk9It5HZQ3yIaZUCXOIEUKgyS8yZny6Zd7SDz2HuC_3ywNdwVFdxHeA6ntZFc_mcM4v6XO3428YklnsaaOuXqvlmjofCTozwun6m5iiJmfP5sJdzn2-wJYsXS3zOzLcMRoM3vntuGxURFlAfNB-mnY0nrXGPzOFFzYhIacS5NiKtUkR1GEkfq0DRFodLTpCpyBXv_Z0ASnE7zRKgJnctFZRbS-C-bhFTvw564rODoJBr3W9EO0e03ktlwOOKluQqCcmuqYNr8",
-      title: "Sell in Seconds",
-      description:
-          "Turn your clutter into cash. Post textbooks, gadgets, and gear to students on your campus.",
-      steps: [
-        OnboardingStep(
-          icon: 'camera',
-          title: "Snap a Photo",
-          description: "Take a clear picture of your item directly in the app.",
-        ),
-        OnboardingStep(
-          icon: 'tag',
-          title: "Set Your Price",
-          description: "Add a description and set a fair price for students.",
-        ),
-        OnboardingStep(
-          icon: 'handshake',
-          title: "Meet on Campus",
-          description: "Chat securely and arrange a safe meetup spot nearby.",
-        ),
-      ],
-    ),
-  ];
+  late List<OnboardingContent> _contents;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    _contents = [
+      OnboardingContent(
+        isSplash: true,
+        image: "assets/images/onboarding/onboarding_1.jpg",
+        title: l10n.onboardingTitle1,
+        description: l10n.onboardingDescription1,
+      ),
+      OnboardingContent(
+        image: "assets/images/onboarding/onboarding_2.jpg",
+        title: l10n.onboardingTitle2,
+        description: l10n.onboardingDescription2,
+        steps: [
+          OnboardingStep(
+            icon: 'search',
+            title: l10n.onboardingStepSearchFilter,
+            description: l10n.onboardingStepSearchFilterDesc,
+          ),
+          OnboardingStep(
+            icon: 'message',
+            title: l10n.onboardingStepChatSecurely,
+            description: l10n.onboardingStepChatSecurelyDesc,
+          ),
+          OnboardingStep(
+            icon: 'location',
+            title: l10n.onboardingStepMeetOnCampus,
+            description: l10n.onboardingStepMeetOnCampusDesc,
+          ),
+        ],
+      ),
+      OnboardingContent(
+        image: "assets/images/onboarding/onboarding_3.jpg",
+        title: l10n.onboardingTitle3,
+        description: l10n.onboardingDescription3,
+        steps: [
+          OnboardingStep(
+            icon: 'camera',
+            title: l10n.onboardingStepSnapPhoto,
+            description: l10n.onboardingStepSnapPhotoDesc,
+          ),
+          OnboardingStep(
+            icon: 'tag',
+            title: l10n.onboardingStepSetPrice,
+            description: l10n.onboardingStepSetPriceDesc,
+          ),
+          OnboardingStep(
+            icon: 'handshake',
+            title: l10n.onboardingStepMeetDeal,
+            description: l10n.onboardingStepMeetOnCampusDesc,
+          ),
+        ],
+      ),
+    ];
     return Scaffold(
-      backgroundColor: AppPalette.background,
+      backgroundColor: AppColors.of(context).background,
       body: Stack(
         children: [
           PageView.builder(
@@ -125,15 +116,15 @@ class _OnboardingPageState extends State<OnboardingPage> {
               child: TextButton(
                 onPressed: _navigateToLogin,
                 style: TextButton.styleFrom(
-                  backgroundColor: AppPalette.surface,
+                  backgroundColor: AppColors.of(context).surface,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20.r),
                   ),
                 ),
                 child: Text(
-                  "Skip",
+                  l10n.skip,
                   style: TextStyle(
-                    color: AppPalette.textSecondary,
+                    color: AppColors.of(context).textSecondary,
                     fontWeight: FontWeight.bold,
                     fontSize: 14.sp,
                   ),
@@ -146,6 +137,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 
   Widget _buildSplashPage(OnboardingContent content) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         Expanded(
@@ -159,12 +151,14 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(24.r),
                     image: DecorationImage(
-                      image: NetworkImage(content.image),
+                      image: AssetImage(content.image),
                       fit: BoxFit.cover,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: AppColors.of(
+                          context,
+                        ).textPrimary.withOpacity(0.1),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       ),
@@ -181,11 +175,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       vertical: 8.h,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
+                      color: AppColors.of(context).surface.withOpacity(0.9),
                       borderRadius: BorderRadius.circular(12.r),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: AppColors.of(
+                            context,
+                          ).textPrimary.withOpacity(0.1),
                           blurRadius: 10,
                           offset: const Offset(0, 5),
                         ),
@@ -196,12 +192,14 @@ class _OnboardingPageState extends State<OnboardingPage> {
                         Container(
                           padding: EdgeInsets.all(4.w),
                           decoration: BoxDecoration(
-                            color: AppPalette.accent.withOpacity(0.2),
+                            color: AppColors.of(
+                              context,
+                            ).accent.withOpacity(0.2),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
                             Icons.check,
-                            color: AppPalette.accent,
+                            color: AppColors.of(context).accent,
                             size: 14.sp,
                           ),
                         ),
@@ -210,20 +208,20 @@ class _OnboardingPageState extends State<OnboardingPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              "STATUS",
+                              l10n.statusLabel,
                               style: TextStyle(
                                 fontSize: 10.sp,
                                 fontWeight: FontWeight.bold,
-                                color: AppPalette.textSecondary,
+                                color: AppColors.of(context).textSecondary,
                                 letterSpacing: 1.0,
                               ),
                             ),
                             Text(
-                              "Student Verified",
+                              l10n.studentVerified,
                               style: TextStyle(
                                 fontSize: 12.sp,
                                 fontWeight: FontWeight.bold,
-                                color: AppPalette.textPrimary,
+                                color: AppColors.of(context).textPrimary,
                               ),
                             ),
                           ],
@@ -250,7 +248,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   style: TextStyle(
                     fontSize: 32.sp,
                     fontWeight: FontWeight.w800,
-                    color: AppPalette.textPrimary,
+                    color: AppColors.of(context).textPrimary,
                     height: 1.1,
                   ),
                 ),
@@ -260,7 +258,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16.sp,
-                    color: AppPalette.textSecondary,
+                    color: AppColors.of(context).textSecondary,
                     height: 1.5,
                   ),
                 ),
@@ -276,7 +274,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text("Get Started"),
+                      Text(l10n.getStarted),
                       SizedBox(width: 8.w),
                       const Icon(Icons.arrow_forward),
                     ],
@@ -287,16 +285,16 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   onPressed: _navigateToLogin,
                   child: RichText(
                     text: TextSpan(
-                      text: "Already have an account? ",
+                      text: l10n.alreadyHaveAccount,
                       style: TextStyle(
-                        color: AppPalette.textSecondary,
+                        color: AppColors.of(context).textSecondary,
                         fontSize: 14.sp,
                       ),
                       children: [
                         TextSpan(
-                          text: "Log in",
+                          text: l10n.logIn,
                           style: TextStyle(
-                            color: AppPalette.primary,
+                            color: AppColors.of(context).primary,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -314,6 +312,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 
   Widget _buildFeaturePage(OnboardingContent content) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         // Image Header
@@ -323,10 +322,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
           margin: EdgeInsets.all(16.w),
           padding: EdgeInsets.only(top: 40.h),
           decoration: BoxDecoration(
-            color: AppPalette.surface,
+            color: AppColors.of(context).surface,
             borderRadius: BorderRadius.circular(24.r),
             image: DecorationImage(
-              image: NetworkImage(content.image),
+              image: AssetImage(content.image),
               fit: BoxFit.cover,
             ),
           ),
@@ -348,7 +347,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 Text(
                   content.title,
                   style: TextStyle(
-                    color: Colors.white,
+                    color: AppColors.of(context).onPrimary,
                     fontSize: 30.sp,
                     fontWeight: FontWeight.bold,
                   ),
@@ -357,7 +356,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 Text(
                   content.description,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.9),
+                    color: AppColors.of(context).onPrimary.withOpacity(0.9),
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w500,
                   ),
@@ -385,12 +384,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       width: 48.w,
                       height: 48.w,
                       decoration: BoxDecoration(
-                        color: AppPalette.primary.withOpacity(0.1),
+                        color: AppColors.of(context).primary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12.r),
                       ),
                       child: Icon(
                         _getIcon(step.icon),
-                        color: AppPalette.primary,
+                        color: AppColors.of(context).primary,
                         size: 24.sp,
                       ),
                     ),
@@ -404,7 +403,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                             style: TextStyle(
                               fontSize: 16.sp,
                               fontWeight: FontWeight.bold,
-                              color: AppPalette.textPrimary,
+                              color: AppColors.of(context).textPrimary,
                             ),
                           ),
                           SizedBox(height: 4.h),
@@ -412,7 +411,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                             step.description,
                             style: TextStyle(
                               fontSize: 14.sp,
-                              color: AppPalette.textSecondary,
+                              color: AppColors.of(context).textSecondary,
                               height: 1.4,
                             ),
                           ),
@@ -452,8 +451,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   children: [
                     Text(
                       _currentIndex == _contents.length - 1
-                          ? "Get Started"
-                          : "Next",
+                          ? l10n.getStarted
+                          : l10n.next,
                     ),
                     SizedBox(width: 8.w),
                     const Icon(Icons.arrow_forward),
@@ -478,7 +477,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
           height: 8.h,
           width: isActive ? 32.w : 8.w,
           decoration: BoxDecoration(
-            color: isActive ? AppPalette.primary : AppPalette.border,
+            color: isActive
+                ? AppColors.of(context).primary
+                : AppColors.of(context).border,
             borderRadius: BorderRadius.circular(4.r),
           ),
         );

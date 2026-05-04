@@ -20,20 +20,35 @@ class ReportModel extends Report {
   });
 
   factory ReportModel.fromJson(Map<String, dynamic> json) {
-    // Parse the reporter
-    final reporter = json['reporter'] as Map<String, dynamic>?;
+    // Parse the reporter safely (handle both populated Map and unpopulated String ID)
+    Map<String, dynamic>? reporter;
+    if (json['reporter'] is Map) {
+      reporter = Map<String, dynamic>.from(json['reporter']);
+    } else if (json['reporter'] is String) {
+      reporter = {'_id': json['reporter']};
+    }
     final reporterId = reporter?['_id'] ?? '';
     final reporterName = reporter?['name'] ?? 'Unknown Reporter';
     final reporterAvatar = reporter?['avatar'];
 
-    // Parse review info
-    final reviewedByMap = json['reviewedBy'] as Map<String, dynamic>?;
+    // Parse review info safely
+    Map<String, dynamic>? reviewedByMap;
+    if (json['reviewedBy'] is Map) {
+      reviewedByMap = Map<String, dynamic>.from(json['reviewedBy']);
+    } else if (json['reviewedBy'] is String) {
+      reviewedByMap = {'_id': json['reviewedBy']};
+    }
     final reviewedByName = reviewedByMap != null ? reviewedByMap['name'] : null;
 
-    // Parse target polymorphically
+    // Parse target polymorphically and safely
     ReportTarget? parsedTarget;
     final tType = json['targetType'];
-    final tData = json['target'] as Map<String, dynamic>?;
+    Map<String, dynamic>? tData;
+    if (json['target'] is Map) {
+      tData = Map<String, dynamic>.from(json['target']);
+    } else if (json['target'] is String) {
+      tData = {'_id': json['target']};
+    }
 
     if (tData != null) {
       if (tType == 'user') {

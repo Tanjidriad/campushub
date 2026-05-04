@@ -1,3 +1,4 @@
+// ignore_for_file: unnecessary_underscores
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -94,7 +95,7 @@ class _ListingsScreenState extends State<ListingsScreen>
             Container(
               padding: EdgeInsets.all(6.w),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: AppRadius.xs,
               ),
               child: Icon(

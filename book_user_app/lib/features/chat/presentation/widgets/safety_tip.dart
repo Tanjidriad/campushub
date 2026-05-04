@@ -1,3 +1,4 @@
+import 'package:book_user_app/core/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -10,19 +11,28 @@ class SafetyTip extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
         decoration: BoxDecoration(
-          color: Colors.blue[50], // bg-blue-50
+          color: AppColors.of(context).accent.withOpacity(0.08), // bg-blue-50
           borderRadius: BorderRadius.circular(20.r),
-          border: Border.all(color: Colors.blue[100]!),
+          border: Border.all(
+            color: AppColors.of(context).accent.withOpacity(0.15),
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.security, size: 14.sp, color: Colors.blue[600]),
+            Icon(
+              Icons.security,
+              size: 14.sp,
+              color: AppColors.of(context).accent,
+            ),
             SizedBox(width: 6.w),
             Flexible(
               child: Text(
                 'Safety Tip: Always meet in public places like the library.',
-                style: TextStyle(color: Colors.blue[600], fontSize: 12.sp),
+                style: TextStyle(
+                  color: AppColors.of(context).accent,
+                  fontSize: 12.sp,
+                ),
               ),
             ),
           ],

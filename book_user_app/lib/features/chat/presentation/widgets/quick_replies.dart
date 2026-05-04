@@ -1,3 +1,4 @@
+import 'package:book_user_app/core/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -18,8 +19,10 @@ class QuickReplies extends StatelessWidget {
     return Container(
       height: 50.h,
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey[100]!)),
+        color: AppColors.of(context).card,
+        border: Border(
+          top: BorderSide(color: AppColors.of(context).subtleFill),
+        ),
       ),
       child: ListView.separated(
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
@@ -32,16 +35,16 @@ class QuickReplies extends StatelessWidget {
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
               decoration: BoxDecoration(
-                color: Colors.grey[50],
+                color: AppColors.of(context).inputFill,
                 borderRadius: BorderRadius.circular(20.r),
-                border: Border.all(color: Colors.grey[200]!),
+                border: Border.all(color: AppColors.of(context).border),
               ),
               child: Text(
                 replies[index],
                 style: TextStyle(
                   fontSize: 12.sp,
                   fontWeight: FontWeight.w600,
-                  color: Colors.grey[700],
+                  color: AppColors.of(context).textPrimary,
                 ),
               ),
             ),

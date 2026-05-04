@@ -21,6 +21,7 @@ class SocketService {
 
   // ── Other event listeners ──
   final List<void Function(Map<String, dynamic>)> _typingListeners = [];
+  final List<void Function(Map<String, dynamic>)> _offerUpdatedListeners = [];
   final List<void Function(String)> _userOnlineListeners = [];
   final List<void Function(String)> _userOfflineListeners = [];
   final List<void Function(Map<String, dynamic>)> _messageReadListeners = [];
@@ -66,7 +67,10 @@ class SocketService {
     // Already attempting — wait for up to 3 s then return
     if (_isConnecting) {
       debugPrint('🔌 Socket connection in progress, waiting...');
-      for (int i = 0; i < 30; i++) {
+      // When multiple screens kick off `connect()` concurrently, this prevents
+      // ChatBloc from giving up on `conversation:join` before the socket is ready.
+      // (See logs: "Could not join socket room ... — running in HTTP-only mode")
+      for (int i = 0; i < 100; i++) {
         await Future.delayed(const Duration(milliseconds: 100));
         if (_isConnected) return;
       }
@@ -208,6 +212,19 @@ class SocketService {
       }
     });
 
+    // ── offer updated ──
+    _socket?.on('offer:updated', (data) {
+      debugPrint('📩 offer:updated received');
+      if (data == null) return;
+      for (final l in List.from(_offerUpdatedListeners)) {
+        try {
+          l(Map<String, dynamic>.from(data));
+        } catch (e) {
+          debugPrint('❌ Error in offer-updated listener: $e');
+        }
+      }
+    });
+
     // ── online / offline ──
     _socket?.on('user:online', (data) {
       if (data == null) return;
@@ -292,18 +309,24 @@ class SocketService {
     required String conversationId,
     String? text,
     String? image,
+    Map<String, double>? location,
+    String? messageType,
+    Map<String, dynamic>? metadata,
   }) {
     if (!_isConnected || _socket == null) {
       debugPrint('⚠️ sendMessage: socket not connected');
       return;
     }
-    if (text == null && image == null) {
+    if (text == null && image == null && location == null && messageType != 'offer') {
       debugPrint('⚠️ sendMessage: nothing to send');
       return;
     }
     final data = <String, dynamic>{'conversationId': conversationId};
     if (text != null) data['text'] = text;
     if (image != null) data['image'] = {'url': image};
+    if (location != null) data['location'] = location;
+    if (messageType != null) data['messageType'] = messageType;
+    if (metadata != null) data['metadata'] = metadata;
     debugPrint('📤 Sending message to $conversationId');
     _socket?.emit('message:send', data);
   }
@@ -374,6 +397,11 @@ class SocketService {
   void removeMessageSentListener(void Function(String, String) l) =>
       _messageSentListeners.remove(l);
 
+  void addOfferUpdatedListener(void Function(Map<String, dynamic>) l) =>
+      _offerUpdatedListeners.add(l);
+  void removeOfferUpdatedListener(void Function(Map<String, dynamic>) l) =>
+      _offerUpdatedListeners.remove(l);
+
   void addMessageReadListener(void Function(Map<String, dynamic>) l) =>
       _messageReadListeners.add(l);
   void removeMessageReadListener(void Function(Map<String, dynamic>) l) =>
@@ -409,6 +437,7 @@ class SocketService {
     _messageListeners.clear();
     _notificationListeners.clear();
     _typingListeners.clear();
+    _offerUpdatedListeners.clear();
     _userOnlineListeners.clear();
     _userOfflineListeners.clear();
     _messageSentListeners.clear();

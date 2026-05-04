@@ -207,7 +207,7 @@ class AppShadows {
   /// Colored glow for primary action buttons
   static List<BoxShadow> primaryGlow(double opacity) => [
     BoxShadow(
-      color: const Color(0xFF0D9488).withOpacity(opacity),
+      color: const Color(0xFF0D9488).withValues(alpha: opacity),
       blurRadius: 16,
       offset: const Offset(0, 4),
     ),

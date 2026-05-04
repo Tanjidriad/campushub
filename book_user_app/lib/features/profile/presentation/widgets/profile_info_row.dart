@@ -7,7 +7,6 @@ class ProfileInfoRow extends StatelessWidget {
   final String label;
   final String value;
   final Color? valueColor;
-  final bool isDark;
   final String? iconPath;
 
   const ProfileInfoRow({
@@ -15,17 +14,17 @@ class ProfileInfoRow extends StatelessWidget {
     required this.label,
     required this.value,
     this.valueColor,
-    required this.isDark,
     this.iconPath,
   });
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Container(
       margin: EdgeInsets.only(bottom: 8.h),
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 13.h),
       decoration: BoxDecoration(
-        color: isDark ? AppPalette.gray800 : AppPalette.gray100,
+        color: colors.subtleFill,
         borderRadius: BorderRadius.circular(6.r),
       ),
       child: Row(
@@ -44,7 +43,7 @@ class ProfileInfoRow extends StatelessWidget {
                       height: 18.w,
                       fit: BoxFit.contain,
                       colorFilter: ColorFilter.mode(
-                        isDark ? Colors.white70 : Colors.black54,
+                        AppColors.of(context).textSecondary,
                         BlendMode.srcIn,
                       ),
                     ),
@@ -57,7 +56,7 @@ class ProfileInfoRow extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w500,
-                  color: isDark ? Colors.white : Colors.black87,
+                  color: AppColors.of(context).textPrimary,
                 ),
               ),
             ],
@@ -68,8 +67,7 @@ class ProfileInfoRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14.sp,
                 fontWeight: FontWeight.bold,
-                color:
-                    valueColor ?? (isDark ? Colors.grey[300] : Colors.black87),
+                color: valueColor ?? colors.textPrimary,
               ),
               overflow: TextOverflow.ellipsis,
             ),

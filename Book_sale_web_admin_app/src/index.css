@@ -1,0 +1,227 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+:root {
+  --background: 160 8% 97%;
+  --foreground: 215 25% 15%;
+  --card: 0 0% 100%;
+  --card-foreground: 215 25% 15%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 215 25% 15%;
+  --primary: 174 84% 32%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 160 10% 96%;
+  --secondary-foreground: 215 25% 15%;
+  --muted: 210 14% 96%;
+  --muted-foreground: 215 10% 46%;
+  --accent: 38 92% 50%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 210 14% 90%;
+  --input: 210 14% 90%;
+  --ring: 174 84% 32%;
+  --radius: 0.75rem;
+  --success: 160 84% 39%;
+  --success-foreground: 0 0% 100%;
+  --warning: 38 92% 50%;
+  --warning-foreground: 48 96% 89%;
+  --info: 200 90% 50%;
+  --info-foreground: 0 0% 100%;
+  --chart-1: 174 84% 32%;
+  --chart-2: 217 91% 60%;
+  --chart-3: 38 92% 50%;
+  --chart-4: 0 68% 56%;
+  --chart-5: 270 76% 62%;
+  --sidebar-background: 0 0% 100%;
+  --sidebar-foreground: 215 25% 15%;
+  --sidebar-primary: 174 84% 32%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 160 10% 96%;
+  --sidebar-accent-foreground: 215 25% 15%;
+  --sidebar-border: 210 14% 90%;
+  --sidebar-muted: 215 10% 46%;
+}
+
+.dark {
+  --background: 223 17% 8%;
+  --foreground: 210 20% 95%;
+  --card: 220 15% 12%;
+  --card-foreground: 210 20% 95%;
+  --popover: 220 15% 12%;
+  --popover-foreground: 210 20% 95%;
+  --primary: 174 70% 40%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 220 15% 15%;
+  --secondary-foreground: 210 20% 95%;
+  --muted: 220 15% 15%;
+  --muted-foreground: 217 10% 60%;
+  --accent: 38 92% 50%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 63% 31%;
+  --destructive-foreground: 210 20% 95%;
+  --border: 224 12% 19%;
+  --input: 224 12% 19%;
+  --ring: 174 70% 40%;
+  --radius: 0.75rem;
+  --success: 160 70% 45%;
+  --success-foreground: 0 0% 100%;
+  --warning: 48 96% 72%;
+  --warning-foreground: 38 92% 50%;
+  --info: 200 80% 55%;
+  --info-foreground: 0 0% 100%;
+  --chart-1: 174 70% 40%;
+  --chart-2: 217 80% 65%;
+  --chart-3: 48 96% 72%;
+  --chart-4: 0 63% 55%;
+  --chart-5: 270 76% 70%;
+  --sidebar-background: 220 15% 12%;
+  --sidebar-foreground: 210 20% 92%;
+  --sidebar-primary: 174 70% 40%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 220 15% 15%;
+  --sidebar-accent-foreground: 210 20% 92%;
+  --sidebar-border: 224 12% 19%;
+  --sidebar-muted: 217 10% 55%;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  letter-spacing: -0.01em;
+}
+
+h1, h2, h3, h4, h5, h6, .font-display {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+}
+
+/* === Animations === */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in-down {
+  from { opacity: 0; transform: translateY(-16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.2); }
+  50% { box-shadow: 0 0 0 8px hsl(var(--primary) / 0); }
+}
+@keyframes dialog-in {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes spinner {
+  to { transform: rotate(360deg); }
+}
+
+/* Utility Animation Classes */
+.animate-fade-in { animation: fade-in 0.4s ease-out both; }
+.animate-fade-in-up { animation: fade-in-up 0.5s ease-out both; }
+.animate-fade-in-down { animation: fade-in-down 0.5s ease-out both; }
+.animate-slide-in-left { animation: slide-in-left 0.5s ease-out both; }
+.animate-slide-in-right { animation: slide-in-right 0.5s ease-out both; }
+.animate-scale-in { animation: scale-in 0.3s ease-out both; }
+.animate-shimmer { animation: shimmer 2s linear infinite; background-size: 200% 100%; }
+.animate-count-up { animation: count-up 0.6s ease-out both; }
+.animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+.animate-dialog-in { animation: dialog-in 0.25s ease-out both; }
+.animate-overlay-in { animation: overlay-in 0.2s ease-out both; }
+.animate-float { animation: float 3s ease-in-out infinite; }
+.animate-spinner { animation: spinner 0.7s linear infinite; }
+
+/* Staggered children animation */
+.stagger-children > * { animation: fade-in-up 0.4s ease-out both; }
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 60ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 120ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 180ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 240ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 300ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 360ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 420ms; }
+
+/* Glass effect */
+.glass {
+  background: hsl(var(--card) / 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid hsl(var(--border) / 0.5);
+}
+
+/* Gradient text utility */
+.gradient-text {
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--chart-4)));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: hsl(var(--muted-foreground) / 0.3); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.5); }
+
+/* Recharts tooltip custom */
+.recharts-default-tooltip {
+  background: hsl(var(--card)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  border-radius: 0.5rem !important;
+  box-shadow: 0 4px 20px hsl(var(--foreground) / 0.08) !important;
+  padding: 10px 14px !important;
+}
+.recharts-tooltip-label {
+  font-weight: 600 !important;
+  color: hsl(var(--foreground)) !important;
+}
+.recharts-tooltip-item {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+/* Selection */
+::selection {
+  background: hsl(var(--primary) / 0.2);
+  color: hsl(var(--foreground));
+}

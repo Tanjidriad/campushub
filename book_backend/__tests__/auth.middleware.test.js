@@ -30,7 +30,8 @@ jest.mock('../models/User', () => {
 
 jest.mock('../utils/hashToken', () => jest.fn((t) => `hashed_${t}`));
 
-const { protect, optionalAuth } = require('../middleware/auth');
+const hashToken = require('../utils/hashToken');
+const { protect, optionalAuth, verifyRefreshToken } = require('../middleware/auth');
 const User = require('../models/User');
 
 describe('Auth Middleware', () => {
@@ -145,6 +146,54 @@ describe('Auth Middleware', () => {
 
             expect(req.user).toBeDefined();
             expect(next).toHaveBeenCalled();
+        });
+    });
+
+    describe('verifyRefreshToken', () => {
+        it('should reject when refresh token is missing', async () => {
+            req.body = {};
+
+            await verifyRefreshToken(req, res, next);
+
+            expect(res.status).toHaveBeenCalledWith(400);
+            expect(next).not.toHaveBeenCalled();
+        });
+
+        it('should reject and clear stored token on replay token mismatch', async () => {
+            const refreshToken = jwt.sign({ id: 'user123' }, process.env.JWT_REFRESH_SECRET || 'test-refresh-secret');
+            req.body = { refreshToken };
+            const save = jest.fn().mockResolvedValue(true);
+
+            User.findById.mockResolvedValue({
+                _id: 'user123',
+                refreshToken: 'different_hash',
+                save,
+            });
+
+            await verifyRefreshToken(req, res, next);
+
+            expect(hashToken).toHaveBeenCalledWith(refreshToken);
+            expect(save).toHaveBeenCalled();
+            expect(res.status).toHaveBeenCalledWith(401);
+            expect(next).not.toHaveBeenCalled();
+        });
+
+        it('should accept a valid refresh token and attach user to request', async () => {
+            const refreshToken = jwt.sign({ id: 'user123' }, process.env.JWT_REFRESH_SECRET || 'test-refresh-secret');
+            req.body = { refreshToken };
+            const save = jest.fn().mockResolvedValue(true);
+
+            User.findById.mockResolvedValue({
+                _id: 'user123',
+                refreshToken: `hashed_${refreshToken}`,
+                save,
+            });
+
+            await verifyRefreshToken(req, res, next);
+
+            expect(next).toHaveBeenCalled();
+            expect(req.user).toBeDefined();
+            expect(req.user._id).toBe('user123');
         });
     });
 });

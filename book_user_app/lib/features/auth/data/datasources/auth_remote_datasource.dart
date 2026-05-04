@@ -27,6 +27,10 @@ abstract class AuthRemoteDataSource {
     String? phone,
     String? bio,
     String? location,
+    String? educationLevel,
+    String? stream,
+    String? department,
+    String? classOrSemester,
   });
 
   Future<void> changePassword({
@@ -189,6 +193,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     String? phone,
     String? bio,
     String? location,
+    String? educationLevel,
+    String? stream,
+    String? department,
+    String? classOrSemester,
   }) async {
     final response = await apiClient.put(
       '/auth/profile',
@@ -198,6 +206,11 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         if (phone != null) 'phone': phone,
         if (bio != null) 'bio': bio,
         if (location != null) 'location': location,
+        // Send values unconditionally so we can clear them by sending empty string if needed
+        'educationLevel': educationLevel ?? '',
+        'stream': stream ?? '',
+        'department': department ?? '',
+        'classOrSemester': classOrSemester ?? '',
       },
     );
 

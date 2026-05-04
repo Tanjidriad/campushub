@@ -1,3 +1,4 @@
+import 'package:book_user_app/core/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -22,7 +23,7 @@ class _ShimmerBox extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.of(context).card,
         borderRadius: shape == BoxShape.circle
             ? null
             : (borderRadius ?? BorderRadius.circular(8.r)),
@@ -42,46 +43,50 @@ class ChatMessageShimmer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Shimmer.fromColors(
-      baseColor: Colors.grey[200]!,
-      highlightColor: Colors.grey[50]!,
+      baseColor: AppColors.of(context).border,
+      highlightColor: AppColors.of(context).shimmerHighlight,
       child: Padding(
         padding: EdgeInsets.all(16.w),
         child: Column(
           children: [
             // Incoming message (left)
-            _buildBubble(isMe: false, width: 0.65),
+            _buildBubble(context, isMe: false, width: 0.65),
             SizedBox(height: 12.h),
             // Outgoing message (right)
-            _buildBubble(isMe: true, width: 0.55),
+            _buildBubble(context, isMe: true, width: 0.55),
             SizedBox(height: 12.h),
             // Incoming message (left, shorter)
-            _buildBubble(isMe: false, width: 0.40),
+            _buildBubble(context, isMe: false, width: 0.40),
             SizedBox(height: 12.h),
             // Outgoing message (right, longer)
-            _buildBubble(isMe: true, width: 0.70),
+            _buildBubble(context, isMe: true, width: 0.70),
             SizedBox(height: 12.h),
             // Incoming message (left)
-            _buildBubble(isMe: false, width: 0.50),
+            _buildBubble(context, isMe: false, width: 0.50),
             SizedBox(height: 12.h),
             // Outgoing message (right, short)
-            _buildBubble(isMe: true, width: 0.35),
+            _buildBubble(context, isMe: true, width: 0.35),
             SizedBox(height: 12.h),
             // Incoming (two lines)
-            _buildMultiLineBubble(isMe: false),
+            _buildMultiLineBubble(context, isMe: false),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildBubble({required bool isMe, required double width}) {
+  Widget _buildBubble(
+    BuildContext context, {
+    required bool isMe,
+    required double width,
+  }) {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         width: width.sw,
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.of(context).card,
           borderRadius: BorderRadius.only(
             topLeft: Radius.circular(isMe ? 18.r : 4.r),
             topRight: Radius.circular(isMe ? 4.r : 18.r),
@@ -97,14 +102,14 @@ class ChatMessageShimmer extends StatelessWidget {
     );
   }
 
-  Widget _buildMultiLineBubble({required bool isMe}) {
+  Widget _buildMultiLineBubble(BuildContext context, {required bool isMe}) {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         width: 0.65.sw,
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.of(context).card,
           borderRadius: BorderRadius.only(
             topLeft: Radius.circular(isMe ? 18.r : 4.r),
             topRight: Radius.circular(isMe ? 4.r : 18.r),
@@ -136,14 +141,14 @@ class ConversationListShimmer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Shimmer.fromColors(
-      baseColor: Colors.grey[200]!,
-      highlightColor: Colors.grey[50]!,
+      baseColor: AppColors.of(context).border,
+      highlightColor: AppColors.of(context).shimmerHighlight,
       child: ListView.separated(
         physics: const NeverScrollableScrollPhysics(),
         itemCount: itemCount,
         separatorBuilder: (_, __) => Padding(
           padding: EdgeInsets.only(left: 76.w),
-          child: Divider(color: Colors.grey[100], height: 1),
+          child: Divider(color: AppColors.of(context).subtleFill, height: 1),
         ),
         itemBuilder: (_, index) => _buildConversationRow(index),
       ),
@@ -209,29 +214,29 @@ class ListingDetailShimmer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.of(context).background,
       body: Column(
         children: [
           // Sticky header
-          _buildHeaderShimmer(),
+          _buildHeaderShimmer(context),
           // Scrollable body
           Expanded(
             child: Shimmer.fromColors(
-              baseColor: Colors.grey[200]!,
-              highlightColor: Colors.grey[50]!,
+              baseColor: AppColors.of(context).border,
+              highlightColor: AppColors.of(context).shimmerHighlight,
               child: SingleChildScrollView(
                 physics: const NeverScrollableScrollPhysics(),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Hero image
-                    _buildImageShimmer(),
+                    _buildImageShimmer(context),
                     // Dot indicators
-                    _buildDotsShimmer(),
+                    _buildDotsShimmer(context),
                     // Price + Title
                     _buildInfoShimmer(),
                     // Seller card
-                    _buildSellerCardShimmer(),
+                    _buildSellerCardShimmer(context),
                     // Description section
                     _buildDescriptionShimmer(),
                     SizedBox(height: 24.h),
@@ -241,19 +246,19 @@ class ListingDetailShimmer extends StatelessWidget {
             ),
           ),
           // Bottom bar
-          _buildBottomBarShimmer(),
+          _buildBottomBarShimmer(context),
         ],
       ),
     );
   }
 
-  Widget _buildHeaderShimmer() {
+  Widget _buildHeaderShimmer(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.of(context).card,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: AppColors.of(context).textPrimary.withOpacity(0.05),
             blurRadius: 2,
             offset: const Offset(0, 1),
           ),
@@ -267,7 +272,10 @@ class ListingDetailShimmer extends StatelessWidget {
             children: [
               IconButton(
                 onPressed: null,
-                icon: Icon(Icons.arrow_back, color: Colors.grey[300]),
+                icon: Icon(
+                  Icons.arrow_back,
+                  color: AppColors.of(context).border,
+                ),
               ),
               const Spacer(),
               Text(
@@ -275,7 +283,7 @@ class ListingDetailShimmer extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 18.sp,
                   fontWeight: FontWeight.bold,
-                  color: const Color(0xFF1F2937),
+                  color: AppColors.of(context).textPrimary,
                 ),
               ),
               const Spacer(),
@@ -287,18 +295,18 @@ class ListingDetailShimmer extends StatelessWidget {
     );
   }
 
-  Widget _buildImageShimmer() {
+  Widget _buildImageShimmer(BuildContext context) {
     return Container(
       margin: EdgeInsets.only(top: 8.h, left: 16.w, right: 16.w),
       height: 190.h,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.of(context).card,
         borderRadius: BorderRadius.circular(16.r),
       ),
     );
   }
 
-  Widget _buildDotsShimmer() {
+  Widget _buildDotsShimmer(BuildContext context) {
     return Padding(
       padding: EdgeInsets.only(top: 12.h, bottom: 4.h),
       child: Row(
@@ -309,7 +317,7 @@ class ListingDetailShimmer extends StatelessWidget {
             width: i == 0 ? 24.w : 6.w,
             height: 6.h,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.of(context).card,
               borderRadius: BorderRadius.circular(3.r),
             ),
           );
@@ -348,16 +356,16 @@ class ListingDetailShimmer extends StatelessWidget {
     );
   }
 
-  Widget _buildSellerCardShimmer() {
+  Widget _buildSellerCardShimmer(BuildContext context) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w),
       child: Container(
         margin: EdgeInsets.only(top: 24.h),
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
         decoration: BoxDecoration(
-          color: const Color(0xFFF9FAFB),
+          color: AppColors.of(context).inputFill,
           borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(color: Colors.grey[100]!),
+          border: Border.all(color: AppColors.of(context).subtleFill),
         ),
         child: Row(
           children: [
@@ -380,7 +388,7 @@ class ListingDetailShimmer extends StatelessWidget {
               padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(20.r),
-                border: Border.all(color: Colors.grey[200]!),
+                border: Border.all(color: AppColors.of(context).border),
               ),
               child: _ShimmerBox(width: 60.w, height: 14.h),
             ),
@@ -468,23 +476,23 @@ class ListingDetailShimmer extends StatelessWidget {
     );
   }
 
-  Widget _buildBottomBarShimmer() {
+  Widget _buildBottomBarShimmer(BuildContext context) {
     return Container(
       padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 32.h),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey[200]!)),
+        color: AppColors.of(context).card,
+        border: Border(top: BorderSide(color: AppColors.of(context).border)),
       ),
       child: Shimmer.fromColors(
-        baseColor: Colors.grey[200]!,
-        highlightColor: Colors.grey[50]!,
+        baseColor: AppColors.of(context).border,
+        highlightColor: AppColors.of(context).shimmerHighlight,
         child: Row(
           children: [
             Expanded(
               child: Container(
                 height: 48.h,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.of(context).card,
                   borderRadius: BorderRadius.circular(12.r),
                 ),
               ),
@@ -495,7 +503,7 @@ class ListingDetailShimmer extends StatelessWidget {
               child: Container(
                 height: 48.h,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.of(context).card,
                   borderRadius: BorderRadius.circular(12.r),
                 ),
               ),

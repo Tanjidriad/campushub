@@ -12,6 +12,7 @@ class CategoryModel extends Category {
     super.isActive,
     super.displayOrder,
     super.listingCount,
+    super.hasEducationConfig,
   });
 
   factory CategoryModel.fromJson(Map<String, dynamic> json) {
@@ -25,6 +26,7 @@ class CategoryModel extends Category {
       isActive: json['isActive'] as bool? ?? true,
       displayOrder: json['displayOrder'] as int? ?? 0,
       listingCount: json['listingCount'] as int? ?? 0,
+      hasEducationConfig: json['hasEducationConfig'] as bool? ?? false,
     );
   }
 
@@ -39,6 +41,7 @@ class CategoryModel extends Category {
       'isActive': isActive,
       'displayOrder': displayOrder,
       'listingCount': listingCount,
+      'hasEducationConfig': hasEducationConfig,
     };
   }
 
@@ -52,6 +55,7 @@ class CategoryModel extends Category {
     isActive: isActive,
     displayOrder: displayOrder,
     listingCount: listingCount,
+    hasEducationConfig: hasEducationConfig,
   );
 
   static List<CategoryModel> fromJsonList(List<dynamic> jsonList) {

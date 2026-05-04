@@ -63,6 +63,11 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
   @override
   Future<void> logout() async {
+    try {
+      await apiClient.dio.post(ApiConstants.logout);
+    } catch (_) {
+      // Always clear local credentials even if server logout fails.
+    }
     await apiClient.clearTokens();
   }
 

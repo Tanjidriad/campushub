@@ -1,3 +1,4 @@
+import 'package:book_user_app/core/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:iconsax/iconsax.dart';
@@ -13,16 +14,17 @@ class AppSnackBar {
     String? actionLabel,
     VoidCallback? onAction,
   }) {
+    final colors = AppColors.of(context);
     final snackBar = SnackBar(
       content: Row(
         children: [
-          Icon(_getIcon(type), color: Colors.white, size: 24.sp),
+          Icon(_getIcon(type), color: colors.onPrimary, size: 24.sp),
           SizedBox(width: 12.w),
           Expanded(
             child: Text(
               message,
               style: TextStyle(
-                color: Colors.white,
+                color: colors.onPrimary,
                 fontSize: 14.sp,
                 fontWeight: FontWeight.w500,
               ),
@@ -30,7 +32,7 @@ class AppSnackBar {
           ),
         ],
       ),
-      backgroundColor: _getColor(type),
+      backgroundColor: _getColor(colors, type),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
       margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
@@ -38,7 +40,7 @@ class AppSnackBar {
       action: actionLabel != null
           ? SnackBarAction(
               label: actionLabel,
-              textColor: Colors.white,
+              textColor: colors.onPrimary,
               onPressed: onAction ?? () {},
             )
           : null,
@@ -78,16 +80,16 @@ class AppSnackBar {
     }
   }
 
-  static Color _getColor(SnackBarType type) {
+  static Color _getColor(AppColors colors, SnackBarType type) {
     switch (type) {
       case SnackBarType.success:
-        return const Color(0xFF22C55E);
+        return colors.success;
       case SnackBarType.error:
-        return const Color(0xFFEF4444);
+        return colors.error;
       case SnackBarType.warning:
-        return const Color(0xFFF59E0B);
+        return colors.warning;
       case SnackBarType.info:
-        return const Color(0xFF3B82F6);
+        return colors.accent;
     }
   }
 }

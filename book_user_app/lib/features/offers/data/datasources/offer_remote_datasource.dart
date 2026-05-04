@@ -19,6 +19,11 @@ class OfferRemoteDataSource {
         if (message != null) 'message': message,
       },
     );
+    // ApiClient accepts 4xx without throwing, so check success manually
+    if (response.data['success'] != true) {
+      final msg = response.data['message']?.toString() ?? 'Failed to create offer';
+      throw Exception(msg);
+    }
     return Offer.fromJson(response.data['data']);
   }
 
@@ -60,6 +65,10 @@ class OfferRemoteDataSource {
         if (message != null) 'message': message,
       },
     );
+    if (response.data['success'] != true) {
+      final msg = response.data['message']?.toString() ?? 'Failed to respond to offer';
+      throw Exception(msg);
+    }
     return Offer.fromJson(response.data['data']);
   }
 

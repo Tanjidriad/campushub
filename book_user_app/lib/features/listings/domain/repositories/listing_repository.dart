@@ -142,11 +142,26 @@ abstract class ListingRepository {
     String? category,
     String? priceType,
     double? price,
+    String? currency,
     String? condition,
+    String? locationName,
+    String? locationAddress,
+    String? meetupPreferences,
+    List<String>? tags,
+    String? educationLevel,
+    String? classOrSemester,
+    String? subject,
+    String? bookType,
+    String? division,
+    String? district,
+    String? upazila,
   });
 
   /// Delete a listing
   Future<Either<Failure, void>> deleteListing(String id);
+
+  /// Delete an image from a listing
+  Future<Either<Failure, Listing>> deleteListingImage(String listingId, String imageId);
 
   /// Toggle wishlist for a listing
   Future<Either<Failure, bool>> toggleWishlist(String listingId);
@@ -169,4 +184,10 @@ abstract class ListingRepository {
     String? buyerId,
     double? soldPrice,
   });
+
+  /// Get similar listings
+  Future<Either<Failure, List<Listing>>> getSimilarListings(String listingId);
+
+  /// Get recommended listings for user
+  Future<Either<Failure, List<Listing>>> getRecommendedListings({int limit = 10});
 }

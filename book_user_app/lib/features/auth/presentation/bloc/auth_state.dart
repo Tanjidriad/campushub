@@ -78,3 +78,11 @@ class AuthResetPasswordSuccess extends AuthState {
 class AuthAvatarUploading extends AuthState {
   const AuthAvatarUploading();
 }
+
+class AuthChangePasswordLoading extends AuthState {
+  const AuthChangePasswordLoading();
+}
+
+class AuthChangePasswordSuccess extends AuthState {
+  const AuthChangePasswordSuccess();
+}

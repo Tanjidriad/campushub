@@ -32,7 +32,9 @@ class OfferBloc extends Bloc<OfferEvent, OfferState> {
       final message = e.response?.data['message'] ?? 'Failed to create offer';
       emit(OfferError(message: message));
     } catch (e) {
-      emit(OfferError(message: e.toString()));
+      // Strip "Exception: " prefix for clean UI display
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      emit(OfferError(message: msg));
     }
   }
 

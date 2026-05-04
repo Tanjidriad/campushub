@@ -1,6 +1,8 @@
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart';
 
-enum MessageType { text, image, location, system }
+// ==================== ENUMS ====================
+enum MessageType { text, image, location, system, offer }
 
 MessageType _parseMessageType(dynamic value) {
   if (value == null) return MessageType.text;
@@ -12,6 +14,8 @@ MessageType _parseMessageType(dynamic value) {
       return MessageType.location;
     case 'system':
       return MessageType.system;
+    case 'offer':
+      return MessageType.offer;
     default:
       return MessageType.text;
   }
@@ -25,6 +29,8 @@ String _messageTypeToString(MessageType type) {
       return 'location';
     case MessageType.system:
       return 'system';
+    case MessageType.offer:
+      return 'offer';
     default:
       return 'text';
   }
@@ -78,6 +84,93 @@ class LocationData extends Equatable {
   List<Object?> get props => [latitude, longitude, address];
 }
 
+class OfferData extends Equatable {
+  final String offerId;
+  final double amount;
+  final String status;
+  final double? counterAmount;
+  final int roundNumber;
+  final String? listingTitle;
+  final String? listingImage;
+  final double? listingPrice;
+  final String? listingId;
+
+  const OfferData({
+    required this.offerId,
+    required this.amount,
+    required this.status,
+    this.counterAmount,
+    this.roundNumber = 1,
+    this.listingTitle,
+    this.listingImage,
+    this.listingPrice,
+    this.listingId,
+  });
+
+  bool get isPending => status == 'pending';
+  bool get isAccepted => status == 'accepted';
+  bool get isDeclined => status == 'declined';
+  bool get isCountered => status == 'countered';
+  bool get isExpired => status == 'expired';
+  bool get canCounter => roundNumber < 3;
+
+  factory OfferData.fromJson(Map<String, dynamic> json) {
+    final parsedAmount = double.tryParse(json['amount']?.toString() ?? '') ?? 0.0;
+    debugPrint('🟠 OfferData.fromJson: raw amount=${json['amount']} (${json['amount']?.runtimeType}), '
+        'parsed=$parsedAmount, offerId=${json['offerId']}');
+    return OfferData(
+      offerId: json['offerId']?.toString() ?? '',
+      amount: parsedAmount,
+      status: json['status']?.toString() ?? 'pending',
+      counterAmount: double.tryParse(json['counterAmount']?.toString() ?? ''),
+      roundNumber: json['roundNumber'] ?? 1,
+      listingTitle: json['listingTitle']?.toString(),
+      listingImage: json['listingImage']?.toString(),
+      listingPrice: double.tryParse(json['listingPrice']?.toString() ?? ''),
+      listingId: json['listingId']?.toString(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'offerId': offerId,
+    'amount': amount,
+    'status': status,
+    'counterAmount': counterAmount,
+    'roundNumber': roundNumber,
+    'listingTitle': listingTitle,
+    'listingImage': listingImage,
+    'listingPrice': listingPrice,
+    if (listingId != null) 'listingId': listingId,
+  };
+
+  OfferData copyWith({String? status, double? counterAmount, int? roundNumber}) {
+    return OfferData(
+      offerId: offerId,
+      amount: amount,
+      status: status ?? this.status,
+      counterAmount: counterAmount ?? this.counterAmount,
+      roundNumber: roundNumber ?? this.roundNumber,
+      listingTitle: listingTitle,
+      listingImage: listingImage,
+      listingPrice: listingPrice,
+      listingId: listingId,
+    );
+  }
+
+  @override
+  List<Object?> get props => [
+        offerId,
+        amount,
+        status,
+        counterAmount,
+        roundNumber,
+        listingTitle,
+        listingImage,
+        listingPrice,
+        listingId,
+      ];
+}
+
 class MessageSender extends Equatable {
   final String id;
   final String name;
@@ -107,6 +200,7 @@ class ChatMessage extends Equatable {
   final ImageData? image;
   final MessageType messageType;
   final LocationData? location;
+  final OfferData? offer;
   final DateTime? deliveredAt;
   final DateTime? readAt;
   final bool isDeleted;
@@ -122,6 +216,7 @@ class ChatMessage extends Equatable {
     this.image,
     this.messageType = MessageType.text,
     this.location,
+    this.offer,
     this.deliveredAt,
     this.readAt,
     this.isDeleted = false,
@@ -154,6 +249,19 @@ class ChatMessage extends Equatable {
       location = LocationData.fromJson(locationData);
     }
 
+    // Parse offer — from explicit 'offer' field or from 'metadata' (server-persisted)
+    OfferData? offer;
+    final offerData = json['offer'];
+    if (offerData is Map<String, dynamic>) {
+      offer = OfferData.fromJson(offerData);
+    } else if (_parseMessageType(json['messageType']) == MessageType.offer) {
+      // Server stores offer fields in 'metadata'
+      final meta = json['metadata'];
+      if (meta is Map<String, dynamic>) {
+        offer = OfferData.fromJson(meta);
+      }
+    }
+
     return ChatMessage(
       id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
       conversation: json['conversation']?.toString() ?? '',
@@ -162,6 +270,7 @@ class ChatMessage extends Equatable {
       image: image,
       messageType: _parseMessageType(json['messageType']),
       location: location,
+      offer: offer,
       deliveredAt: json['deliveredAt'] != null
           ? DateTime.tryParse(json['deliveredAt'].toString())
           : null,
@@ -187,6 +296,7 @@ class ChatMessage extends Equatable {
     'image': image?.toJson(),
     'messageType': _messageTypeToString(messageType),
     'location': location?.toJson(),
+    'offer': offer?.toJson(),
     'deliveredAt': deliveredAt?.toIso8601String(),
     'readAt': readAt?.toIso8601String(),
     'isDeleted': isDeleted,
@@ -203,6 +313,7 @@ class ChatMessage extends Equatable {
     String? text,
     ImageData? image,
     LocationData? location,
+    OfferData? offer,
   }) {
     final now = DateTime.now();
     return ChatMessage(
@@ -212,13 +323,36 @@ class ChatMessage extends Equatable {
       text: text,
       image: image,
       location: location,
-      messageType: location != null
+      offer: offer,
+      messageType: offer != null
+          ? MessageType.offer
+          : location != null
           ? MessageType.location
           : image != null
           ? MessageType.image
           : MessageType.text,
       createdAt: now,
       updatedAt: now,
+    );
+  }
+
+  /// Returns a copy with updated offer data
+  ChatMessage copyWithOffer(OfferData newOffer) {
+    return ChatMessage(
+      id: id,
+      conversation: conversation,
+      sender: sender,
+      text: text,
+      image: image,
+      messageType: messageType,
+      location: location,
+      offer: newOffer,
+      deliveredAt: deliveredAt,
+      readAt: readAt,
+      isDeleted: isDeleted,
+      isEdited: isEdited,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
     );
   }
 
@@ -233,6 +367,7 @@ class ChatMessage extends Equatable {
     image,
     messageType,
     location,
+    offer,
     deliveredAt,
     readAt,
     isDeleted,
